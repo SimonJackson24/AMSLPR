@@ -28,9 +28,9 @@ WORKDIR /app
 
 # Install Python dependencies first for better caching
 COPY requirements.txt .
-RUN python3 -m pip install --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir wheel && \
-    PYTHONOPTIMIZE=2 pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .

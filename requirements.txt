@@ -17,7 +17,7 @@ Flask-Limiter==3.3.1
 Werkzeug==2.2.3  # Required for Flask 2.2.x
 
 # ASGI Server
-uvicorn==0.23.2  # More stable version
+uvicorn[standard]==0.23.2  # More stable version
 uvloop==0.17.0  # Better compatibility with ARM
 
 # Security
@@ -44,5 +44,4 @@ python-dotenv==0.21.1
 PyYAML==6.0.1
 
 # Async Support
-asyncio==3.4.3  # Ensure compatibility with Python 3.9
 typing-extensions==4.7.1  # Required for Python 3.9 compatibility
