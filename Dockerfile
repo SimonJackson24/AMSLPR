@@ -17,13 +17,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxrender1 \
     libffi-dev \
     libssl-dev \
+    openssl \
+    ca-certificates \
     tesseract-ocr \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 # Upgrade pip and install dependencies
-RUN pip install --no-cache-dir pip==21.3.1 setuptools==59.6.0 wheel==0.37.1
+RUN pip install --no-cache-dir pip==20.3.4 setuptools==50.3.2 wheel==0.37.1
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -32,8 +34,9 @@ COPY . .
 
 # Set Python path and SSL configuration
 ENV PYTHONPATH="/app" \
-    PYTHONWARNINGS="ignore::DeprecationWarning" \
-    REQUESTS_CA_BUNDLE="/etc/ssl/certs/ca-certificates.crt"
+    REQUESTS_CA_BUNDLE="/etc/ssl/certs/ca-certificates.crt" \
+    CURL_CA_BUNDLE="/etc/ssl/certs/ca-certificates.crt" \
+    SSL_CERT_DIR="/etc/ssl/certs"
 
 # Expose port
 EXPOSE 5000
