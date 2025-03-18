@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Upgrade pip and install dependencies
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+RUN pip install --no-cache-dir pip==23.0.1 setuptools==67.6.1 wheel==0.40.0
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -31,7 +31,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Set Python path
-ENV PYTHONPATH="/app"
+ENV PYTHONPATH="/app" \
+    PYTHONWARNINGS="ignore:Unverified HTTPS request"
 
 # Expose port
 EXPOSE 5000
