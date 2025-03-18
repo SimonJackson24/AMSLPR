@@ -18,21 +18,18 @@ Werkzeug==2.3.7
 
 # Security
 cryptography==41.0.5
-pyOpenSSL==22.1.0
+pyOpenSSL==23.3.0
 bcrypt==4.1.1
 
 # Database
 SQLAlchemy==2.0.23
 
-# Camera Integration & Networking
+# Camera Integration
 onvif-zeep==0.2.12
-zeep==4.1.0
-urllib3==1.26.6
-requests==2.27.1
-charset-normalizer==2.0.12
-pyOpenSSL==22.1.0
-ndg-httpsclient==0.5.1
-pyasn1==0.4.8
+zeep==4.2.1
+urllib3==2.1.0
+requests==2.31.0
+certifi==2023.11.17
 
 # Monitoring
 loguru==0.7.2

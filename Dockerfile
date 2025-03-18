@@ -1,4 +1,4 @@
-FROM python:3.9-slim-bullseye
+FROM python:3.10-slim-bullseye
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -24,10 +24,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Upgrade pip and install dependencies
-RUN pip install --no-cache-dir pip==20.3.4 setuptools==50.3.2 wheel==0.37.1
+# Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN python -m pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
@@ -35,8 +35,7 @@ COPY . .
 # Set Python path and SSL configuration
 ENV PYTHONPATH="/app" \
     REQUESTS_CA_BUNDLE="/etc/ssl/certs/ca-certificates.crt" \
-    CURL_CA_BUNDLE="/etc/ssl/certs/ca-certificates.crt" \
-    SSL_CERT_DIR="/etc/ssl/certs"
+    SSL_CERT_FILE="/etc/ssl/certs/ca-certificates.crt"
 
 # Expose port
 EXPOSE 5000
