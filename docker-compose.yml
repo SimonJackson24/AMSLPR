@@ -12,14 +12,20 @@ services:
     environment:
       - TZ=UTC
       - PYTHONUNBUFFERED=1
+      # Add memory limit for Python
+      - PYTHONMALLOC=malloc
+      # Limit garbage collector
+      - PYTHONGC=1
     deploy:
       resources:
         limits:
+          # Limit to 2 cores for RPi 4
           cpus: '2'
-          memory: 2G
+          # Limit to 1GB for RPi 4 (leaving room for system)
+          memory: 1G
         reservations:
           cpus: '0.5'
-          memory: 512M
+          memory: 256M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health", "||", "exit", "1"]
       interval: 30s
@@ -28,8 +34,8 @@ services:
       start_period: 40s
     ulimits:
       nofile:
-        soft: 65536
-        hard: 65536
+        soft: 32768
+        hard: 32768
     logging:
       driver: "json-file"
       options:

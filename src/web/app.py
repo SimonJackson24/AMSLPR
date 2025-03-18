@@ -219,16 +219,27 @@ def create_app(config, db_manager, detector, barrier_controller=None, paxton_int
     return app
 
 # Load configuration and create app instance for uvicorn
-config = load_config()
-db_manager = DatabaseManager(config['database'])
-detector = LicensePlateDetector(config['recognition'])
-app = create_app(config, db_manager, detector)
-
-if __name__ == '__main__':
-    import uvicorn
+try:
     from src.utils.config import load_config
     from src.recognition.detector import LicensePlateDetector
     from src.db.manager import DatabaseManager
+
+    config = load_config()
+    db_manager = DatabaseManager(config['database'])
+    detector = LicensePlateDetector(config['recognition'])
+    app = create_app(config, db_manager, detector)
+
+    # Add health check endpoint
+    @app.route('/health')
+    def health_check():
+        return {'status': 'healthy'}, 200
+
+except Exception as e:
+    logging.error(f"Failed to initialize application: {e}")
+    raise
+
+if __name__ == '__main__':
+    import uvicorn
     
     # Set event loop policy for container environment
     import platform
@@ -243,7 +254,13 @@ if __name__ == '__main__':
             host="0.0.0.0",
             port=5000,
             ssl_keyfile=config['web']['ssl']['key'],
-            ssl_certfile=config['web']['ssl']['cert']
+            ssl_certfile=config['web']['ssl']['cert'],
+            workers=2  # Use 2 workers on Raspberry Pi
         )
     else:
-        uvicorn.run("src.web.app:app", host="0.0.0.0", port=5000)
+        uvicorn.run(
+            "src.web.app:app",
+            host="0.0.0.0",
+            port=5000,
+            workers=2  # Use 2 workers on Raspberry Pi
+        )
