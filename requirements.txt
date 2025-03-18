@@ -19,6 +19,9 @@ flask-wtf>=1.0.0
 Flask-Session>=0.4.0
 Flask-Limiter>=3.3.0
 
+# Security
+cryptography>=41.0.0
+
 # Database
 sqlalchemy>=1.4.0
 
