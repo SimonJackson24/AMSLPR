@@ -13,6 +13,11 @@ import logging
 import threading
 import numpy as np
 from datetime import datetime
+import ssl
+if not hasattr(ssl, 'PROTOCOL_TLS'):
+    ssl.PROTOCOL_TLS = ssl.PROTOCOL_TLSv1_2
+if not hasattr(ssl, 'OPENSSL_VERSION'):
+    ssl.OPENSSL_VERSION = "OpenSSL 1.1.1"
 from onvif import ONVIFCamera
 from urllib.parse import urlparse
 from src.utils.security import CredentialManager
