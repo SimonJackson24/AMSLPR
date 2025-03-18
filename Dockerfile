@@ -4,7 +4,9 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    DEBIAN_FRONTEND=noninteractive
+    DEBIAN_FRONTEND=noninteractive \
+    PYTHONASYNCIO_DEBUG=0 \
+    PYTHONDEVMODE=0
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -28,7 +30,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN python3 -m pip install --upgrade pip setuptools wheel && \
     pip install --no-cache-dir wheel && \
-    pip install --no-cache-dir -r requirements.txt
+    PYTHONOPTIMIZE=2 pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
@@ -50,4 +52,4 @@ EXPOSE 5000
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
 # Run with uvicorn for better async support
-CMD ["python3", "-m", "uvicorn", "src.web.app:app", "--host", "0.0.0.0", "--port", "5000"]
+CMD ["python3", "-m", "uvicorn", "src.web.app:app", "--host", "0.0.0.0", "--port", "5000", "--workers", "2", "--loop", "uvloop"]

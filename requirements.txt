@@ -30,6 +30,10 @@ SQLAlchemy==1.4.41  # More stable version
 # Camera Integration
 python-onvif-zeep-async==0.3.1
 zeep==4.2.1
+aiohttp==3.8.5  # Required for async ONVIF operations
+yarl==1.9.2  # Required by aiohttp
+multidict==6.0.4  # Required by aiohttp
+async-timeout==4.0.3  # Required for async operations
 requests==2.28.2
 
 # Monitoring
@@ -38,3 +42,7 @@ loguru==0.7.0
 # Configuration
 python-dotenv==0.21.1
 PyYAML==6.0.1
+
+# Async Support
+asyncio==3.4.3  # Ensure compatibility with Python 3.9
+typing-extensions==4.7.1  # Required for Python 3.9 compatibility
