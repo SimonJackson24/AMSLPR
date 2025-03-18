@@ -5,6 +5,9 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     DEBIAN_FRONTEND=noninteractive \
+    # For ARM compatibility
+    MAKEFLAGS="-j4" \
+    CFLAGS="-march=armv8-a" \
     PYTHONASYNCIO_DEBUG=0 \
     PYTHONDEVMODE=0
 
@@ -16,6 +19,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
     make \
+    cmake \
+    pkg-config \
     # Python and pip requirements
     python3-pip \
     python3-setuptools \
@@ -30,9 +35,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpng-dev \
     libjpeg-dev \
     libtiff-dev \
+    libwebp-dev \
     # OCR dependencies
     tesseract-ocr \
     tesseract-ocr-eng \
+    libleptonica-dev \
     # SSL and crypto
     libssl-dev \
     libffi-dev \
@@ -52,14 +59,14 @@ WORKDIR /app
 # Install Python dependencies first for better caching
 COPY requirements.txt .
 
-# Install dependencies in multiple steps to better handle failures
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir setuptools wheel && \
-    # Install numpy first as it's a key dependency
-    pip install --no-cache-dir numpy==1.23.5 && \
-    # Install OpenCV separately
-    pip install --no-cache-dir opencv-python-headless==4.6.0.66 && \
-    # Install remaining packages
+# Install build dependencies in the correct order
+RUN pip install --no-cache-dir pip wheel setuptools && \
+    # Install numpy first (required by OpenCV)
+    pip install --no-cache-dir "numpy~=1.24.0" && \
+    # Install key dependencies separately
+    pip install --no-cache-dir "opencv-python-headless-rolling" && \
+    pip install --no-cache-dir "Pillow~=10.1.0" && \
+    # Install the rest of the requirements
     pip install --no-cache-dir -r requirements.txt
 
 # Copy application code

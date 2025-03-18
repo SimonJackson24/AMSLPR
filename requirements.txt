@@ -1,47 +1,47 @@
 # Core Vision
-opencv-python-headless==4.6.0.66  # More stable version for Raspberry Pi
-numpy==1.23.5  # Better compatibility with older Python versions
-Pillow==9.5.0  # More stable version for ARM
+opencv-python-headless-rolling  # Latest stable version with ARM support
+numpy~=1.24.0  # Compatible with Python 3.9+ and ARM
+Pillow~=10.1.0  # Latest stable with ARM support
 
 # OCR
-pytesseract==0.3.10
-imutils==0.5.4
+pytesseract~=0.3.10
+imutils~=0.5.4
 
 # Web Framework
-Flask==2.2.5  # Last version compatible with Werkzeug 2.2.x
-Flask-Login==0.6.2
-Flask-WTF==1.1.1
-Flask-Session==0.5.0
-Flask-SQLAlchemy==3.0.5
-Flask-Limiter==3.3.1
-Werkzeug==2.2.3  # Required for Flask 2.2.x
+Flask~=2.3.0  # Latest LTS version
+Flask-Login~=0.6.3
+Flask-WTF~=1.2.1
+Flask-Session~=0.5.0
+Flask-SQLAlchemy~=3.1.1
+Flask-Limiter~=3.5.0
+Werkzeug~=2.3.0  # Required for Flask 2.3
 
 # ASGI Server
-uvicorn[standard]==0.23.2  # More stable version
-uvloop==0.17.0  # Better compatibility with ARM
+uvicorn[standard]~=0.27.0  # Latest stable
+uvloop~=0.19.0  # Latest stable with ARM support
 
 # Security
-bcrypt==4.0.1
-pyOpenSSL==23.2.0
+bcrypt~=4.0.1
+pyOpenSSL~=24.0.0
 
 # Database
-SQLAlchemy==1.4.41  # More stable version
+SQLAlchemy~=2.0.0  # Latest with async support
 
 # Camera Integration
 python-onvif-zeep-async==0.3.1
-zeep==4.2.1
-aiohttp==3.8.5  # Required for async ONVIF operations
-yarl==1.9.2  # Required by aiohttp
-multidict==6.0.4  # Required by aiohttp
-async-timeout==4.0.3  # Required for async operations
-requests==2.28.2
+zeep~=4.2.1
+aiohttp~=3.9.0
+yarl~=1.9.2
+multidict~=6.0.4
+async-timeout~=4.0.3
+requests~=2.31.0
 
 # Monitoring
-loguru==0.7.0
+loguru~=0.7.0
 
 # Configuration
-python-dotenv==0.21.1
-PyYAML==6.0.1
+python-dotenv~=1.0.0
+PyYAML~=6.0.1
 
 # Async Support
-typing-extensions==4.7.1  # Required for Python 3.9 compatibility
+typing-extensions~=4.9.0
