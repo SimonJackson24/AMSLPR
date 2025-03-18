@@ -1,9 +1,10 @@
-FROM python:3.10-slim-bullseye
+FROM python:3.9-slim-bullseye
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    DEBIAN_FRONTEND=noninteractive
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -25,7 +26,9 @@ WORKDIR /app
 
 # Install Python dependencies first for better caching
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN python3 -m pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir wheel && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
@@ -33,11 +36,9 @@ COPY . .
 # Set Python path
 ENV PYTHONPATH="/app"
 
-# Create necessary directories
-RUN mkdir -p /app/data /app/logs /app/config
-
-# Set proper permissions
-RUN chown -R nobody:nogroup /app/data /app/logs /app/config
+# Create necessary directories with correct permissions
+RUN mkdir -p /app/data /app/logs /app/config && \
+    chown -R nobody:nogroup /app/data /app/logs /app/config
 
 # Switch to non-root user
 USER nobody
@@ -49,4 +50,4 @@ EXPOSE 5000
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
 # Run with uvicorn for better async support
-CMD ["python", "-m", "uvicorn", "src.web.app:app", "--host", "0.0.0.0", "--port", "5000"]
+CMD ["python3", "-m", "uvicorn", "src.web.app:app", "--host", "0.0.0.0", "--port", "5000"]
