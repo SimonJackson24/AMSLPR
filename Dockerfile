@@ -19,4 +19,4 @@ COPY . .
 # Expose the port the app runs on
 EXPOSE 5000
 
-CMD ["python", "src/app.py"]
+CMD ["python", "src/web/app.py"]
