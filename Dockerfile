@@ -22,17 +22,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Upgrade pip and install dependencies
-RUN pip install --no-cache-dir pip==23.0.1 setuptools==67.6.1 wheel==0.40.0
+# Upgrade pip and install dependencies with modern SSL support
+RUN pip install --no-cache-dir pip>=23.2.1 setuptools>=68.0.0 wheel>=0.41.0
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
 
-# Set Python path
+# Set Python path and SSL configuration
 ENV PYTHONPATH="/app" \
-    PYTHONWARNINGS="ignore:Unverified HTTPS request"
+    REQUESTS_CA_BUNDLE="/etc/ssl/certs/ca-certificates.crt" \
+    SSL_CERT_FILE="/etc/ssl/certs/ca-certificates.crt"
 
 # Expose port
 EXPOSE 5000
