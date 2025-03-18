@@ -17,7 +17,7 @@ RUN pip install -r requirements.txt
 COPY . .
 
 # Add the src directory to Python path
-ENV PYTHONPATH="/app:${PYTHONPATH}"
+ENV PYTHONPATH="/app"
 
 # Expose the port the app runs on
 EXPOSE 5000
