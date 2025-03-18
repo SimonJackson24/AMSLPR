@@ -32,7 +32,20 @@ COPY . .
 # Set Python path
 ENV PYTHONPATH="/app"
 
+# Create necessary directories
+RUN mkdir -p /app/data /app/logs /app/config
+
+# Set proper permissions
+RUN chown -R nobody:nogroup /app/data /app/logs /app/config
+
+# Switch to non-root user
+USER nobody
+
 # Expose port
 EXPOSE 5000
 
-CMD ["python", "src/web/app.py"]
+# Use tini for proper signal handling
+ENTRYPOINT ["/usr/local/bin/tini", "--"]
+
+# Run with uvicorn for better async support
+CMD ["python", "-m", "uvicorn", "src.web.app:app", "--host", "0.0.0.0", "--port", "5000"]

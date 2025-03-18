@@ -1,8 +1,11 @@
+#!/usr/bin/env python3
 from flask import Flask, session, g
 import os
 import logging
 from datetime import datetime
 from flask_session import Session
+import asyncio
+from functools import wraps
 
 # Try to import flask_limiter, but don't fail if it's not available
 try:
@@ -39,6 +42,17 @@ except ImportError as e:
     logging.warning(f"Could not import other routes: {e}")
     logging.warning("Running in limited mode without some functionality")
     OTHER_ROUTES_AVAILABLE = False
+
+def async_route(f):
+    """Decorator to make a route async-compatible."""
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            return loop.create_task(f(*args, **kwargs))
+        else:
+            return loop.run_until_complete(f(*args, **kwargs))
+    return wrapper
 
 def create_app(config, db_manager, detector, barrier_controller=None, paxton_integration=None, nayax_integration=None):
     """
@@ -134,7 +148,7 @@ def create_app(config, db_manager, detector, barrier_controller=None, paxton_int
     
     # Initialize camera health monitor if available
     try:
-        from src.utils.camera_health import CameraHealthMonitor
+        from src.utils.camera_health import AsyncCameraHealthMonitor
         # We'll initialize this later when we have a camera manager
         app.config['CAMERA_HEALTH_MONITOR_ENABLED'] = True
     except ImportError as e:
@@ -178,7 +192,7 @@ def create_app(config, db_manager, detector, barrier_controller=None, paxton_int
     # Register blueprints if available
     try:
         from src.web.main_routes import main_bp
-        # Blueprint is registered in register_main_routes
+        app.register_blueprint(main_bp)
     except ImportError as e:
         logging.warning(f"Could not import main routes: {e}")
     
@@ -202,52 +216,38 @@ def create_app(config, db_manager, detector, barrier_controller=None, paxton_int
     except ImportError as e:
         logging.warning(f"Could not import OCR routes: {e}")
     
-    # Register other routes if available
-    if OTHER_ROUTES_AVAILABLE:
-        # Register vehicle routes
-        register_vehicle_routes(app, db_manager)
-        
-        # Register barrier routes
-        register_barrier_routes(app, barrier_controller)
-        
-        # Register API routes
-        register_api_routes(app, db_manager, paxton_integration=paxton_integration, nayax_integration=nayax_integration)
-        
-        # Register stats routes
-        register_stats_routes(app, db_manager)
-        
-        # Register user routes
-        register_user_routes(app, db_manager)
-        
-        # Register main routes with integrations
-        register_main_routes(app, db_manager, barrier_controller, paxton_integration, nayax_integration)
-    
     return app
 
-def init_camera_health_monitor(app):
-    """Initialize the camera health monitor."""
-    global camera_health_monitor
+if __name__ == '__main__':
+    import uvicorn
+    from src.utils.config import load_config
+    from src.recognition.detector import LicensePlateDetector
+    from src.db.manager import DatabaseManager
     
-    # Get camera manager from app config
-    camera_manager = app.config.get('CAMERA_MANAGER')
-    if not camera_manager:
-        app.logger.error("Cannot initialize camera health monitor: Camera manager not found")
-        return
+    # Set event loop policy for container environment
+    import platform
+    if platform.system() == 'Linux':
+        import uvloop
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     
-    # Get notification manager if available
-    notification_manager = app.config.get('NOTIFICATION_MANAGER')
+    # Load configuration
+    config = load_config()
     
-    # Create and start camera health monitor
-    camera_health_monitor = CameraHealthMonitor(
-        camera_manager=camera_manager,
-        notification_manager=notification_manager,
-        check_interval=60  # Check every 60 seconds
-    )
-    camera_health_monitor.start()
+    # Initialize components
+    db_manager = DatabaseManager(config['database'])
+    detector = LicensePlateDetector(config['recognition'])
     
-    # Store in app config for access in routes
-    app.config['CAMERA_HEALTH_MONITOR'] = camera_health_monitor
+    # Create app
+    app = create_app(config, db_manager, detector)
     
-    app.logger.info("Camera health monitor initialized")
-
-# ... rest of the code remains the same ...
+    # Run with uvicorn for better async support
+    if config['web']['ssl']['enabled']:
+        uvicorn.run(
+            app,
+            host="0.0.0.0",
+            port=5000,
+            ssl_keyfile=config['web']['ssl']['key'],
+            ssl_certfile=config['web']['ssl']['cert']
+        )
+    else:
+        uvicorn.run(app, host="0.0.0.0", port=5000)

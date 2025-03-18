@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
 """
-Camera health monitoring module for AMSLPR system.
-
-This module provides functionality to monitor camera health, attempt reconnection,
-and notify administrators of camera issues.
+Camera health monitoring module.
+Monitors camera status and sends notifications for issues.
 """
 
-import time
-import threading
+import asyncio
 import logging
 from datetime import datetime, timedelta
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('AMSLPR.utils.camera_health')
 
-class CameraHealthMonitor:
+class AsyncCameraHealthMonitor:
     """
-    Monitor camera health and handle reconnection attempts.
+    Asynchronous monitor for camera health status.
+    Checks camera streams and sends notifications for issues.
     """
     
     def __init__(self, camera_manager, notification_manager=None, check_interval=60):
@@ -23,271 +21,210 @@ class CameraHealthMonitor:
         Initialize the camera health monitor.
         
         Args:
-            camera_manager: The camera manager instance
-            notification_manager: Optional notification manager for sending alerts
-            check_interval: Interval in seconds between health checks
+            camera_manager (ONVIFCameraManager): Camera manager instance
+            notification_manager (NotificationManager, optional): Notification manager instance
+            check_interval (int): Interval between health checks in seconds
         """
         self.camera_manager = camera_manager
         self.notification_manager = notification_manager
         self.check_interval = check_interval
         self.running = False
-        self.monitor_thread = None
-        self.camera_status = {}  # Tracks status of each camera
-        self.reconnect_attempts = {}  # Tracks reconnection attempts
-        self.max_reconnect_attempts = 5  # Maximum number of reconnection attempts
-        self.reconnect_backoff = [30, 60, 120, 300, 600]  # Backoff times in seconds
+        self.task = None
+        self.camera_status = {}
+        
+        # Health check thresholds
+        self.stall_threshold = timedelta(seconds=10)  # Camera considered stalled if no frames for 10s
+        self.offline_threshold = timedelta(seconds=30)  # Camera considered offline if no frames for 30s
     
-    def start(self):
-        """
-        Start the health monitoring thread.
-        """
+    async def start(self):
+        """Start the health monitor."""
         if self.running:
-            logger.warning("Camera health monitor is already running")
+            logger.warning("Health monitor already running")
             return
         
-        self.running = True
-        self.monitor_thread = threading.Thread(target=self._monitor_loop, daemon=True)
-        self.monitor_thread.start()
-        logger.info("Camera health monitor started")
+        try:
+            self.running = True
+            self.task = asyncio.create_task(self._monitor_loop())
+            logger.info("Camera health monitor started")
+        except Exception as e:
+            self.running = False
+            logger.error(f"Failed to start camera health monitor: {e}")
+            raise
     
-    def stop(self):
-        """
-        Stop the health monitoring thread.
-        """
+    async def stop(self):
+        """Stop the health monitor and cleanup resources."""
         if not self.running:
-            logger.warning("Camera health monitor is not running")
             return
         
-        self.running = False
-        if self.monitor_thread:
-            self.monitor_thread.join(timeout=5.0)
-        logger.info("Camera health monitor stopped")
+        try:
+            self.running = False
+            if self.task:
+                # Give the task a chance to complete gracefully
+                try:
+                    await asyncio.wait_for(self.task, timeout=5.0)
+                except asyncio.TimeoutError:
+                    # Force cancel if it doesn't complete in time
+                    self.task.cancel()
+                    try:
+                        await self.task
+                    except asyncio.CancelledError:
+                        pass
+                self.task = None
+            
+            # Clean up camera status
+            self.camera_status.clear()
+            logger.info("Camera health monitor stopped and cleaned up")
+        except Exception as e:
+            logger.error(f"Error during health monitor shutdown: {e}")
+            raise
     
-    def _monitor_loop(self):
-        """
-        Main monitoring loop.
-        """
+    async def _monitor_loop(self):
+        """Main monitoring loop."""
         while self.running:
             try:
-                self._check_all_cameras()
-                time.sleep(self.check_interval)
+                await self._check_cameras()
             except Exception as e:
-                logger.error(f"Error in camera health monitor: {e}")
-                time.sleep(10)  # Short delay before retrying after error
+                logger.error(f"Error in camera health check: {e}")
+            
+            await asyncio.sleep(self.check_interval)
     
-    def _check_all_cameras(self):
-        """
-        Check the health of all configured cameras.
-        """
-        # Get all cameras from the camera manager
-        cameras = self.camera_manager.get_cameras()
+    async def _check_cameras(self):
+        """Check health status of all cameras."""
+        cameras = self.camera_manager.get_all_cameras()
+        current_time = datetime.now()
         
         for camera_id, camera in cameras.items():
-            self._check_camera(camera_id, camera)
-    
-    def _check_camera(self, camera_id, camera):
-        """
-        Check the health of a specific camera.
-        
-        Args:
-            camera_id: ID of the camera to check
-            camera: Camera configuration dictionary
-        """
-        # Skip cameras that are not supposed to be streaming
-        if not self.camera_manager.should_be_streaming(camera_id):
-            return
-        
-        # Check if the camera is streaming
-        is_streaming = self.camera_manager.is_streaming(camera_id)
-        
-        # Get the last frame time
-        last_frame_time = self.camera_manager.get_last_frame_time(camera_id)
-        
-        # Calculate time since last frame
-        now = datetime.now()
-        time_since_last_frame = None
-        if last_frame_time:
-            time_since_last_frame = (now - last_frame_time).total_seconds()
-        
-        # Determine camera health status
-        if not is_streaming:
-            status = "offline"
-        elif time_since_last_frame and time_since_last_frame > 30:
-            status = "stalled"  # Camera is streaming but not receiving frames
-        else:
-            status = "healthy"
-        
-        # Check if status has changed
-        previous_status = self.camera_status.get(camera_id)
-        if previous_status != status:
-            self._handle_status_change(camera_id, camera, previous_status, status)
-        
-        # Update status
-        self.camera_status[camera_id] = status
-        
-        # Handle reconnection if needed
-        if status in ["offline", "stalled"]:
-            self._handle_reconnection(camera_id, camera, status)
-    
-    def _handle_status_change(self, camera_id, camera, previous_status, new_status):
-        """
-        Handle a camera status change.
-        
-        Args:
-            camera_id: ID of the camera
-            camera: Camera configuration dictionary
-            previous_status: Previous status of the camera
-            new_status: New status of the camera
-        """
-        logger.info(f"Camera {camera_id} ({camera.get('name', 'Unknown')}) status changed from {previous_status or 'unknown'} to {new_status}")
-        
-        # Send notification if camera went offline or stalled
-        if new_status in ["offline", "stalled"] and self.notification_manager:
-            self._send_camera_alert(camera_id, camera, new_status)
-        
-        # Reset reconnection attempts if camera is now healthy
-        if new_status == "healthy" and camera_id in self.reconnect_attempts:
-            del self.reconnect_attempts[camera_id]
-    
-    def _handle_reconnection(self, camera_id, camera, status):
-        """
-        Handle reconnection attempts for a camera.
-        
-        Args:
-            camera_id: ID of the camera
-            camera: Camera configuration dictionary
-            status: Current status of the camera
-        """
-        # Initialize reconnection attempts if not already tracking
-        if camera_id not in self.reconnect_attempts:
-            self.reconnect_attempts[camera_id] = {
-                "count": 0,
-                "next_attempt": datetime.now()
-            }
-        
-        # Check if it's time for another reconnection attempt
-        reconnect_info = self.reconnect_attempts[camera_id]
-        if datetime.now() >= reconnect_info["next_attempt"]:
-            # Increment attempt counter
-            reconnect_info["count"] += 1
-            
-            # Log the reconnection attempt
-            logger.info(f"Attempting to reconnect camera {camera_id} ({camera.get('name', 'Unknown')}), attempt {reconnect_info['count']}")
-            
-            # Try to restart the stream
             try:
-                if self.camera_manager.is_streaming(camera_id):
-                    self.camera_manager.stop_stream(camera_id)
+                # Skip cameras that are intentionally disabled
+                if not camera.get('enabled', True):
+                    continue
                 
-                # Wait a moment before restarting
-                time.sleep(2)
+                # Get camera status
+                old_status = self.camera_status.get(camera_id, {}).get('status', 'unknown')
+                new_status = await self._check_camera_health(camera_id, camera, current_time)
                 
-                # Start the stream again
-                success = self.camera_manager.start_stream(camera_id)
+                # Update status
+                self.camera_status[camera_id] = {
+                    'status': new_status,
+                    'last_check': current_time,
+                    'camera': camera
+                }
                 
-                if success:
-                    logger.info(f"Successfully reconnected camera {camera_id}")
-                    # Status will be updated on next check if truly successful
-                else:
-                    logger.warning(f"Failed to reconnect camera {camera_id}")
+                # Send notification if status changed to worse
+                if self._should_notify(old_status, new_status):
+                    await self._send_notification(camera_id, camera, new_status)
+                
             except Exception as e:
-                logger.error(f"Error reconnecting camera {camera_id}: {e}")
-            
-            # Calculate next attempt time with exponential backoff
-            backoff_index = min(reconnect_info["count"] - 1, len(self.reconnect_backoff) - 1)
-            backoff_time = self.reconnect_backoff[backoff_index]
-            reconnect_info["next_attempt"] = datetime.now() + timedelta(seconds=backoff_time)
-            
-            # If we've reached max attempts, give up and send a final notification
-            if reconnect_info["count"] >= self.max_reconnect_attempts and self.notification_manager:
-                self._send_reconnection_failed_alert(camera_id, camera)
+                logger.error(f"Error checking camera {camera_id}: {e}")
     
-    def _send_camera_alert(self, camera_id, camera, status):
+    async def _check_camera_health(self, camera_id, camera, current_time):
         """
-        Send an alert about a camera issue.
+        Check health of a specific camera.
         
         Args:
-            camera_id: ID of the camera
-            camera: Camera configuration dictionary
-            status: Current status of the camera
+            camera_id (str): Camera identifier
+            camera (dict): Camera information
+            current_time (datetime): Current time for comparison
+        
+        Returns:
+            str: Health status ('healthy', 'stalled', 'offline', or 'error')
+        """
+        try:
+            # Try to get camera status
+            stream_url = self.camera_manager.get_stream_url(camera_id)
+            if not stream_url:
+                return 'offline'
+            
+            # Check if we can connect to the camera
+            camera_info = self.camera_manager.get_camera_info(camera_id)
+            if not camera_info:
+                return 'offline'
+            
+            # Check if we can get camera imaging settings
+            try:
+                imaging_service = camera_info.get('imaging_service')
+                if imaging_service:
+                    video_source_token = camera_info.get('video_source_token')
+                    if video_source_token:
+                        await imaging_service.GetImagingSettings({'VideoSourceToken': video_source_token})
+            except Exception as e:
+                logger.warning(f"Could not get imaging settings for camera {camera_id}: {e}")
+                return 'error'
+            
+            return 'healthy'
+            
+        except Exception as e:
+            logger.error(f"Error checking camera {camera_id} health: {e}")
+            return 'error'
+    
+    def _should_notify(self, old_status, new_status):
+        """
+        Determine if a notification should be sent based on status change.
+        
+        Args:
+            old_status (str): Previous camera status
+            new_status (str): New camera status
+        
+        Returns:
+            bool: True if notification should be sent
+        """
+        # Status severity order (higher index = worse)
+        severity = ['healthy', 'stalled', 'error', 'offline']
+        
+        # Get severity indices
+        old_severity = severity.index(old_status) if old_status in severity else -1
+        new_severity = severity.index(new_status) if new_status in severity else -1
+        
+        # Notify if status got worse
+        return new_severity > old_severity
+    
+    async def _send_notification(self, camera_id, camera, status):
+        """
+        Send a notification about camera health status.
+        
+        Args:
+            camera_id (str): Camera identifier
+            camera (dict): Camera information
+            status (str): New camera status
         """
         if not self.notification_manager:
             return
         
-        camera_name = camera.get('name', 'Unknown')
-        camera_location = camera.get('location', 'Unknown')
-        
-        subject = f"AMSLPR Camera Alert: {camera_name} is {status}"
-        message = f"""Camera Alert
-
-Camera: {camera_name}
-Location: {camera_location}
-Status: {status}
-Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
-The system will attempt to reconnect automatically.
-"""
+        message = (
+            f"Camera {camera.get('name', camera_id)} is {status}.\n"
+            f"Location: {camera.get('location', 'Unknown')}\n"
+            f"IP: {camera.get('ip', 'Unknown')}"
+        )
         
         try:
-            self.notification_manager.send_notification(subject, message, level="warning")
+            await self.notification_manager.send_notification(
+                title=f"Camera Health Alert - {camera.get('name', camera_id)}",
+                message=message,
+                level='warning' if status == 'stalled' else 'error'
+            )
         except Exception as e:
-            logger.error(f"Failed to send camera alert notification: {e}")
-    
-    def _send_reconnection_failed_alert(self, camera_id, camera):
-        """
-        Send an alert about failed reconnection attempts.
-        
-        Args:
-            camera_id: ID of the camera
-            camera: Camera configuration dictionary
-        """
-        if not self.notification_manager:
-            return
-        
-        camera_name = camera.get('name', 'Unknown')
-        camera_location = camera.get('location', 'Unknown')
-        
-        subject = f"AMSLPR Camera Alert: Failed to reconnect {camera_name}"
-        message = f"""Camera Reconnection Failed
-
-Camera: {camera_name}
-Location: {camera_location}
-Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-
-The system has failed to reconnect to the camera after {self.max_reconnect_attempts} attempts.
-Manual intervention may be required.
-"""
-        
-        try:
-            self.notification_manager.send_notification(subject, message, level="error")
-        except Exception as e:
-            logger.error(f"Failed to send reconnection failed notification: {e}")
+            logger.error(f"Error sending camera health notification: {e}")
     
     def get_camera_health_status(self):
-        """
-        Get the health status of all cameras.
-        
-        Returns:
-            dict: Dictionary mapping camera IDs to their health status
-        """
-        return self.camera_status.copy()
+        """Get current health status for all cameras."""
+        return {
+            camera_id: status['status']
+            for camera_id, status in self.camera_status.items()
+        }
     
     def get_camera_health_summary(self):
-        """
-        Get a summary of camera health.
-        
-        Returns:
-            dict: Summary of camera health statistics
-        """
+        """Get summary of camera health status."""
         total = len(self.camera_status)
-        healthy = sum(1 for status in self.camera_status.values() if status == "healthy")
-        offline = sum(1 for status in self.camera_status.values() if status == "offline")
-        stalled = sum(1 for status in self.camera_status.values() if status == "stalled")
+        healthy = sum(1 for s in self.camera_status.values() if s['status'] == 'healthy')
+        stalled = sum(1 for s in self.camera_status.values() if s['status'] == 'stalled')
+        offline = sum(1 for s in self.camera_status.values() if s['status'] == 'offline')
+        error = sum(1 for s in self.camera_status.values() if s['status'] == 'error')
         
         return {
-            "total": total,
-            "healthy": healthy,
-            "offline": offline,
-            "stalled": stalled,
-            "health_percentage": (healthy / total * 100) if total > 0 else 0
+            'total': total,
+            'healthy': healthy,
+            'stalled': stalled,
+            'offline': offline,
+            'error': error,
+            'health_percentage': (healthy / total * 100) if total > 0 else 0
         }
