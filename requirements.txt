@@ -13,6 +13,7 @@ Flask-Login==0.6.3
 Flask-WTF==1.2.1
 Flask-Session==0.5.0
 Flask-SQLAlchemy==3.1.1
+Flask-Limiter==3.5.0
 Werkzeug==2.3.7
 
 # Security
@@ -22,6 +23,10 @@ bcrypt==4.1.1
 
 # Database
 SQLAlchemy==2.0.23
+
+# Camera Integration
+onvif-zeep==0.2.12
+zeep==4.2.1
 
 # Monitoring
 loguru==0.7.2
