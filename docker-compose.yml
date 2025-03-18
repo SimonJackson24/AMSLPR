@@ -15,6 +15,7 @@ services:
     environment:
       - TZ=UTC
       - PYTHONUNBUFFERED=1
+    network_mode: "host"  # This gives full network access like the host machine
 
   portainer:
     image: portainer/portainer-ce:latest
