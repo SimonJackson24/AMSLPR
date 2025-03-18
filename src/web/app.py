@@ -218,6 +218,12 @@ def create_app(config, db_manager, detector, barrier_controller=None, paxton_int
     
     return app
 
+# Load configuration and create app instance for uvicorn
+config = load_config()
+db_manager = DatabaseManager(config['database'])
+detector = LicensePlateDetector(config['recognition'])
+app = create_app(config, db_manager, detector)
+
 if __name__ == '__main__':
     import uvicorn
     from src.utils.config import load_config
@@ -230,24 +236,14 @@ if __name__ == '__main__':
         import uvloop
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     
-    # Load configuration
-    config = load_config()
-    
-    # Initialize components
-    db_manager = DatabaseManager(config['database'])
-    detector = LicensePlateDetector(config['recognition'])
-    
-    # Create app
-    app = create_app(config, db_manager, detector)
-    
     # Run with uvicorn for better async support
     if config['web']['ssl']['enabled']:
         uvicorn.run(
-            app,
+            "src.web.app:app",
             host="0.0.0.0",
             port=5000,
             ssl_keyfile=config['web']['ssl']['key'],
             ssl_certfile=config['web']['ssl']['cert']
         )
     else:
-        uvicorn.run(app, host="0.0.0.0", port=5000)
+        uvicorn.run("src.web.app:app", host="0.0.0.0", port=5000)

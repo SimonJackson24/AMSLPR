@@ -17,14 +17,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxrender1 \
     libffi-dev \
     tesseract-ocr \
+    tini \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Install Python dependencies
+# Install Python dependencies first for better caching
 COPY requirements.txt .
-RUN python -m pip install --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
@@ -45,7 +46,7 @@ USER nobody
 EXPOSE 5000
 
 # Use tini for proper signal handling
-ENTRYPOINT ["/usr/local/bin/tini", "--"]
+ENTRYPOINT ["/usr/bin/tini", "--"]
 
 # Run with uvicorn for better async support
 CMD ["python", "-m", "uvicorn", "src.web.app:app", "--host", "0.0.0.0", "--port", "5000"]
