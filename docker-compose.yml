@@ -13,4 +13,3 @@ services:
     environment:
       - TZ=UTC
       - PYTHONUNBUFFERED=1
-    network_mode: "host"
