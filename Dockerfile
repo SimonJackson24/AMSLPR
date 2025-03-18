@@ -1,46 +1,37 @@
-FROM python:3.9-slim
+FROM python:3.9-slim-bullseye
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
-    # OpenCV dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    python3-dev \
+    libpq-dev \
     libgl1-mesa-glx \
     libglib2.0-0 \
-    # OCR dependencies
-    tesseract-ocr \
-    tesseract-ocr-eng \
-    # Build dependencies
-    build-essential \
-    libffi-dev \
-    python3-dev \
-    libssl-dev \
-    # PDF and font dependencies
-    libpango-1.0-0 \
-    libharfbuzz0b \
-    libpangoft2-1.0-0 \
-    # Image processing
     libsm6 \
     libxext6 \
-    libxrender-dev \
-    # PostgreSQL dependencies
-    libpq-dev \
-    # MySQL dependencies
-    default-libmysqlclient-dev \
-    # Cleanup
+    libxrender1 \
+    libffi-dev \
+    tesseract-ocr \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy requirements first to leverage Docker cache
+# Install Python dependencies
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application
+# Copy application code
 COPY . .
 
-# Add the src directory to Python path
+# Set Python path
 ENV PYTHONPATH="/app"
 
-# Expose the port the app runs on
+# Expose port
 EXPOSE 5000
 
 CMD ["python", "src/web/app.py"]
