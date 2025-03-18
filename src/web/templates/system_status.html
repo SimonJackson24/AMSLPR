@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+
+{% block title %}System Status{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mt-4 mb-4">System Status</h1>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">System Overview</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Uptime:</strong> {{ status.uptime }}</p>
+                    <p><strong>Last Updated:</strong> {{ status.timestamp | replace('T', ' ') }}</p>
+                    
+                    <div class="progress mb-3">
+                        <div class="progress-bar {% if status.cpu.percent > 90 %}bg-danger{% elif status.cpu.percent > 70 %}bg-warning{% else %}bg-success{% endif %}" 
+                             role="progressbar" 
+                             style="width: {{ status.cpu.percent }}%" 
+                             aria-valuenow="{{ status.cpu.percent }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            CPU: {{ status.cpu.percent }}%
+                        </div>
+                    </div>
+                    
+                    <div class="progress mb-3">
+                        <div class="progress-bar {% if status.memory.percent > 90 %}bg-danger{% elif status.memory.percent > 70 %}bg-warning{% else %}bg-success{% endif %}" 
+                             role="progressbar" 
+                             style="width: {{ status.memory.percent }}%" 
+                             aria-valuenow="{{ status.memory.percent }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            Memory: {{ status.memory.percent }}%
+                        </div>
+                    </div>
+                    
+                    <div class="progress mb-3">
+                        <div class="progress-bar {% if status.disk.percent > 90 %}bg-danger{% elif status.disk.percent > 70 %}bg-warning{% else %}bg-success{% endif %}" 
+                             role="progressbar" 
+                             style="width: {{ status.disk.percent }}%" 
+                             aria-valuenow="{{ status.disk.percent }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            Disk: {{ status.disk.percent }}%
+                        </div>
+                    </div>
+                    
+                    {% if status.temperature %}
+                    <div class="progress mb-3">
+                        <div class="progress-bar {% if status.temperature > 80 %}bg-danger{% elif status.temperature > 70 %}bg-warning{% else %}bg-success{% endif %}" 
+                             role="progressbar" 
+                             style="width: {{ status.temperature / 100 * 100 }}%" 
+                             aria-valuenow="{{ status.temperature }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            Temperature: {{ status.temperature }}°C
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Resource Details</h5>
+                </div>
+                <div class="card-body">
+                    <h6>CPU</h6>
+                    <p>Usage: {{ status.cpu.percent }}% ({{ status.cpu.count }} cores)</p>
+                    <p>Process CPU: {{ status.process.cpu_percent }}%</p>
+                    
+                    <h6>Memory</h6>
+                    <p>Total: {{ '%.2f'|format(status.memory.total_mb / 1024) }} GB</p>
+                    <p>Used: {{ '%.2f'|format(status.memory.used_mb / 1024) }} GB ({{ status.memory.percent }}%)</p>
+                    <p>Free: {{ '%.2f'|format(status.memory.free_mb / 1024) }} GB</p>
+                    <p>Process Memory: {{ '%.2f'|format(status.process.memory_mb) }} MB</p>
+                    
+                    <h6>Disk</h6>
+                    <p>Total: {{ '%.2f'|format(status.disk.total_gb) }} GB</p>
+                    <p>Used: {{ '%.2f'|format(status.disk.used_gb) }} GB ({{ status.disk.percent }}%)</p>
+                    <p>Free: {{ '%.2f'|format(status.disk.free_gb) }} GB</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Network</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Bytes Sent:</strong> {{ '%.2f'|format(status.network.bytes_sent / (1024 * 1024)) }} MB</p>
+                    <p><strong>Bytes Received:</strong> {{ '%.2f'|format(status.network.bytes_recv / (1024 * 1024)) }} MB</p>
+                    <p><strong>Packets Sent:</strong> {{ status.network.packets_sent }}</p>
+                    <p><strong>Packets Received:</strong> {{ status.network.packets_recv }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Actions</h5>
+                </div>
+                <div class="card-body">
+                    <button id="refreshStatus" class="btn btn-primary">Refresh Status</button>
+                    <button id="clearCache" class="btn btn-warning">Clear Cache</button>
+                    <button id="restartApp" class="btn btn-danger">Restart Application</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Recent Errors</h5>
+                </div>
+                <div class="card-body">
+                    {% if errors %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Type</th>
+                                        <th>Message</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for error in errors %}
+                                    <tr>
+                                        <td>{{ error.timestamp | replace('T', ' ') }}</td>
+                                        <td>{{ error.type }}</td>
+                                        <td>{{ error.message }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-info view-error" data-error-id="{{ loop.index }}">View Details</button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p>No recent errors.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Details Modal -->
+<div class="modal fade" id="errorModal" tabindex="-1" role="dialog" aria-labelledby="errorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="errorModalLabel">Error Details</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="errorDetails">
+                    <p><strong>Timestamp:</strong> <span id="errorTimestamp"></span></p>
+                    <p><strong>Type:</strong> <span id="errorType"></span></p>
+                    <p><strong>Message:</strong> <span id="errorMessage"></span></p>
+                    <p><strong>Traceback:</strong></p>
+                    <pre id="errorTraceback" class="bg-light p-3"></pre>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Refresh status
+        $('#refreshStatus').click(function() {
+            location.reload();
+        });
+        
+        // Clear cache
+        $('#clearCache').click(function() {
+            if (confirm('Are you sure you want to clear the cache?')) {
+                $.post('/system/clear-cache', function(data) {
+                    if (data.success) {
+                        alert('Cache cleared successfully.');
+                        location.reload();
+                    } else {
+                        alert('Failed to clear cache: ' + data.error);
+                    }
+                });
+            }
+        });
+        
+        // Restart application
+        $('#restartApp').click(function() {
+            if (confirm('Are you sure you want to restart the application? This will disconnect all users.')) {
+                $.post('/system/restart', function(data) {
+                    if (data.success) {
+                        alert('Application restart initiated. The page will reload in 10 seconds.');
+                        setTimeout(function() {
+                            location.reload();
+                        }, 10000);
+                    } else {
+                        alert('Failed to restart application: ' + data.error);
+                    }
+                });
+            }
+        });
+        
+        // View error details
+        $('.view-error').click(function() {
+            var errorId = $(this).data('error-id');
+            var error = {{ errors|tojson|safe }}[errorId - 1];
+            
+            $('#errorTimestamp').text(error.timestamp.replace('T', ' '));
+            $('#errorType').text(error.type);
+            $('#errorMessage').text(error.message);
+            $('#errorTraceback').text(error.traceback);
+            
+            $('#errorModal').modal('show');
+        });
+    });
+</script>
+{% endblock %}

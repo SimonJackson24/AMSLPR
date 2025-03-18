@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Parking Dashboard - AMSLPR{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="d-flex align-items-center">
+            <i class="bi bi-p-square-fill me-3 text-primary"></i> Parking Dashboard
+        </h2>
+        <p class="text-muted">Overview of parking operations</p>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body stats-card">
+                <div class="icon"><i class="bi bi-car-front"></i></div>
+                <div class="stats-value">{{ stats.active_sessions|default(0) }}</div>
+                <div class="stats-label">Active Sessions</div>
+            </div>
+            <div class="card-footer text-center">
+                <a class="btn btn-sm btn-primary" href="{{ url_for('parking.parking_sessions') }}">
+                    View Details <i class="bi bi-angle-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body stats-card">
+                <div class="icon"><i class="bi bi-cash"></i></div>
+                <div class="stats-value">${{ stats.total_revenue|default(0) }}</div>
+                <div class="stats-label">Today's Revenue</div>
+            </div>
+            <div class="card-footer text-center">
+                <a class="btn btn-sm btn-primary" href="{{ url_for('parking.parking_sessions') }}">
+                    View Details <i class="bi bi-angle-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body stats-card">
+                <div class="icon"><i class="bi bi-clock"></i></div>
+                <div class="stats-value">{{ stats.avg_duration_minutes|default(0) }} min</div>
+                <div class="stats-label">Avg. Duration</div>
+            </div>
+            <div class="card-footer text-center">
+                <a class="btn btn-sm btn-primary" href="{{ url_for('parking.parking_sessions') }}">
+                    View Details <i class="bi bi-angle-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body stats-card">
+                <div class="icon"><i class="bi bi-list-ul"></i></div>
+                <div class="stats-value">{{ stats.total_sessions|default(0) }}</div>
+                <div class="stats-label">Total Sessions</div>
+            </div>
+            <div class="card-footer text-center">
+                <a class="btn btn-sm btn-primary" href="{{ url_for('parking.parking_sessions') }}">
+                    View Details <i class="bi bi-angle-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Sessions -->
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Active Parking Sessions</h6>
+            </div>
+            <div class="card-body">
+                {% if active_sessions %}
+                <div class="table-responsive">
+                    <table class="table table-bordered" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>License Plate</th>
+                                <th>Entry Time</th>
+                                <th>Duration</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for session in active_sessions %}
+                            <tr>
+                                <td>{{ session.plate_number }}</td>
+                                <td>{{ session.entry_time }}</td>
+                                <td>{{ session.current_duration|default(0) }} min</td>
+                                <td>
+                                    <a href="{{ url_for('parking.view_session', session_id=session.id) }}" class="btn btn-info btn-sm">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-center">No active parking sessions.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Completed Sessions -->
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Recent Completed Sessions</h6>
+            </div>
+            <div class="card-body">
+                {% if completed_sessions %}
+                <div class="table-responsive">
+                    <table class="table table-bordered" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>License Plate</th>
+                                <th>Duration</th>
+                                <th>Fee</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for session in completed_sessions %}
+                            <tr>
+                                <td>{{ session.plate_number }}</td>
+                                <td>{{ session.duration_minutes|default(0) }} min</td>
+                                <td>${{ session.calculated_fee|default(0) }}</td>
+                                <td>
+                                    <a href="{{ url_for('parking.view_session', session_id=session.id) }}" class="btn btn-info btn-sm">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-center">No completed parking sessions.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

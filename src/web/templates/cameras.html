@@ -1,0 +1,462 @@
+{% extends "base.html" %}
+
+{% block title %}Cameras - AMSLPR{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="d-flex align-items-center">
+            <i class="bi bi-camera-video me-3 text-primary"></i> Camera Management
+        </h2>
+        <p class="text-muted">Configure and monitor all connected cameras</p>
+    </div>
+    <div class="col-auto">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCameraModal">
+            <i class="bi bi-plus-lg me-2"></i> Add Camera
+        </button>
+    </div>
+</div>
+
+<!-- Camera Status Overview -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 border-success">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="stats-icon bg-success">
+                        <i class="bi bi-check"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-0">{{ stats.online|default(3) }}</h5>
+                        <p class="mb-0 text-muted">Online Cameras</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 border-danger">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="stats-icon bg-danger">
+                        <i class="bi bi-x-lg"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-0">{{ stats.offline|default(1) }}</h5>
+                        <p class="mb-0 text-muted">Offline Cameras</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card h-100 border-warning">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="stats-icon bg-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-0">{{ stats.issues|default(1) }}</h5>
+                        <p class="mb-0 text-muted">Cameras with Issues</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="stats-icon bg-info">
+                        <i class="bi bi-speedometer2"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-0">{{ stats.avg_fps|default('24.5') }}</h5>
+                        <p class="mb-0 text-muted">Avg. FPS</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Camera Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3 mb-3 mb-md-0">
+                <label for="statusFilter" class="form-label">Status</label>
+                <select class="form-select" id="statusFilter">
+                    <option value="all" selected>All</option>
+                    <option value="online">Online</option>
+                    <option value="offline">Offline</option>
+                    <option value="issues">With Issues</option>
+                </select>
+            </div>
+            <div class="col-md-3 mb-3 mb-md-0">
+                <label for="locationFilter" class="form-label">Location</label>
+                <select class="form-select" id="locationFilter">
+                    <option value="all" selected>All Locations</option>
+                    <option value="entrance">Entrance</option>
+                    <option value="exit">Exit</option>
+                    <option value="parking">Parking Area</option>
+                </select>
+            </div>
+            <div class="col-md-4 mb-3 mb-md-0">
+                <label for="searchFilter" class="form-label">Search</label>
+                <input type="text" class="form-control" id="searchFilter" placeholder="Search by name or ID...">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="button" class="btn btn-primary w-100" id="applyFilters">
+                    <i class="bi bi-filter me-2"></i> Apply
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Camera Grid -->
+<div class="row" id="cameraGrid">
+    {% for camera in cameras|default([]) %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100 {% if camera.status == 'online' %}border-success{% elif camera.status == 'offline' %}border-danger{% else %}border-warning{% endif %}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ camera.name }}</h5>
+                <span class="badge {% if camera.status == 'online' %}bg-success{% elif camera.status == 'offline' %}bg-danger{% else %}bg-warning{% endif %}">
+                    {{ camera.status|capitalize }}
+                </span>
+            </div>
+            <div class="card-img-top p-2">
+                <div class="camera-thumbnail">
+                    {% if camera.status != 'offline' %}
+                    <img src="{{ url_for('static', filename='img/camera_thumbnails/' + camera.thumbnail) }}" class="img-fluid" alt="{{ camera.name }}">
+                    {% else %}
+                    <div class="offline-placeholder">
+                        <i class="bi bi-camera-video-slash fa-3x"></i>
+                        <p>Camera Offline</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span><i class="bi bi-geo-alt me-2"></i> Location:</span>
+                        <span>{{ camera.location }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span><i class="bi bi-speedometer2 me-2"></i> FPS:</span>
+                        <span>{{ camera.fps|default('25') }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span><i class="bi bi-clock me-2"></i> Uptime:</span>
+                        <span>{{ camera.uptime|default('2d 5h') }}</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-footer">
+                <div class="btn-group w-100">
+                    <a href="{{ url_for('camera.camera_view', camera_id=camera.id) }}" class="btn btn-outline-primary">
+                        <i class="bi bi-eye me-1"></i> View
+                    </a>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editCameraModal{{ camera.id }}">
+                        <i class="bi bi-gear me-1"></i> Settings
+                    </button>
+                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteCameraModal{{ camera.id }}">
+                        <i class="bi bi-trash-alt me-1"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Camera Modal -->
+    <div class="modal fade" id="editCameraModal{{ camera.id }}" tabindex="-1" aria-labelledby="editCameraModalLabel{{ camera.id }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editCameraModalLabel{{ camera.id }}">Edit Camera: {{ camera.name }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editCameraForm{{ camera.id }}">
+                        <div class="mb-3">
+                            <label for="editCameraName{{ camera.id }}" class="form-label">Camera Name</label>
+                            <input type="text" class="form-control" id="editCameraName{{ camera.id }}" value="{{ camera.name }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editCameraLocation{{ camera.id }}" class="form-label">Location</label>
+                            <input type="text" class="form-control" id="editCameraLocation{{ camera.id }}" value="{{ camera.location }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editCameraUrl{{ camera.id }}" class="form-label">Stream URL</label>
+                            <input type="text" class="form-control" id="editCameraUrl{{ camera.id }}" value="{{ camera.url|default('rtsp://192.168.1.100:554/stream') }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editCameraModel{{ camera.id }}" class="form-label">Camera Model</label>
+                            <input type="text" class="form-control" id="editCameraModel{{ camera.id }}" value="{{ camera.model|default('Raspberry Pi Camera v2') }}">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="editCameraResolution{{ camera.id }}" class="form-label">Resolution</label>
+                                <select class="form-select" id="editCameraResolution{{ camera.id }}">
+                                    <option value="1920x1080" {% if camera.resolution == '1920x1080' %}selected{% endif %}>1920x1080 (1080p)</option>
+                                    <option value="1280x720" {% if camera.resolution == '1280x720' or not camera.resolution %}selected{% endif %}>1280x720 (720p)</option>
+                                    <option value="640x480" {% if camera.resolution == '640x480' %}selected{% endif %}>640x480 (480p)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editCameraFps{{ camera.id }}" class="form-label">Frame Rate</label>
+                                <input type="number" class="form-control" id="editCameraFps{{ camera.id }}" value="{{ camera.fps|default(25) }}" min="1" max="60">
+                            </div>
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="editCameraEnabled{{ camera.id }}" {% if camera.enabled|default(true) %}checked{% endif %}>
+                            <label class="form-check-label" for="editCameraEnabled{{ camera.id }}">Enabled</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveCamera({{ camera.id }})">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Delete Camera Modal -->
+    <div class="modal fade" id="deleteCameraModal{{ camera.id }}" tabindex="-1" aria-labelledby="deleteCameraModalLabel{{ camera.id }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteCameraModalLabel{{ camera.id }}">Delete Camera</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the camera <strong>{{ camera.name }}</strong>?</p>
+                    <p class="text-danger"><i class="bi bi-exclamation-triangle me-2"></i> This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="deleteCamera({{ camera.id }})">Delete Camera</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-camera-video-slash fa-4x mb-3 text-muted"></i>
+                <h4>No Cameras Found</h4>
+                <p class="text-muted">You haven't added any cameras yet.</p>
+                <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addCameraModal">
+                    <i class="bi bi-plus-lg me-2"></i> Add Your First Camera
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Add Camera Modal -->
+<div class="modal fade" id="addCameraModal" tabindex="-1" aria-labelledby="addCameraModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addCameraModalLabel">Add New Camera</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addCameraForm">
+                    <div class="mb-3">
+                        <label for="cameraName" class="form-label">Camera Name</label>
+                        <input type="text" class="form-control" id="cameraName" placeholder="e.g. Entrance Camera" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="cameraLocation" class="form-label">Location</label>
+                        <input type="text" class="form-control" id="cameraLocation" placeholder="e.g. Main Entrance" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="cameraUrl" class="form-label">Stream URL</label>
+                        <input type="text" class="form-control" id="cameraUrl" placeholder="rtsp://192.168.1.100:554/stream" required>
+                        <div class="form-text">RTSP, HTTP, or local device path (e.g. /dev/video0)</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="cameraModel" class="form-label">Camera Model</label>
+                        <input type="text" class="form-control" id="cameraModel" placeholder="e.g. Raspberry Pi Camera v2">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="cameraResolution" class="form-label">Resolution</label>
+                            <select class="form-select" id="cameraResolution">
+                                <option value="1920x1080">1920x1080 (1080p)</option>
+                                <option value="1280x720" selected>1280x720 (720p)</option>
+                                <option value="640x480">640x480 (480p)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="cameraFps" class="form-label">Frame Rate</label>
+                            <input type="number" class="form-control" id="cameraFps" value="25" min="1" max="60">
+                        </div>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="cameraEnabled" checked>
+                        <label class="form-check-label" for="cameraEnabled">Enable Camera</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="addCameraBtn">Add Camera</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+    .camera-thumbnail {
+        position: relative;
+        width: 100%;
+        height: 180px;
+        background-color: #000;
+        overflow: hidden;
+        border-radius: 0.25rem;
+    }
+    
+    .camera-thumbnail img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .offline-placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: #adb5bd;
+    }
+    
+    .offline-placeholder p {
+        margin-top: 1rem;
+        margin-bottom: 0;
+    }
+    
+    .stats-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add Camera Form Submission
+        document.getElementById('addCameraBtn').addEventListener('click', function() {
+            const form = document.getElementById('addCameraForm');
+            
+            // In a real app, you'd validate the form and submit it to the server
+            // For now, we'll just show a success message and close the modal
+            
+            // Show loading state
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...';
+            
+            // Simulate API call
+            setTimeout(() => {
+                // Reset button state
+                this.disabled = false;
+                this.innerHTML = 'Add Camera';
+                
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addCameraModal'));
+                modal.hide();
+                
+                // Show success message
+                showToast('Camera added successfully!', 'success');
+                
+                // In a real app, you'd reload the page or update the camera list
+                // For demo purposes, we'll just reload the page after a delay
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            }, 1500);
+        });
+        
+        // Filter functionality
+        document.getElementById('applyFilters').addEventListener('click', function() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const locationFilter = document.getElementById('locationFilter').value;
+            const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
+            
+            // In a real app, you'd send these filters to the server and reload the data
+            // For demo purposes, we'll just show a toast message
+            showToast(`Filters applied: Status=${statusFilter}, Location=${locationFilter}, Search="${searchFilter}"`, 'info');
+        });
+    });
+    
+    // Save Camera Changes
+    function saveCamera(id) {
+        // In a real app, you'd validate the form and submit it to the server
+        // For now, we'll just show a success message and close the modal
+        
+        // Show loading state
+        const saveBtn = document.querySelector(`#editCameraModal${id} .btn-primary`);
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+        
+        // Simulate API call
+        setTimeout(() => {
+            // Reset button state
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = 'Save Changes';
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById(`editCameraModal${id}`));
+            modal.hide();
+            
+            // Show success message
+            showToast('Camera settings updated successfully!', 'success');
+        }, 1500);
+    }
+    
+    // Delete Camera
+    function deleteCamera(id) {
+        // In a real app, you'd send a delete request to the server
+        // For now, we'll just show a success message and close the modal
+        
+        // Show loading state
+        const deleteBtn = document.querySelector(`#deleteCameraModal${id} .btn-danger`);
+        deleteBtn.disabled = true;
+        deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Deleting...';
+        
+        // Simulate API call
+        setTimeout(() => {
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById(`deleteCameraModal${id}`));
+            modal.hide();
+            
+            // Show success message
+            showToast('Camera deleted successfully!', 'success');
+            
+            // In a real app, you'd remove the camera from the DOM or reload the page
+            // For demo purposes, we'll just reload the page after a delay
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        }, 1500);
+    }
+</script>
+{% endblock %}

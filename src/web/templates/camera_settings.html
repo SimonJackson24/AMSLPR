@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+
+{% block title %}Camera Settings - AMSLPR{% endblock %}
+
+{% block head %}
+<style>
+    .settings-card {
+        margin-bottom: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .settings-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        padding: 15px 20px;
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+    }
+    
+    .settings-body {
+        padding: 20px;
+    }
+    
+    .form-label {
+        font-weight: 500;
+    }
+    
+    .form-text {
+        font-size: 0.8rem;
+    }
+    
+    .camera-selector {
+        margin-bottom: 30px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h3">Camera Settings</h1>
+            <p class="text-muted">Configure global and individual camera settings for the ANPR system</p>
+        </div>
+    </div>
+    
+    {% if 'admin' not in session.permissions %}
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle-fill"></i> You don't have permission to modify these settings.
+    </div>
+    {% endif %}
+    
+    <div class="row">
+        <!-- Global Settings -->
+        <div class="col-lg-6">
+            <div class="card settings-card">
+                <div class="settings-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-sliders"></i> Global Camera Settings</h5>
+                </div>
+                <div class="settings-body">
+                    <form id="globalSettingsForm" method="post" action="{{ url_for('camera.save_camera_settings', camera_id='global') }}">
+                        <div class="mb-3">
+                            <label for="detectionConfidence" class="form-label">Detection Confidence Threshold</label>
+                            <input type="range" class="form-range" min="0.1" max="1.0" step="0.05" id="detectionConfidence" name="detection_confidence" value="{{ settings.detection_confidence }}">
+                            <div class="d-flex justify-content-between">
+                                <span class="form-text">Low (More Detections)</span>
+                                <span class="form-text fw-bold" id="confidenceValue">{{ settings.detection_confidence }}</span>
+                                <span class="form-text">High (Fewer Detections)</span>
+                            </div>
+                            <div class="form-text">Minimum confidence level required for a detection to be considered valid</div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="minPlateSize" class="form-label">Minimum Plate Size (px)</label>
+                                <input type="number" class="form-control" id="minPlateSize" name="min_plate_size" value="{{ settings.min_plate_size }}" min="10" max="100">
+                                <div class="form-text">Minimum size of license plate to detect</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="maxPlateSize" class="form-label">Maximum Plate Size (px)</label>
+                                <input type="number" class="form-control" id="maxPlateSize" name="max_plate_size" value="{{ settings.max_plate_size }}" min="50" max="500">
+                                <div class="form-text">Maximum size of license plate to detect</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="recognitionInterval" class="form-label">Recognition Interval (seconds)</label>
+                            <input type="number" class="form-control" id="recognitionInterval" name="recognition_interval" value="{{ settings.recognition_interval }}" min="0.1" max="10" step="0.1">
+                            <div class="form-text">Time between recognition attempts</div>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="saveDetections" name="save_detections" {% if settings.save_detections %}checked{% endif %}>
+                            <label class="form-check-label" for="saveDetections">Save Detection Images</label>
+                            <div class="form-text">Save images of detected license plates</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="detectionPath" class="form-label">Detection Images Path</label>
+                            <input type="text" class="form-control" id="detectionPath" name="detection_path" value="{{ settings.detection_path }}">
+                            <div class="form-text">Path to save detection images (relative to application root)</div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-primary" {% if 'admin' not in session.permissions %}disabled{% endif %}>
+                                <i class="bi bi-save"></i> Save Global Settings
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Camera-Specific Settings -->
+        <div class="col-lg-6">
+            <div class="card settings-card">
+                <div class="settings-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-camera"></i> Camera-Specific Settings</h5>
+                </div>
+                <div class="settings-body">
+                    {% if cameras %}
+                    <div class="camera-selector mb-4">
+                        <label for="cameraSelect" class="form-label">Select Camera</label>
+                        <select class="form-select" id="cameraSelect">
+                            <option value="" selected disabled>Choose a camera...</option>
+                            {% for camera_id, camera in cameras.items() %}
+                            <option value="{{ camera_id }}">{{ camera.name }} ({{ camera.ip }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div id="cameraSpecificSettings" style="display: none;">
+                        <form id="cameraSettingsForm" method="post">
+                            <div class="mb-3">
+                                <label for="cameraName" class="form-label">Camera Name</label>
+                                <input type="text" class="form-control" id="cameraName" name="name">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="cameraUsername" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="cameraUsername" name="username">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="cameraPassword" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="cameraPassword" name="password" placeholder="Leave empty to keep current password">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Recognition Area</label>
+                                <div class="d-grid">
+                                    <button type="button" id="editAreaBtn" class="btn btn-outline-primary">
+                                        <i class="bi bi-crop"></i> Edit Recognition Area
+                                    </button>
+                                </div>
+                                <div class="form-text">Define the area of the camera image to analyze for license plates</div>
+                            </div>
+                            
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="cameraEnabled" name="enabled">
+                                <label class="form-check-label" for="cameraEnabled">Camera Enabled</label>
+                            </div>
+                            
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <button type="button" id="testConnectionBtn" class="btn btn-outline-secondary me-md-2">
+                                    <i class="bi bi-check-circle"></i> Test Connection
+                                </button>
+                                <button type="submit" class="btn btn-primary" {% if 'admin' not in session.permissions %}disabled{% endif %}>
+                                    <i class="bi bi-save"></i> Save Camera Settings
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div id="noCameraSelected" class="text-center py-5">
+                        <i class="bi bi-camera-video text-muted" style="font-size: 3rem;"></i>
+                        <p class="mt-3 text-muted">Select a camera to configure its settings</p>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle-fill"></i> No cameras have been added yet.
+                        <a href="{{ url_for('camera.cameras') }}" class="alert-link">Add cameras</a> to configure their settings.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Update confidence value display
+    const confidenceSlider = document.getElementById('detectionConfidence');
+    const confidenceValue = document.getElementById('confidenceValue');
+    
+    if (confidenceSlider) {
+        confidenceSlider.addEventListener('input', function() {
+            confidenceValue.textContent = this.value;
+        });
+    }
+    
+    // Camera selection handling
+    const cameraSelect = document.getElementById('cameraSelect');
+    const cameraSpecificSettings = document.getElementById('cameraSpecificSettings');
+    const noCameraSelected = document.getElementById('noCameraSelected');
+    const cameraSettingsForm = document.getElementById('cameraSettingsForm');
+    
+    if (cameraSelect) {
+        cameraSelect.addEventListener('change', function() {
+            const cameraId = this.value;
+            if (cameraId) {
+                // Show camera settings form and hide placeholder
+                cameraSpecificSettings.style.display = 'block';
+                noCameraSelected.style.display = 'none';
+                
+                // Update form action
+                cameraSettingsForm.action = `/camera/${cameraId}/settings`;
+                
+                // Load camera settings via AJAX
+                fetch(`/api/camera/${cameraId}/settings`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById('cameraName').value = data.camera.name || '';
+                            document.getElementById('cameraUsername').value = data.camera.username || '';
+                            document.getElementById('cameraEnabled').checked = data.camera.enabled || false;
+                            
+                            // Update edit area button link
+                            document.getElementById('editAreaBtn').onclick = function() {
+                                window.location.href = `/camera/${cameraId}/detection-area`;
+                            };
+                        } else {
+                            alert('Error loading camera settings: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error loading camera settings');
+                    });
+            } else {
+                // Hide camera settings form and show placeholder
+                cameraSpecificSettings.style.display = 'none';
+                noCameraSelected.style.display = 'block';
+            }
+        });
+    }
+    
+    // Test connection button
+    const testConnectionBtn = document.getElementById('testConnectionBtn');
+    if (testConnectionBtn) {
+        testConnectionBtn.addEventListener('click', function() {
+            const cameraId = cameraSelect.value;
+            if (!cameraId) return;
+            
+            // Disable button and show loading state
+            this.disabled = true;
+            const originalText = this.innerHTML;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Testing...';
+            
+            // Get current form values
+            const formData = new FormData();
+            formData.append('username', document.getElementById('cameraUsername').value);
+            formData.append('password', document.getElementById('cameraPassword').value);
+            
+            // Test connection
+            fetch(`/api/camera/${cameraId}/test-connection`, {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Connection successful!');
+                    } else {
+                        alert('Connection failed: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error testing connection');
+                })
+                .finally(() => {
+                    // Reset button state
+                    this.disabled = false;
+                    this.innerHTML = originalText;
+                });
+        });
+    }
+    
+    // Form submission handling
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Disable submit button and show loading state
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+            
+            // Submit form via AJAX
+            const formData = new FormData(this);
+            
+            fetch(this.action, {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Settings saved successfully!');
+                    } else {
+                        alert('Error saving settings: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error saving settings');
+                })
+                .finally(() => {
+                    // Reset button state
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                });
+        });
+    });
+</script>
+{% endblock %}

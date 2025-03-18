@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- UK License Plate - Centered and larger -->
+  <g transform="translate(106, 181)">
+    <!-- Plate background -->
+    <rect x="0" y="0" width="300" height="120" rx="8" ry="8" fill="#f8f9fa" stroke="#000000" stroke-width="3"/>
+    
+    <!-- Blue EU section (left side) -->
+    <rect x="0" y="0" width="48" height="120" fill="#003399" rx="8" ry="8"/>
+    <rect x="0" y="0" width="48" height="120" fill="#003399"/>
+    
+    <!-- GB text and flag in EU section -->
+    <text x="24" y="36" font-family="Arial" font-size="22" font-weight="bold" text-anchor="middle" fill="#ffffff">GB</text>
+    <rect x="12" y="48" width="24" height="12" fill="#ffffff"/>
+    <rect x="12" y="60" width="24" height="12" fill="#ffffff"/>
+    <rect x="12" y="72" width="24" height="12" fill="#ffffff"/>
+    <path d="M12,48 L36,72 M12,72 L36,48" stroke="#cc0000" stroke-width="2.5"/>
+    
+    <!-- Registration number -->
+    <text x="174" y="78" font-family="Arial" font-size="60" font-weight="bold" text-anchor="middle" fill="#000000">AB12 CDE</text>
+    
+    <!-- Small text at bottom of plate -->
+    <text x="174" y="102" font-family="Arial" font-size="12" text-anchor="middle" fill="#666666">DVLA REGISTERED</text>
+  </g>
+  
+  <!-- Advanced AI Crosshairs -->
+  <g>
+    <!-- Main targeting elements -->
+    <g stroke="#dc3545" stroke-width="2.5" fill="none">
+      <!-- Outer targeting circle with data points -->
+      <circle cx="256" cy="256" r="160" stroke-dasharray="8 4"/>
+      
+      <!-- Inner targeting circle -->
+      <circle cx="256" cy="256" r="120" stroke-dasharray="3 2"/>
+      
+      <!-- Crosshair lines with measurement ticks -->
+      <line x1="256" y1="76" x2="256" y2="156" stroke-linecap="round"/>
+      <line x1="256" y1="356" x2="256" y2="436" stroke-linecap="round"/>
+      <line x1="76" y1="256" x2="156" y2="256" stroke-linecap="round"/>
+      <line x1="356" y1="256" x2="436" y2="256" stroke-linecap="round"/>
+      
+      <!-- Measurement ticks on crosshair lines -->
+      <line x1="251" y1="116" x2="261" y2="116" stroke-width="1.5"/>
+      <line x1="251" y1="396" x2="261" y2="396" stroke-width="1.5"/>
+      <line x1="116" y1="251" x2="116" y2="261" stroke-width="1.5"/>
+      <line x1="396" y1="251" x2="396" y2="261" stroke-width="1.5"/>
+      
+      <!-- Diagonal measurement lines -->
+      <line x1="186" y1="186" x2="226" y2="226" stroke-linecap="round"/>
+      <line x1="326" y1="186" x2="286" y2="226" stroke-linecap="round"/>
+      <line x1="186" y1="326" x2="226" y2="286" stroke-linecap="round"/>
+      <line x1="326" y1="326" x2="286" y2="286" stroke-linecap="round"/>
+    </g>
+    
+    <!-- AI Data visualization elements -->
+    <g>
+      <!-- Data points around the targeting circle -->
+      <circle cx="256" cy="96" r="3" fill="#1a2a6c"/>
+      <circle cx="416" cy="256" r="3" fill="#1a2a6c"/>
+      <circle cx="256" cy="416" r="3" fill="#1a2a6c"/>
+      <circle cx="96" cy="256" r="3" fill="#1a2a6c"/>
+      
+      <!-- Small data points at various angles -->
+      <circle cx="346" cy="166" r="2" fill="#4a69bd"/>
+      <circle cx="346" cy="346" r="2" fill="#4a69bd"/>
+      <circle cx="166" cy="346" r="2" fill="#4a69bd"/>
+      <circle cx="166" cy="166" r="2" fill="#4a69bd"/>
+      
+      <!-- Center targeting elements -->
+      <circle cx="256" cy="256" r="8" fill="none" stroke="#dc3545" stroke-width="1.5"/>
+      <circle cx="256" cy="256" r="2" fill="#dc3545"/>
+      
+      <!-- Digital scanning lines (horizontal) -->
+      <rect x="106" y="240" width="300" height="1" fill="rgba(26, 42, 108, 0.6)"/>
+      <rect x="106" y="245" width="300" height="1" fill="rgba(26, 42, 108, 0.4)"/>
+      <rect x="106" y="250" width="300" height="1" fill="rgba(26, 42, 108, 0.6)"/>
+      <rect x="106" y="255" width="300" height="1" fill="rgba(26, 42, 108, 0.8)"/>
+      <rect x="106" y="260" width="300" height="1" fill="rgba(26, 42, 108, 0.6)"/>
+      <rect x="106" y="265" width="300" height="1" fill="rgba(26, 42, 108, 0.4)"/>
+      <rect x="106" y="270" width="300" height="1" fill="rgba(26, 42, 108, 0.6)"/>
+    </g>
+  </g>
+</svg>

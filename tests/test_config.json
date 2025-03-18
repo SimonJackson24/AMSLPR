@@ -1,0 +1,67 @@
+{
+    "recognition": {
+        "camera_id": 0,
+        "frame_width": 640,
+        "frame_height": 480,
+        "processing_interval": 0.5,
+        "confidence_threshold": 0.7,
+        "save_images": true,
+        "image_save_path": "data/images"
+    },
+    "barrier": {
+        "gpio_pin": 18,
+        "open_time": 5,
+        "safety_check": true
+    },
+    "database": {
+        "path": "data/amslpr.db",
+        "backup_interval": 86400
+    },
+    "web": {
+        "host": "0.0.0.0",
+        "port": 5000,
+        "debug": false,
+        "secret_key": "test-secret-key"
+    },
+    "ssl": {
+        "enabled": false,
+        "cert_file": "config/ssl/cert.pem",
+        "key_file": "config/ssl/key.pem",
+        "auto_generate": true
+    },
+    "security": {
+        "rate_limiting": {
+            "enabled": true,
+            "max_requests": 100,
+            "window_seconds": 60
+        },
+        "failed_login_delay": 3,
+        "max_failed_logins": 5,
+        "lockout_time": 300
+    },
+    "monitoring": {
+        "enabled": true,
+        "log_interval": 300,
+        "metrics_path": "data/metrics",
+        "alert_thresholds": {
+            "cpu_percent": 80,
+            "memory_percent": 80,
+            "disk_percent": 90,
+            "cpu_temp": 70
+        }
+    },
+    "error_handling": {
+        "log_path": "logs/errors",
+        "max_log_size": 10485760,
+        "backup_count": 5,
+        "email_notifications": false,
+        "email_config": {
+            "server": "smtp.example.com",
+            "port": 587,
+            "username": "user@example.com",
+            "password": "password",
+            "from_addr": "amslpr@example.com",
+            "to_addrs": ["admin@example.com"]
+        }
+    }
+}

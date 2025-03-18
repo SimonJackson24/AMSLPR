@@ -1,0 +1,50 @@
+{
+    "camera": {
+        "discovery_enabled": true,
+        "discovery_interval": 60,
+        "default_username": "admin",
+        "default_password": "admin",
+        "cameras": [
+            {
+                "id": "entrance",
+                "name": "Main Entrance",
+                "location": "Front Gate",
+                "ip": "192.168.1.100",
+                "port": 80,
+                "username": "admin",
+                "password": "admin",
+                "detection_settings": {
+                    "confidence_threshold": 0.7,
+                    "min_plate_size": 5,
+                    "save_images": true,
+                    "use_detection_area": false,
+                    "detection_area": "",
+                    "frame_width": 640,
+                    "frame_height": 480,
+                    "frame_rate": 10,
+                    "processing_interval": 1000
+                }
+            },
+            {
+                "id": "exit",
+                "name": "Exit Gate",
+                "location": "Back Gate",
+                "ip": "192.168.1.101",
+                "port": 80,
+                "username": "admin",
+                "password": "admin",
+                "detection_settings": {
+                    "confidence_threshold": 0.7,
+                    "min_plate_size": 5,
+                    "save_images": true,
+                    "use_detection_area": false,
+                    "detection_area": "",
+                    "frame_width": 640,
+                    "frame_height": 480,
+                    "frame_rate": 10,
+                    "processing_interval": 1000
+                }
+            }
+        ]
+    }
+}

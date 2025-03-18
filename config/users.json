@@ -1,0 +1,36 @@
+{
+    "users": {
+        "admin": {
+            "password_hash": "943798b6a7e98740dd626b9d2dd5f2a8d8210f8a663ae4621475602ffcd7afdf",
+            "salt": "7db781964f8c3b51b60497c983a06fc1",
+            "role": "admin",
+            "name": "Administrator",
+            "email": "admin@example.com",
+            "created_at": "2025-03-15T13:42:29.403125",
+            "last_login": "2025-03-17T09:13:19.549971"
+        }
+    },
+    "roles": {
+        "admin": {
+            "description": "Administrator with full access",
+            "permissions": [
+                "view",
+                "edit",
+                "admin"
+            ]
+        },
+        "operator": {
+            "description": "Operator with limited access",
+            "permissions": [
+                "view",
+                "edit"
+            ]
+        },
+        "viewer": {
+            "description": "Viewer with read-only access",
+            "permissions": [
+                "view"
+            ]
+        }
+    }
+}

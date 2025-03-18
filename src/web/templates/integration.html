@@ -1,0 +1,162 @@
+{% extends "layout.html" %}
+
+{% block title %}Integration Settings{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mt-4 mb-4">Integration Settings</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Operating Mode</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('system.integration_settings') }}">
+                <div class="form-group mb-3">
+                    <label for="operating_mode">Operating Mode:</label>
+                    <select class="form-control" id="operating_mode" name="operating_mode" onchange="toggleIntegrationSettings()">
+                        {% for mode in operating_modes %}
+                            <option value="{{ mode }}" {% if config.operating_mode == mode %}selected{% endif %}>
+                                {{ mode|capitalize }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-text text-muted">
+                        <strong>Standalone:</strong> AMSLPR controls the barrier directly and checks vehicle authorization in its own database.<br>
+                        <strong>Paxton:</strong> AMSLPR sends all detected license plates to Paxton via Wiegand protocol, and Paxton handles authorization and barrier control.<br>
+                        <strong>Nayax:</strong> AMSLPR integrates with Nayax payment system for parking fee management.
+                    </small>
+                </div>
+                
+                <div id="paxton-settings" class="{% if config.operating_mode != 'paxton' %}d-none{% endif %}">
+                    <h4 class="mt-4 mb-3">Paxton Integration Settings</h4>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 
+                        In Paxton mode, the system will send <strong>all</strong> detected license plates to Paxton using the Wiegand 26-bit protocol.
+                        License plates are converted to numeric codes that Paxton can process. The AMSLPR database is bypassed for authorization
+                        decisions, allowing Paxton to handle all access control.
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="data0_pin">DATA0 GPIO Pin:</label>
+                        <input type="number" class="form-control" id="data0_pin" name="data0_pin" 
+                               value="{{ config.paxton.wiegand.data0_pin }}" min="0" max="27">
+                        <small class="form-text text-muted">GPIO pin for Wiegand DATA0 signal (BCM numbering)</small>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="data1_pin">DATA1 GPIO Pin:</label>
+                        <input type="number" class="form-control" id="data1_pin" name="data1_pin" 
+                               value="{{ config.paxton.wiegand.data1_pin }}" min="0" max="27">
+                        <small class="form-text text-muted">GPIO pin for Wiegand DATA1 signal (BCM numbering)</small>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="facility_code">Facility Code:</label>
+                        <input type="number" class="form-control" id="facility_code" name="facility_code" 
+                               value="{{ config.paxton.wiegand.facility_code }}" min="0" max="255">
+                        <small class="form-text text-muted">Facility code (0-255) for Wiegand protocol</small>
+                    </div>
+                </div>
+                
+                <div id="nayax-settings" class="{% if config.operating_mode != 'nayax' %}d-none{% endif %}">
+                    <h4 class="mt-4 mb-3">Nayax Integration Settings</h4>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 
+                        In Nayax mode, the system will integrate with Nayax payment terminals for parking fee management.
+                        This allows users to pay for parking using the Nayax payment system.
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="nayax_api_key">API Key:</label>
+                        <input type="text" class="form-control" id="nayax_api_key" name="nayax_api_key" 
+                               value="{{ config.nayax.api_key }}">
+                        <small class="form-text text-muted">Nayax API Key for authentication</small>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="nayax_terminal_id">Terminal ID:</label>
+                        <input type="text" class="form-control" id="nayax_terminal_id" name="nayax_terminal_id" 
+                               value="{{ config.nayax.terminal_id }}">
+                        <small class="form-text text-muted">Nayax Terminal ID</small>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="nayax_merchant_id">Merchant ID:</label>
+                        <input type="text" class="form-control" id="nayax_merchant_id" name="nayax_merchant_id" 
+                               value="{{ config.nayax.merchant_id }}">
+                        <small class="form-text text-muted">Nayax Merchant ID</small>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary mt-3">
+                    <i class="bi bi-save"></i> Save Settings
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">Wiring Diagram</h5>
+        </div>
+        <div class="card-body">
+            <h5>Raspberry Pi to Paxton Wiegand Connection</h5>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Raspberry Pi</th>
+                            <th>Paxton Controller</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>GPIO {{ config.paxton.wiegand.data0_pin }} (DATA0)</td>
+                            <td>DATA0</td>
+                            <td>Wiegand DATA0 signal</td>
+                        </tr>
+                        <tr>
+                            <td>GPIO {{ config.paxton.wiegand.data1_pin }} (DATA1)</td>
+                            <td>DATA1</td>
+                            <td>Wiegand DATA1 signal</td>
+                        </tr>
+                        <tr>
+                            <td>GND</td>
+                            <td>GND</td>
+                            <td>Common ground</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="alert alert-warning mt-3">
+                <i class="bi bi-exclamation-triangle"></i>
+                <strong>Important:</strong> Ensure proper voltage levels and use appropriate level shifters if necessary.
+                The Raspberry Pi GPIO pins operate at 3.3V, while some Paxton controllers may expect 5V signals.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleIntegrationSettings() {
+        const mode = document.getElementById('operating_mode').value;
+        const paxtonSettings = document.getElementById('paxton-settings');
+        const nayaxSettings = document.getElementById('nayax-settings');
+        
+        // Hide all settings first
+        paxtonSettings.classList.add('d-none');
+        nayaxSettings.classList.add('d-none');
+        
+        // Show the appropriate settings based on the selected mode
+        if (mode === 'paxton') {
+            paxtonSettings.classList.remove('d-none');
+        } else if (mode === 'nayax') {
+            nayaxSettings.classList.remove('d-none');
+        }
+    }
+</script>
+{% endblock %}

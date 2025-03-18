@@ -1,0 +1,47 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+.env/
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+
+# Database
+*.db
+*.sqlite3
+
+# Environment variables
+.env
+
+# Test coverage
+.coverage
+htmlcov/
+
+# Project specific
+data/images/*
+!data/images/.gitkeep
+data/logs/*
+!data/logs/.gitkeep
+data/models/*
+!data/models/.gitkeep
+
+# OS specific
+.DS_Store
+Thumbs.db

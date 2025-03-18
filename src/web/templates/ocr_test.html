@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Test OCR{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="my-4">Test OCR</h1>
+    
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">Upload License Plate Image</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <form id="ocr-test-form" enctype="multipart/form-data">
+                        <div class="form-group">
+                            <label for="image-upload">Select License Plate Image</label>
+                            <input type="file" class="form-control-file" id="image-upload" name="image" accept="image/*" required>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Test OCR</button>
+                        <a href="/ocr/settings" class="btn btn-secondary ml-2">Back to Settings</a>
+                    </form>
+                    
+                    <div id="result-container" class="mt-4" style="display: none;">
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0">Recognition Result</h5>
+                            </div>
+                            <div class="card-body">
+                                <h3 id="plate-text" class="text-center mb-3"></h3>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p><strong>Confidence:</strong> <span id="confidence"></span></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p><strong>Method:</strong> <span id="method"></span></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="error-container" class="mt-4 alert alert-danger" style="display: none;">
+                        <h5>Error</h5>
+                        <p id="error-message"></p>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="m-0 font-weight-bold text-primary">Image Preview</h6>
+                        </div>
+                        <div class="card-body text-center">
+                            <img id="image-preview" src="/static/img/placeholder-license-plate.jpg" class="img-fluid" alt="License Plate Preview" style="max-height: 200px;">
+                        </div>
+                    </div>
+                    
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h6 class="m-0 font-weight-bold text-primary">Tips for Best Results</h6>
+                        </div>
+                        <div class="card-body">
+                            <ul>
+                                <li>Use clear, well-lit images of license plates</li>
+                                <li>Ensure the license plate is centered in the image</li>
+                                <li>Avoid extreme angles or distortions</li>
+                                <li>Crop the image to include only the license plate area</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Image preview
+    document.getElementById('image-upload').addEventListener('change', function() {
+        const file = this.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('image-preview').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    // Form submission
+    document.getElementById('ocr-test-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        
+        // Show loading state
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Processing...';
+        submitBtn.disabled = true;
+        
+        // Hide previous results
+        document.getElementById('result-container').style.display = 'none';
+        document.getElementById('error-container').style.display = 'none';
+        
+        fetch('/ocr/api/test', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Reset button
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            
+            if (data.success) {
+                // Show result
+                document.getElementById('plate-text').textContent = data.plate_text;
+                document.getElementById('confidence').textContent = (data.confidence * 100).toFixed(1) + '%';
+                document.getElementById('method').textContent = data.method;
+                document.getElementById('result-container').style.display = 'block';
+            } else {
+                // Show error
+                document.getElementById('error-message').textContent = data.message;
+                document.getElementById('error-container').style.display = 'block';
+            }
+        })
+        .catch(error => {
+            // Reset button
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            
+            // Show error
+            document.getElementById('error-message').textContent = 'An error occurred while processing the request.';
+            document.getElementById('error-container').style.display = 'block';
+            console.error('Error:', error);
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}Parking Sessions - AMSLPR{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="bi bi-p-square-fill"></i> Parking Sessions</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="/parking">Parking</a></li>
+                    <li class="breadcrumb-item active">Sessions</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+    
+    <!-- Search Form -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Search Sessions</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" action="{{ url_for('parking.parking_sessions') }}">
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="plate_number" class="form-label">License Plate</label>
+                        <input type="text" class="form-control" id="plate_number" name="plate_number" value="{{ request.args.get('plate_number', '') }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ request.args.get('start_date', '') }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="end_date" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ request.args.get('end_date', '') }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="all" {% if request.args.get('status') == 'all' or not request.args.get('status') %}selected{% endif %}>All</option>
+                            <option value="active" {% if request.args.get('status') == 'active' %}selected{% endif %}>Active</option>
+                            <option value="completed" {% if request.args.get('status') == 'completed' %}selected{% endif %}>Completed</option>
+                            <option value="paid" {% if request.args.get('status') == 'paid' %}selected{% endif %}>Paid</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
+                    <a href="{{ url_for('parking.parking_sessions') }}" class="btn btn-secondary"><i class="bi bi-redo"></i> Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Sessions Table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Sessions</h6>
+            <div>
+                <a href="#" class="btn btn-sm btn-success" id="exportCSV"><i class="bi bi-file-csv"></i> Export CSV</a>
+                <a href="#" class="btn btn-sm btn-danger" id="exportPDF"><i class="bi bi-file-pdf"></i> Export PDF</a>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if sessions %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="sessionsTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>License Plate</th>
+                            <th>Entry Time</th>
+                            <th>Exit Time</th>
+                            <th>Duration</th>
+                            <th>Fee</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for session in sessions %}
+                        <tr>
+                            <td>{{ session.id }}</td>
+                            <td>{{ session.license_plate }}</td>
+                            <td>{{ session.entry_time }}</td>
+                            <td>{{ session.exit_time or 'Still in parking' }}</td>
+                            <td>
+                                {% if session.exit_time %}
+                                {{ session.duration }} minutes
+                                {% else %}
+                                {{ session.current_duration or '0' }} minutes (ongoing)
+                                {% endif %}
+                            </td>
+                            <td>${{ session.fee or '0.00' }}</td>
+                            <td>
+                                {% if session.status == 'pending' %}
+                                <span class="badge bg-warning">Pending</span>
+                                {% elif session.status == 'paid' %}
+                                <span class="badge bg-success">Paid</span>
+                                {% elif session.status == 'cancelled' %}
+                                <span class="badge bg-danger">Cancelled</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ session.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('parking.view_session', session_id=session.id) }}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
+                                {% if session.status == 'pending' %}
+                                <button class="btn btn-sm btn-success payment-btn" data-session-id="{{ session.id }}"><i class="bi bi-money-bill"></i></button>
+                                <button class="btn btn-sm btn-danger cancel-btn" data-session-id="{{ session.id }}"><i class="bi bi-x-lg"></i></button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-center">No sessions found</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Process Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="paymentAmount" class="form-label">Amount</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control" id="paymentAmount" step="0.01" min="0">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="paymentMethod" class="form-label">Payment Method</label>
+                    <select class="form-select" id="paymentMethod">
+                        <option value="cash">Cash</option>
+                        <option value="card">Credit/Debit Card</option>
+                        <option value="app">Mobile App</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="paymentNotes" class="form-label">Notes</label>
+                    <textarea class="form-control" id="paymentNotes" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="processPaymentBtn">Process Payment</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to cancel this parking session?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                <button type="button" class="btn btn-danger" id="confirmCancelBtn">Yes, Cancel Session</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Initialize DataTable if there are sessions
+        if ($('#sessionsTable').length) {
+            $('#sessionsTable').DataTable({
+                order: [[2, 'desc']], // Sort by entry time (newest first)
+                pageLength: 25
+            });
+        }
+        
+        // Payment button click
+        $('.payment-btn').click(function() {
+            const sessionId = $(this).data('session-id');
+            
+            // Get fee amount via API
+            $.ajax({
+                url: '/parking/api/calculate-fee',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ session_id: sessionId }),
+                success: function(response) {
+                    $('#paymentAmount').val(response.fee);
+                    $('#paymentModal').modal('show');
+                    $('#processPaymentBtn').data('session-id', sessionId);
+                },
+                error: function(xhr) {
+                    alert('Error calculating fee: ' + xhr.responseJSON.error);
+                }
+            });
+        });
+        
+        // Process payment
+        $('#processPaymentBtn').click(function() {
+            const sessionId = $(this).data('session-id');
+            const amount = $('#paymentAmount').val();
+            const method = $('#paymentMethod').val();
+            const notes = $('#paymentNotes').val();
+            
+            if (!amount || amount <= 0) {
+                alert('Please enter a valid amount');
+                return;
+            }
+            
+            $.ajax({
+                url: '/parking/api/payment/manual',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    session_id: sessionId,
+                    amount: amount,
+                    method: method,
+                    notes: notes
+                }),
+                success: function(response) {
+                    $('#paymentModal').modal('hide');
+                    alert('Payment processed successfully!');
+                    location.reload();
+                },
+                error: function(xhr) {
+                    alert('Error processing payment: ' + xhr.responseJSON.error);
+                }
+            });
+        });
+        
+        // Cancel button click
+        $('.cancel-btn').click(function() {
+            const sessionId = $(this).data('session-id');
+            $('#confirmCancelBtn').data('session-id', sessionId);
+            $('#confirmModal').modal('show');
+        });
+        
+        // Confirm cancel
+        $('#confirmCancelBtn').click(function() {
+            const sessionId = $(this).data('session-id');
+            
+            $.ajax({
+                url: '/parking/api/payment/cancel',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ session_id: sessionId }),
+                success: function(response) {
+                    $('#confirmModal').modal('hide');
+                    alert('Session cancelled successfully!');
+                    location.reload();
+                },
+                error: function(xhr) {
+                    alert('Error cancelling session: ' + xhr.responseJSON.error);
+                }
+            });
+        });
+        
+        // Export to CSV
+        $('#exportCSV').click(function(e) {
+            e.preventDefault();
+            window.location.href = '{{ url_for("parking.parking_sessions") }}?format=csv' + window.location.search.replace('?', '&');
+        });
+        
+        // Export to PDF
+        $('#exportPDF').click(function(e) {
+            e.preventDefault();
+            window.location.href = '{{ url_for("parking.parking_sessions") }}?format=pdf' + window.location.search.replace('?', '&');
+        });
+    });
+</script>
+{% endblock %}

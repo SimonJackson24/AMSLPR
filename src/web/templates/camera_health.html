@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+
+{% block title %}Camera Health - AMSLPR{% endblock %}
+
+{% block head %}
+<style>
+    .stats-card {
+        text-align: center;
+        padding: 1.5rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    
+    .stats-card .icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        color: var(--bs-primary);
+    }
+    
+    .stats-card .stats-value {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stats-card .stats-label {
+        color: #6c757d;
+        font-weight: 500;
+    }
+    
+    .health-chart-container {
+        position: relative;
+        height: 250px;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="d-flex align-items-center">
+            <i class="bi bi-heart-pulse me-3 text-primary"></i> Camera Health
+        </h2>
+        <p class="text-muted">Monitor the status and health of all connected cameras</p>
+    </div>
+    <div class="col-auto">
+        <button id="refreshBtn" class="btn btn-primary">
+            <i class="bi bi-sync-alt me-2"></i> Refresh Status
+        </button>
+    </div>
+</div>
+
+<!-- Camera Health Overview -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3 mb-md-0">
+        <div class="card h-100">
+            <div class="card-body stats-card">
+                <div class="icon"><i class="bi bi-camera"></i></div>
+                <div class="stats-value">{{ cameras|length }}</div>
+                <div class="stats-label">Total Cameras</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3 mb-md-0">
+        <div class="card h-100">
+            <div class="card-body stats-card">
+                <div class="icon"><i class="bi bi-check-circle text-success"></i></div>
+                <div class="stats-value" id="onlineCount">{{ online_count }}</div>
+                <div class="stats-label">Online</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3 mb-md-0">
+        <div class="card h-100">
+            <div class="card-body stats-card">
+                <div class="icon"><i class="bi bi-x-circle text-danger"></i></div>
+                <div class="stats-value" id="offlineCount">{{ cameras|length - online_count }}</div>
+                <div class="stats-label">Offline</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3 mb-md-0">
+        <div class="card h-100">
+            <div class="card-body stats-card">
+                <div class="icon"><i class="bi bi-exclamation-triangle text-warning"></i></div>
+                <div class="stats-value" id="warningCount">{{ warning_count }}</div>
+                <div class="stats-label">Warnings</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Camera Health Details -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i> Camera Status</h5>
+        <span class="badge bg-primary">Last updated: <span id="lastUpdated">{{ last_updated }}</span></span>
+    </div>
+    <div class="card-body p-0">
+        {% if cameras %}
+        <div class="table-responsive">
+            <table class="table table-hover" id="cameraTable">
+                <thead>
+                    <tr>
+                        <th>Camera Name</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Uptime</th>
+                        <th>Last Frame</th>
+                        <th>Frame Rate</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for camera in cameras %}
+                    <tr data-camera-id="{{ camera.id }}">
+                        <td class="fw-medium">{{ camera.name }}</td>
+                        <td>{{ camera.location }}</td>
+                        <td>
+                            {% if camera.status == 'online' %}
+                            <span class="badge bg-success">Online</span>
+                            {% elif camera.status == 'warning' %}
+                            <span class="badge bg-warning">Warning</span>
+                            {% else %}
+                            <span class="badge bg-danger">Offline</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ camera.uptime }}</td>
+                        <td>{{ camera.last_frame }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <span class="me-2">{{ camera.frame_rate }} fps</span>
+                                <div class="progress flex-grow-1" style="height: 6px;">
+                                    <div class="progress-bar {% if camera.frame_rate < 10 %}bg-warning{% elif camera.frame_rate < 5 %}bg-danger{% else %}bg-success{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ (camera.frame_rate / 30) * 100 }}%" 
+                                         aria-valuenow="{{ camera.frame_rate }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="30">
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{{ url_for('camera.view_camera', camera_id=camera.id) }}" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="View Camera">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{{ url_for('camera.camera_settings', camera_id=camera.id) }}" class="btn btn-sm btn-info" data-bs-toggle="tooltip" title="Camera Settings">
+                                    <i class="bi bi-gear"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-warning restart-camera" data-camera-id="{{ camera.id }}" data-bs-toggle="tooltip" title="Restart Camera">
+                                    <i class="bi bi-redo"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-camera fa-3x mb-3 text-muted"></i>
+            <p class="text-muted">No cameras found in the system.</p>
+            <a href="{{ url_for('camera.add_camera') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i> Add Camera
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Health History -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i> Health History</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6 mb-4 mb-md-0">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-header bg-transparent">
+                        <h6 class="mb-0">System Uptime (Last 7 Days)</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="health-chart-container">
+                            <canvas id="uptimeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-header bg-transparent">
+                        <h6 class="mb-0">Average Frame Rate (Last 7 Days)</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="health-chart-container">
+                            <canvas id="frameRateChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast container for notifications -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="notificationToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="bi bi-bell me-2"></i>
+            <strong class="me-auto" id="toastTitle">Notification</strong>
+            <small id="toastTime">Just now</small>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toastMessage">
+            Notification message here.
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Toast notification function
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById('notificationToast');
+        const toastTitle = document.getElementById('toastTitle');
+        const toastMessage = document.getElementById('toastMessage');
+        const toastTime = document.getElementById('toastTime');
+        
+        // Set toast content
+        toastMessage.textContent = message;
+        toastTime.textContent = 'Just now';
+        
+        // Set toast title and color based on type
+        const toastEl = bootstrap.Toast.getOrCreateInstance(toast);
+        
+        switch(type) {
+            case 'success':
+                toastTitle.textContent = 'Success';
+                toast.classList.remove('bg-danger', 'bg-warning', 'bg-info');
+                toast.classList.add('text-white', 'bg-success');
+                break;
+            case 'error':
+                toastTitle.textContent = 'Error';
+                toast.classList.remove('bg-success', 'bg-warning', 'bg-info');
+                toast.classList.add('text-white', 'bg-danger');
+                break;
+            case 'warning':
+                toastTitle.textContent = 'Warning';
+                toast.classList.remove('bg-success', 'bg-danger', 'bg-info');
+                toast.classList.add('text-white', 'bg-warning');
+                break;
+            default:
+                toastTitle.textContent = 'Information';
+                toast.classList.remove('bg-success', 'bg-danger', 'bg-warning');
+                toast.classList.add('text-white', 'bg-info');
+        }
+        
+        // Show the toast
+        toastEl.show();
+    }
+    
+    // Sample data for charts (replace with actual data)
+    const uptimeData = {
+        labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'],
+        datasets: [
+            {
+                label: 'System Uptime (%)',
+                data: [98, 99, 97, 99, 98, 100, 99],
+                borderColor: '#4CAF50',
+                backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                tension: 0.4,
+                fill: true
+            }
+        ]
+    };
+    
+    const frameRateData = {
+        labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'],
+        datasets: [
+            {
+                label: 'Avg Frame Rate (fps)',
+                data: [24, 25, 22, 23, 25, 24, 26],
+                borderColor: '#2196F3',
+                backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                tension: 0.4,
+                fill: true
+            }
+        ]
+    };
+    
+    // Create charts
+    const uptimeChart = new Chart(
+        document.getElementById('uptimeChart'),
+        {
+            type: 'line',
+            data: uptimeData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        min: 90,
+                        max: 100
+                    }
+                }
+            }
+        }
+    );
+    
+    const frameRateChart = new Chart(
+        document.getElementById('frameRateChart'),
+        {
+            type: 'line',
+            data: frameRateData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 30
+                    }
+                }
+            }
+        }
+    );
+    
+    // Refresh camera status
+    document.getElementById('refreshBtn').addEventListener('click', function() {
+        // Show loading spinner
+        this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Refreshing...';
+        this.disabled = true;
+        
+        // Simulate API call (replace with actual API call)
+        setTimeout(function() {
+            // Update last updated time
+            document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+            
+            // Re-enable button
+            const refreshBtn = document.getElementById('refreshBtn');
+            refreshBtn.innerHTML = '<i class="bi bi-sync-alt me-2"></i> Refresh Status';
+            refreshBtn.disabled = false;
+            
+            // Show success toast
+            showToast('Camera status refreshed successfully', 'success');
+        }, 1500);
+    });
+    
+    // Restart camera functionality
+    document.querySelectorAll('.restart-camera').forEach(button => {
+        button.addEventListener('click', function() {
+            const cameraId = this.getAttribute('data-camera-id');
+            const row = document.querySelector(`tr[data-camera-id="${cameraId}"]`);
+            const cameraName = row.querySelector('td').textContent;
+            
+            if (confirm(`Are you sure you want to restart the camera "${cameraName}"?`)) {
+                // Show loading spinner
+                this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+                this.disabled = true;
+                
+                // Simulate API call (replace with actual API call)
+                setTimeout(() => {
+                    // Re-enable button
+                    this.innerHTML = '<i class="bi bi-redo"></i>';
+                    this.disabled = false;
+                    
+                    // Show success toast
+                    showToast(`Camera "${cameraName}" restarted successfully`, 'success');
+                }, 2000);
+            }
+        });
+    });
+</script>
+{% endblock %}

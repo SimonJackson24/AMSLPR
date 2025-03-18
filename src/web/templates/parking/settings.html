@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}Parking Settings - AMSLPR{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="bi bi-p-square-fill"></i> Parking Settings</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="/parking">Parking</a></li>
+                    <li class="breadcrumb-item active">Settings</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+    
+    {% if messages %}
+    <div class="row mb-4">
+        <div class="col">
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}" role="alert">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Parking Settings</h6>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{{ url_for('parking.parking_settings') }}">
+                <!-- Parking Configuration -->
+                <h5 class="mb-3">General Configuration</h5>
+                
+                <div class="form-group mb-3">
+                    <label for="entry_exit_mode"><strong>Entry/Exit Mode</strong></label>
+                    <select class="form-select" id="entry_exit_mode" name="entry_exit_mode">
+                        <option value="single_camera" {% if config.get('parking', {}).get('entry_exit_mode') == 'single_camera' %}selected{% endif %}>Single Camera (Auto-Detect Entry/Exit)</option>
+                        <option value="dual_camera" {% if config.get('parking', {}).get('entry_exit_mode') == 'dual_camera' %}selected{% endif %}>Dual Camera (Separate Entry/Exit)</option>
+                    </select>
+                    <small class="form-text text-muted">How entry and exit are detected</small>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label for="payment_mode"><strong>Payment Mode</strong></label>
+                    <select class="form-select" id="payment_mode" name="payment_mode">
+                        <option value="free" {% if config.get('parking', {}).get('payment_mode') == 'free' %}selected{% endif %}>Free Parking</option>
+                        <option value="fixed" {% if config.get('parking', {}).get('payment_mode') == 'fixed' %}selected{% endif %}>Fixed Rate</option>
+                        <option value="hourly" {% if config.get('parking', {}).get('payment_mode') == 'hourly' %}selected{% endif %}>Hourly Rate</option>
+                        <option value="tiered" {% if config.get('parking', {}).get('payment_mode') == 'tiered' %}selected{% endif %}>Tiered Pricing</option>
+                    </select>
+                    <small class="form-text text-muted">How parking fees are calculated</small>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label for="max_capacity"><strong>Maximum Capacity</strong></label>
+                    <input type="number" class="form-control" id="max_capacity" name="max_capacity" value="{{ config.get('parking', {}).get('max_capacity', 100) }}">
+                    <small class="form-text text-muted">Maximum number of vehicles allowed</small>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label for="grace_period"><strong>Grace Period (minutes)</strong></label>
+                    <input type="number" class="form-control" id="grace_period" name="grace_period" value="{{ config.get('parking', {}).get('grace_period', 15) }}">
+                    <small class="form-text text-muted">Free time allowed before charging begins</small>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="require_payment_on_exit" name="require_payment_on_exit" {% if config.get('parking', {}).get('require_payment_on_exit', True) %}checked{% endif %}>
+                        <label class="form-check-label" for="require_payment_on_exit">Require Payment Before Exit</label>
+                    </div>
+                    <small class="form-text text-muted">If enabled, barrier will not open until payment is confirmed</small>
+                </div>
+                
+                <h5 class="mt-4 mb-3">Pricing</h5>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="currency"><strong>Currency</strong></label>
+                        <input type="text" class="form-control" id="currency" name="currency" value="{{ config.get('parking', {}).get('currency', 'USD') }}">
+                        <small class="form-text text-muted">Currency code (e.g., USD, EUR, GBP)</small>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="currency_symbol"><strong>Currency Symbol</strong></label>
+                        <input type="text" class="form-control" id="currency_symbol" name="currency_symbol" value="{{ config.get('parking', {}).get('currency_symbol', '$') }}">
+                        <small class="form-text text-muted">Symbol to display (e.g., $, €, £)</small>
+                    </div>
+                </div>
+                
+                <div id="fixed_rate_div" {% if config.get('parking', {}).get('payment_mode') != 'fixed' %}style="display: none;"{% endif %}>
+                    <div class="form-group mb-3">
+                        <label for="fixed_rate"><strong>Fixed Rate</strong></label>
+                        <div class="input-group">
+                            <span class="input-group-text">{{ config.get('parking', {}).get('currency_symbol', '$') }}</span>
+                            <input type="number" step="0.01" class="form-control" id="fixed_rate" name="fixed_rate" value="{{ config.get('parking', {}).get('fixed_rate', 5.00) }}">
+                        </div>
+                        <small class="form-text text-muted">Flat rate for parking regardless of duration</small>
+                    </div>
+                </div>
+                
+                <div id="hourly_rate_div" {% if config.get('parking', {}).get('payment_mode') != 'hourly' %}style="display: none;"{% endif %}>
+                    <div class="form-group mb-3">
+                        <label for="hourly_rate"><strong>Hourly Rate</strong></label>
+                        <div class="input-group">
+                            <span class="input-group-text">{{ config.get('parking', {}).get('currency_symbol', '$') }}</span>
+                            <input type="number" step="0.01" class="form-control" id="hourly_rate" name="hourly_rate" value="{{ config.get('parking', {}).get('hourly_rate', 2.00) }}">
+                        </div>
+                        <small class="form-text text-muted">Rate charged per hour</small>
+                    </div>
+                </div>
+                
+                <div id="tiered_rates" {% if config.get('parking', {}).get('payment_mode') != 'tiered' %}style="display: none;"{% endif %}>
+                    <h6>Tiered Rates</h6>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Hours</strong></div>
+                        <div class="col-md-4"><strong>Rate</strong></div>
+                        <div class="col-md-4"></div>
+                    </div>
+                    
+                    <div id="tier_container">
+                        {% for tier in config.get('parking', {}).get('tiered_rates', [{'hours': 1, 'rate': 2.00}]) %}
+                        <div class="row mb-2 tier-row">
+                            <div class="col-md-4">
+                                <input type="number" class="form-control" name="tier_hours[]" value="{{ tier.hours }}">
+                            </div>
+                            <div class="col-md-4">
+                                <div class="input-group">
+                                    <span class="input-group-text">{{ config.get('parking', {}).get('currency_symbol', '$') }}</span>
+                                    <input type="number" step="0.01" class="form-control" name="tier_rates[]" value="{{ tier.rate }}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="button" class="btn btn-danger remove-tier"><i class="bi bi-trash"></i></button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <button type="button" class="btn btn-secondary mt-2" id="add_tier"><i class="bi bi-plus-lg"></i> Add Tier</button>
+                </div>
+                
+                <h5 class="mt-4 mb-3">Payment Integration</h5>
+                
+                <div class="form-group mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="payment_enabled" name="payment_enabled" {% if config.get('parking', {}).get('payment_enabled', False) %}checked{% endif %}>
+                        <label class="form-check-label" for="payment_enabled">Enable Payment System</label>
+                    </div>
+                    <small class="form-text text-muted">Enable integration with payment terminals</small>
+                </div>
+                
+                <div id="payment_methods_div" {% if not config.get('parking', {}).get('payment_enabled', False) %}style="display: none;"{% endif %}>
+                    <div class="form-group mb-3">
+                        <label><strong>Accepted Payment Methods</strong></label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="payment_cash" name="payment_methods[]" value="cash" {% if 'cash' in config.get('parking', {}).get('payment_methods', []) %}checked{% endif %}>
+                            <label class="form-check-label" for="payment_cash">Cash</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="payment_credit" name="payment_methods[]" value="credit" {% if 'credit' in config.get('parking', {}).get('payment_methods', []) %}checked{% endif %}>
+                            <label class="form-check-label" for="payment_credit">Credit Card</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="payment_mobile" name="payment_methods[]" value="mobile" {% if 'mobile' in config.get('parking', {}).get('payment_methods', []) %}checked{% endif %}>
+                            <label class="form-check-label" for="payment_mobile">Mobile Payment</label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="nayax_enabled" name="nayax_enabled" {% if config.get('nayax', {}).get('enabled', False) %}checked{% endif %}>
+                            <label class="form-check-label" for="nayax_enabled">Enable Nayax Integration</label>
+                        </div>
+                        <small class="form-text text-muted">Enable integration with Nayax payment terminals</small>
+                    </div>
+                    
+                    <div id="nayax_settings" {% if not config.get('nayax', {}).get('enabled', False) %}style="display: none;"{% endif %}>
+                        <div class="form-group mb-3">
+                            <label for="nayax_api_key"><strong>Nayax API Key</strong></label>
+                            <input type="text" class="form-control" id="nayax_api_key" name="nayax_api_key" value="{{ config.get('nayax', {}).get('api_key', '') }}">
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="nayax_terminal_id"><strong>Nayax Terminal ID</strong></label>
+                            <input type="text" class="form-control" id="nayax_terminal_id" name="nayax_terminal_id" value="{{ config.get('nayax', {}).get('terminal_id', '') }}">
+                        </div>
+                        <div class="form-group mb-3">
+                            <a href="{{ url_for('parking.nayax_pricing') }}" class="btn btn-outline-primary btn-sm nayax-config-btn" {% if not config.get('nayax', {}).get('enabled', False) %}disabled{% endif %}>
+                                <i class="bi bi-gear-fill"></i> Configure Nayax Pricing Settings
+                            </a>
+                            <small class="form-text text-muted d-block mt-2">Configure detailed pricing settings for Nayax integration</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Settings</button>
+                    <a href="{{ url_for('parking.parking_dashboard') }}" class="btn btn-secondary"><i class="bi bi-x-lg"></i> Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Payment mode change handler
+    $('#payment_mode').change(function() {
+        var mode = $(this).val();
+        $('.pricing-settings').hide();
+        
+        if (mode === 'fixed') {
+            $('#fixed_rate_div').show();
+        } else if (mode === 'hourly') {
+            $('#hourly_rate_div').show();
+        } else if (mode === 'tiered') {
+            $('#tiered_rate_div').show();
+        }
+    });
+    
+    // Payment enabled toggle
+    $('#payment_enabled').change(function() {
+        if ($(this).is(':checked')) {
+            $('#payment_methods_div').show();
+        } else {
+            $('#payment_methods_div').hide();
+        }
+    });
+    
+    // Nayax enabled toggle
+    $('#nayax_enabled').change(function() {
+        if ($(this).is(':checked')) {
+            $('#nayax_settings').show();
+            $('.nayax-config-btn').prop('disabled', false);
+        } else {
+            $('#nayax_settings').hide();
+            $('.nayax-config-btn').prop('disabled', true);
+        }
+    });
+    
+    // Add tier button
+    $('#add_tier').click(function() {
+        var tierCount = $('.tier-row').length;
+        var newTier = `
+        <div class="row tier-row mb-2">
+            <div class="col-md-5">
+                <div class="input-group">
+                    <input type="number" class="form-control" name="tier_hours[]" placeholder="Hours" min="1" required>
+                    <span class="input-group-text">hours</span>
+                </div>
+            </div>
+            <div class="col-md-5">
+                <div class="input-group">
+                    <span class="input-group-text">${$('#currency_symbol').val()}</span>
+                    <input type="number" class="form-control" name="tier_rates[]" placeholder="Rate" min="0.01" step="0.01" required>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-danger remove-tier"><i class="bi bi-trash"></i></button>
+            </div>
+        </div>
+        `;
+        $('#tier_container').append(newTier);
+        bindRemoveTier();
+    });
+    
+    function bindRemoveTier() {
+        $('.remove-tier').off('click').on('click', function() {
+            $(this).closest('.tier-row').remove();
+        });
+    }
+    
+    bindRemoveTier();
+});
+</script>
+{% endblock %}

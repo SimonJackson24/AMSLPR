@@ -1,0 +1,75 @@
+{
+    "database": {
+        "path": "data/amslpr.db"
+    },
+    "recognition": {
+        "confidence_threshold": 0.7,
+        "save_images": true,
+        "image_save_path": "data/images",
+        "ocr_config_path": "config/ocr_config.json"
+    },
+    "barrier": {
+        "enabled": true,
+        "gpio_pin": 18,
+        "open_time": 5
+    },
+    "web": {
+        "host": "0.0.0.0",
+        "port": 5050,
+        "debug": true,
+        "secret_key": "your-secret-key-here"
+    },
+    "notifications": {
+        "email": {
+            "enabled": true,
+            "smtp_server": "smtp.example.com",
+            "smtp_port": 587,
+            "username": "user@example.com",
+            "password": "your-password",
+            "from_address": "amslpr@example.com",
+            "to_addresses": ["admin@example.com"]
+        },
+        "sms": {
+            "enabled": false,
+            "provider": "twilio",
+            "account_sid": "your-account-sid",
+            "auth_token": "your-auth-token",
+            "from_number": "+1234567890",
+            "to_numbers": ["+1987654321"]
+        },
+        "webhook": {
+            "enabled": false,
+            "url": "https://example.com/webhook",
+            "headers": {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer your-token-here"
+            }
+        }
+    },
+    "camera": {
+        "discovery_enabled": true,
+        "discovery_interval": 60,
+        "default_username": "admin",
+        "default_password": "admin",
+        "cameras": [
+            {
+                "id": "entrance",
+                "name": "Main Entrance",
+                "location": "Front Gate",
+                "ip": "192.168.1.100",
+                "port": 80,
+                "username": "admin",
+                "password": "admin"
+            },
+            {
+                "id": "exit",
+                "name": "Exit Gate",
+                "location": "Back Gate",
+                "ip": "192.168.1.101",
+                "port": 80,
+                "username": "admin",
+                "password": "admin"
+            }
+        ]
+    }
+}

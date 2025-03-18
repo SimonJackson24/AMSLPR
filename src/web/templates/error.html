@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}{{ error_title }} - AMSLPR{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="bi bi-exclamation-triangle text-warning"></i> {{ error_title }}</h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            <div class="card shadow mb-4">
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-exclamation-circle text-warning fa-5x mb-3"></i>
+                        <h4>{{ error_message }}</h4>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <a href="{{ back_url }}" class="btn btn-primary">
+                            <i class="bi bi-arrow-left"></i> Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

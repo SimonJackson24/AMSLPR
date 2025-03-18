@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Add Vehicle - AMSLPR{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="bi bi-plus-lg"></i> Add Vehicle</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-car-front"></i> Vehicle Information
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('vehicle.add_vehicle') }}">
+                    <div class="mb-3">
+                        <label for="plate_number" class="form-label">Plate Number</label>
+                        <input type="text" class="form-control" id="plate_number" name="plate_number" required>
+                        <div class="form-text">Enter the license plate number (e.g., ABC123)</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <input type="text" class="form-control" id="description" name="description">
+                        <div class="form-text">Optional description (e.g., John's Car, Company Vehicle)</div>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="authorized" name="authorized" checked>
+                        <label class="form-check-label" for="authorized">Authorized</label>
+                        <div class="form-text">Check if this vehicle is authorized to enter</div>
+                    </div>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('vehicle.vehicles') }}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Add Vehicle</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-info-circle"></i> Help
+            </div>
+            <div class="card-body">
+                <h5>Adding a Vehicle</h5>
+                <p>When adding a vehicle to the system, please ensure:</p>
+                <ul>
+                    <li>The plate number is entered correctly without spaces</li>
+                    <li>Only authorize vehicles that should have access</li>
+                    <li>Add a descriptive note to help identify the vehicle</li>
+                </ul>
+                <h5>Plate Number Format</h5>
+                <p>License plate numbers should be entered without spaces or special characters.</p>
+                <p>Examples:</p>
+                <ul>
+                    <li>ABC123</li>
+                    <li>XYZ789</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

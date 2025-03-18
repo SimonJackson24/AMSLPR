@@ -1,0 +1,26 @@
+{
+    "recognition": {
+        "camera_id": 0,
+        "frame_width": 640,
+        "frame_height": 480,
+        "processing_interval": 0.5,
+        "confidence_threshold": 0.7,
+        "save_images": true,
+        "image_save_path": "data/images"
+    },
+    "barrier": {
+        "gpio_pin": 18,
+        "open_time": 5,
+        "safety_check": true
+    },
+    "database": {
+        "db_path": "data/amslpr.db",
+        "backup_interval": 86400
+    },
+    "web": {
+        "host": "0.0.0.0",
+        "port": 5000,
+        "debug": false,
+        "secret_key": "change-this-in-production"
+    }
+}

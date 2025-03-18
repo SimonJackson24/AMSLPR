@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Vehicle - AMSLPR{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="bi bi-pencil-square"></i> Edit Vehicle</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-car-front"></i> Vehicle Information
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('vehicle.edit_vehicle', plate_number=vehicle.plate_number) }}">
+                    <div class="mb-3">
+                        <label for="plate_number" class="form-label">Plate Number</label>
+                        <input type="text" class="form-control" id="plate_number" value="{{ vehicle.plate_number }}" readonly>
+                        <div class="form-text">Plate number cannot be changed</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <input type="text" class="form-control" id="description" name="description" value="{{ vehicle.description or '' }}">
+                        <div class="form-text">Optional description (e.g., John's Car, Company Vehicle)</div>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="authorized" name="authorized" {% if vehicle.authorized %}checked{% endif %}>
+                        <label class="form-check-label" for="authorized">Authorized</label>
+                        <div class="form-text">Check if this vehicle is authorized to enter</div>
+                    </div>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('vehicle.vehicles') }}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Update Vehicle</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-clock-history"></i> Access History
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('main_dashboard.logs') }}?plate_number={{ vehicle.plate_number }}" class="btn btn-info">
+                        <i class="bi bi-list-ul"></i> View Access Logs
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

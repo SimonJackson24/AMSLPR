@@ -1,0 +1,392 @@
+{% extends "layout.html" %}
+
+{% block title %}View Parking Session{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mt-4">Parking Session Details</h1>
+    <p class="lead">Session #{{ session.id }}</p>
+    
+    <div class="row">
+        <!-- Session Details -->
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Session Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Vehicle Information</h5>
+                            <table class="table">
+                                <tr>
+                                    <th>License Plate:</th>
+                                    <td>{{ session.plate_number }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Entry Time:</th>
+                                    <td>{{ session.entry_time }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Exit Time:</th>
+                                    <td>{{ session.exit_time or 'Active' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Duration:</th>
+                                    <td>
+                                        {% if session.duration_minutes %}
+                                        {{ session.duration_minutes }} minutes
+                                        {% else %}
+                                        Active
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Status:</th>
+                                    <td>
+                                        {% if session.status == 'pending' %}
+                                        <span class="badge badge-primary">Active</span>
+                                        {% elif session.status == 'completed' %}
+                                        <span class="badge badge-warning">Unpaid</span>
+                                        {% elif session.status == 'paid' %}
+                                        <span class="badge badge-success">Paid</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Payment Information</h5>
+                            <table class="table">
+                                <tr>
+                                    <th>Calculated Fee:</th>
+                                    <td>
+                                        {% if session.calculated_fee %}
+                                        u00a3{{ session.calculated_fee }}
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Paid Amount:</th>
+                                    <td>
+                                        {% if session.paid_amount %}
+                                        u00a3{{ session.paid_amount }}
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Payment Method:</th>
+                                    <td>{{ session.payment_method or '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Transaction ID:</th>
+                                    <td>{{ session.transaction_id or '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Payment Time:</th>
+                                    <td>{{ session.payment_time or '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Payment Location:</th>
+                                    <td>
+                                        {% if session.payment_location == 'exit' %}
+                                        At Exit
+                                        {% elif session.payment_location == 'pay_station' %}
+                                        Pay Station
+                                        {% else %}
+                                        {{ session.payment_location }}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Payment Required:</th>
+                                    <td>
+                                        {% if session.payment_required == 'always' %}
+                                        Always
+                                        {% elif session.payment_required == 'grace_period' %}
+                                        After Grace Period
+                                        {% elif session.payment_required == 'never' %}
+                                        Never (Free Parking)
+                                        {% else %}
+                                        {{ session.payment_required }}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    {% if session.notes %}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h5>Notes</h5>
+                            <p>{{ session.notes }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Actions</h6>
+                </div>
+                <div class="card-body">
+                    {% if session.status == 'pending' %}
+                    <!-- Active Session -->
+                    <div class="mb-3">
+                        <h5>End Session</h5>
+                        <p>End the parking session and calculate the fee.</p>
+                        <button id="end-session-btn" class="btn btn-warning btn-block">End Session</button>
+                    </div>
+                    {% elif session.status == 'completed' %}
+                    <!-- Unpaid Session -->
+                    <div class="mb-3">
+                        <h5>Process Payment</h5>
+                        <p>Fee: u00a3{{ session.calculated_fee }}</p>
+                        <button id="process-payment-btn" class="btn btn-success btn-block">Process Payment with Nayax</button>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h5>Manual Payment</h5>
+                        <form id="manual-payment-form">
+                            <div class="form-group">
+                                <label for="payment_method">Payment Method</label>
+                                <select class="form-control" id="payment_method" name="payment_method">
+                                    <option value="cash">Cash</option>
+                                    <option value="card">Card (Manual)</option>
+                                    <option value="invoice">Invoice</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="amount">Amount</label>
+                                <input type="number" class="form-control" id="amount" name="amount" value="{{ session.calculated_fee }}" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label for="notes">Notes</label>
+                                <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">Record Manual Payment</button>
+                        </form>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Back Button -->
+                    <a href="{{ url_for('parking.parking_sessions') }}" class="btn btn-secondary btn-block mt-3">Back to Sessions</a>
+                </div>
+            </div>
+            
+            <!-- Payment Status -->
+            {% if session.status == 'completed' %}
+            <div class="card shadow mb-4" id="payment-status-card" style="display: none;">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Payment Status</h6>
+                </div>
+                <div class="card-body">
+                    <div id="payment-status-content">
+                        <p class="text-center">Waiting for payment...</p>
+                        <div class="progress mb-3">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                        </div>
+                    </div>
+                    <button id="cancel-payment-btn" class="btn btn-danger btn-block mt-3">Cancel Payment</button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    // End Session Button
+    document.getElementById('end-session-btn')?.addEventListener('click', function() {
+        if (confirm('Are you sure you want to end this session?')) {
+            fetch(`/parking/api/session/{{ session.id }}/end`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+            });
+        }
+    });
+    
+    // Process Payment Button
+    document.getElementById('process-payment-btn')?.addEventListener('click', function() {
+        // Show payment status card
+        document.getElementById('payment-status-card').style.display = 'block';
+        
+        // Request payment
+        fetch('/parking/api/payment/request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                session_id: {{ session.id }},
+                amount: {{ session.calculated_fee }}
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                document.getElementById('payment-status-content').innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error:</strong> ${data.error}
+                    </div>
+                `;
+                return;
+            }
+            
+            // Start polling for payment status
+            pollPaymentStatus();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('payment-status-content').innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error:</strong> Failed to initiate payment. Please try again.
+                </div>
+            `;
+        });
+    });
+    
+    // Poll Payment Status
+    function pollPaymentStatus() {
+        const statusInterval = setInterval(() => {
+            fetch('/parking/api/payment/status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    clearInterval(statusInterval);
+                    document.getElementById('payment-status-content').innerHTML = `
+                        <div class="alert alert-danger">
+                            <strong>Error:</strong> ${data.error}
+                        </div>
+                    `;
+                    return;
+                }
+                
+                if (data.status === 'none') {
+                    // No active transaction
+                    return;
+                }
+                
+                if (data.status === 'completed') {
+                    clearInterval(statusInterval);
+                    document.getElementById('payment-status-content').innerHTML = `
+                        <div class="alert alert-success">
+                            <strong>Success!</strong> Payment completed.
+                        </div>
+                        <p><strong>Amount:</strong> u00a3${data.amount}</p>
+                        <p><strong>Transaction ID:</strong> ${data.transaction_id}</p>
+                    `;
+                    
+                    // Reload page after 3 seconds
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 3000);
+                } else if (data.status === 'failed') {
+                    clearInterval(statusInterval);
+                    document.getElementById('payment-status-content').innerHTML = `
+                        <div class="alert alert-danger">
+                            <strong>Failed:</strong> ${data.message}
+                        </div>
+                    `;
+                } else {
+                    // Payment in progress
+                    document.getElementById('payment-status-content').innerHTML = `
+                        <p class="text-center">${data.message || 'Processing payment...'}</p>
+                        <div class="progress mb-3">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }, 1000);
+    }
+    
+    // Cancel Payment Button
+    document.getElementById('cancel-payment-btn')?.addEventListener('click', function() {
+        if (confirm('Are you sure you want to cancel this payment?')) {
+            fetch('/parking/api/payment/cancel', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('payment-status-card').style.display = 'none';
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to cancel payment'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+            });
+        }
+    });
+    
+    // Manual Payment Form
+    document.getElementById('manual-payment-form')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const paymentMethod = document.getElementById('payment_method').value;
+        const amount = document.getElementById('amount').value;
+        const notes = document.getElementById('notes').value;
+        
+        fetch('/parking/api/manual-payment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                session_id: {{ session.id }},
+                amount: amount,
+                payment_method: paymentMethod,
+                notes: notes
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to record payment'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+        });
+    });
+</script>
+{% endblock %}
+
+{% endblock %}

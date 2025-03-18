@@ -1,0 +1,153 @@
+<!-- Include this file in base.html to implement mode-based navigation -->
+
+<!-- Main Navigation -->
+<li class="{% if request.path == '/dashboard' %}active{% endif %}">
+    <a href="{{ url_for('main_dashboard.dashboard') }}">
+        <i class="bi bi-speedometer2"></i>
+        <span>Dashboard</span>
+    </a>
+</li>
+
+<!-- Vehicle Management - Always visible -->
+<li class="{% if '/vehicles' in request.path %}active{% endif %}">
+    <a href="{{ url_for('vehicle.vehicles') }}">
+        <i class="bi bi-car-front"></i>
+        <span>Vehicles</span>
+    </a>
+</li>
+
+<!-- Access Logs - Always visible -->
+<li class="{% if '/logs' in request.path %}active{% endif %}">
+    <a href="{{ url_for('main_dashboard.logs') }}">
+        <i class="bi bi-list-check"></i>
+        <span>Access Logs</span>
+    </a>
+</li>
+
+<!-- Statistics - Always visible -->
+<li class="{% if '/statistics' in request.path %}active{% endif %}">
+    <a href="{{ url_for('main_dashboard.statistics') }}">
+        <i class="bi bi-graph-up"></i>
+        <span>Statistics</span>
+    </a>
+</li>
+
+<!-- Camera Management - Only visible to admins -->
+{% if 'admin' in session.permissions %}
+<li>
+    <a href="#cameraSubmenu" data-bs-toggle="collapse" aria-expanded="{% if '/cameras' in request.path or '/camera' in request.path %}true{% else %}false{% endif %}" class="dropdown-toggle">
+        <i class="bi bi-camera-video"></i>
+        <span>Cameras</span>
+    </a>
+    <ul class="collapse list-unstyled {% if '/cameras' in request.path or '/camera' in request.path %}show{% endif %}" id="cameraSubmenu">
+        <li class="{% if '/cameras' in request.path and not '/camera/health' in request.path and not '/camera/settings' in request.path %}active{% endif %}">
+            <a href="/cameras">
+                <i class="bi bi-camera-video"></i>
+                <span>Camera List</span>
+            </a>
+        </li>
+        <li class="{% if '/camera/health' in request.path %}active{% endif %}">
+            <a href="{{ url_for('camera.camera_health') }}">
+                <i class="bi bi-heart-pulse"></i>
+                <span>Camera Health</span>
+            </a>
+        </li>
+        <li class="{% if '/camera/settings' in request.path %}active{% endif %}">
+            <a href="/camera/settings">
+                <i class="bi bi-gear"></i>
+                <span>Camera Settings</span>
+            </a>
+        </li>
+    </ul>
+</li>
+{% endif %}
+
+<!-- Parking - Only visible in nayax mode or for admin users -->
+{% if config.get('operating_mode') == 'nayax' or 'admin' in session.permissions %}
+<li>
+    <a href="#parkingSubmenu" data-bs-toggle="collapse" aria-expanded="{% if request.path.startswith('/parking') %}true{% else %}false{% endif %}" class="dropdown-toggle">
+        <i class="bi bi-p-square-fill"></i>
+        <span>Parking</span>
+    </a>
+    <ul class="collapse list-unstyled {% if request.path.startswith('/parking') %}show{% endif %}" id="parkingSubmenu">
+        <li class="{% if request.path == '/parking' or request.path == '/parking/dashboard' %}active{% endif %}">
+            <a href="/parking/dashboard">
+                <i class="bi bi-speedometer2"></i>
+                <span>Dashboard</span>
+            </a>
+        </li>
+        <li class="{% if '/parking/sessions' in request.path and not '/parking/session/' in request.path %}active{% endif %}">
+            <a href="/parking/sessions">
+                <i class="bi bi-clock-history"></i>
+                <span>Parking Sessions</span>
+            </a>
+        </li>
+        <li class="{% if '/parking/reports' in request.path %}active{% endif %}">
+            <a href="/parking/reports">
+                <i class="bi bi-file-earmark-bar-graph"></i>
+                <span>Reports</span>
+            </a>
+        </li>
+        <li class="{% if '/parking/settings' in request.path %}active{% endif %}">
+            <a href="/parking/settings">
+                <i class="bi bi-gear"></i>
+                <span>Parking Settings</span>
+            </a>
+        </li>
+        <li class="{% if '/parking/nayax-pricing' in request.path %}active{% endif %}">
+            <a href="/parking/nayax-pricing">
+                <i class="bi bi-cash-coin"></i>
+                <span>Nayax Configuration</span>
+            </a>
+        </li>
+    </ul>
+</li>
+{% endif %}
+
+<!-- System - Only visible to admins -->
+{% if 'admin' in session.permissions %}
+<li>
+    <a href="#systemSubmenu" data-bs-toggle="collapse" aria-expanded="{% if request.path.startswith('/system') %}true{% else %}false{% endif %}" class="dropdown-toggle">
+        <i class="bi bi-gear-fill"></i>
+        <span>System</span>
+    </a>
+    <ul class="collapse list-unstyled {% if request.path.startswith('/system') %}show{% endif %}" id="systemSubmenu">
+        <li class="{% if '/system/settings' in request.path %}active{% endif %}">
+            <a href="/system/settings">
+                <i class="bi bi-sliders"></i>
+                <span>Settings</span>
+            </a>
+        </li>
+        <li class="{% if '/system/integration' in request.path %}active{% endif %}">
+            <a href="/system/integration">
+                <i class="bi bi-box-arrow-in-down"></i>
+                <span>Integration</span>
+            </a>
+        </li>
+        <li class="{% if '/system/users' in request.path %}active{% endif %}">
+            <a href="/system/users">
+                <i class="bi bi-people"></i>
+                <span>Users</span>
+            </a>
+        </li>
+        <li class="{% if '/system/backup' in request.path %}active{% endif %}">
+            <a href="/system/backup">
+                <i class="bi bi-cloud-arrow-up"></i>
+                <span>Backup & Restore</span>
+            </a>
+        </li>
+        <li class="{% if '/system/logs' in request.path %}active{% endif %}">
+            <a href="/system/logs">
+                <i class="bi bi-journal-text"></i>
+                <span>System Logs</span>
+            </a>
+        </li>
+        <li class="{% if '/ocr/settings' in request.path %}active{% endif %}">
+            <a href="/ocr/settings">
+                <i class="bi bi-camera"></i>
+                <span>OCR Settings</span>
+            </a>
+        </li>
+    </ul>
+</li>
+{% endif %}

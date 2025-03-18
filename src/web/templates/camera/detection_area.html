@@ -1,0 +1,419 @@
+{% extends "base.html" %}
+
+{% block title %}Camera Detection Area - AMSLPR{% endblock %}
+
+{% block head %}
+<style>
+    .canvas-container {
+        position: relative;
+        margin: 0 auto;
+        max-width: 100%;
+        overflow: hidden;
+    }
+    
+    #imageCanvas {
+        border: 1px solid #ddd;
+        max-width: 100%;
+        height: auto;
+        display: block;
+    }
+    
+    #drawingCanvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        cursor: crosshair;
+    }
+    
+    .control-panel {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .btn-toolbar {
+        margin-bottom: 15px;
+    }
+    
+    .instructions {
+        background-color: #e9ecef;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .point-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h3">Detection Area Editor</h1>
+            <p class="text-muted">Define the region of interest for license plate detection for {{ camera.name }}</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-9">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Camera View</h6>
+                </div>
+                <div class="card-body">
+                    <div class="canvas-container">
+                        <img id="cameraImage" src="{{ snapshot_url }}" style="display: none;" crossorigin="anonymous">
+                        <canvas id="imageCanvas"></canvas>
+                        <canvas id="drawingCanvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Controls</h6>
+                </div>
+                <div class="card-body">
+                    <div class="instructions mb-4">
+                        <h6><i class="bi bi-info-circle"></i> Instructions</h6>
+                        <ol class="small">
+                            <li>Click on the image to place points and create a polygon</li>
+                            <li>The polygon defines the area where license plate detection will occur</li>
+                            <li>Click on a point to select it (it will turn red)</li>
+                            <li>Drag selected points to adjust the polygon</li>
+                            <li>Press the Delete key to remove a selected point</li>
+                            <li>Click Save when you're done</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="btn-toolbar">
+                        <button id="clearBtn" class="btn btn-outline-secondary me-2">
+                            <i class="bi bi-trash"></i> Clear All
+                        </button>
+                        <button id="resetBtn" class="btn btn-outline-warning me-2">
+                            <i class="bi bi-arrow-counterclockwise"></i> Reset
+                        </button>
+                        <button id="saveBtn" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Save
+                        </button>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="enableDetectionArea" checked>
+                        <label class="form-check-label" for="enableDetectionArea">
+                            Enable detection area
+                        </label>
+                        <small class="form-text text-muted">When disabled, the entire image will be analyzed</small>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h6>Points</h6>
+                        <div class="point-list">
+                            <table class="table table-sm" id="pointsTable">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>X</th>
+                                        <th>Y</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Points will be added here dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-grid gap-2">
+                <a href="{{ url_for('camera.camera_settings') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Camera Settings
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Global variables
+    const imageCanvas = document.getElementById('imageCanvas');
+    const drawingCanvas = document.getElementById('drawingCanvas');
+    const imageCtx = imageCanvas.getContext('2d');
+    const drawingCtx = drawingCanvas.getContext('2d');
+    const cameraImage = document.getElementById('cameraImage');
+    const pointsTable = document.getElementById('pointsTable').getElementsByTagName('tbody')[0];
+    
+    let points = [];
+    let originalPoints = [];
+    let selectedPointIndex = -1;
+    let isDragging = false;
+    let canvasRect;
+    let canvasScale = 1;
+    
+    // Initialize with existing points if available
+    {% if detection_area %}
+    originalPoints = {{ detection_area|tojson }};
+    points = JSON.parse(JSON.stringify(originalPoints)); // Deep copy
+    {% endif %}
+    
+    // Setup canvas when image is loaded
+    cameraImage.onload = function() {
+        setupCanvas();
+        drawImage();
+        drawPoints();
+        updatePointsTable();
+    };
+    
+    function setupCanvas() {
+        // Set canvas dimensions based on image
+        const containerWidth = drawingCanvas.parentElement.clientWidth;
+        const imageAspectRatio = cameraImage.width / cameraImage.height;
+        
+        // Calculate canvas dimensions to fit container while maintaining aspect ratio
+        let canvasWidth = containerWidth;
+        let canvasHeight = containerWidth / imageAspectRatio;
+        
+        // Set canvas dimensions
+        imageCanvas.width = canvasWidth;
+        imageCanvas.height = canvasHeight;
+        drawingCanvas.width = canvasWidth;
+        drawingCanvas.height = canvasHeight;
+        
+        // Calculate scale factor for point coordinates
+        canvasScale = canvasWidth / cameraImage.width;
+        
+        // Get canvas position for mouse coordinates
+        canvasRect = drawingCanvas.getBoundingClientRect();
+        
+        // Scale existing points if needed
+        if (points.length > 0) {
+            points = points.map(point => ({
+                x: point.x * canvasScale,
+                y: point.y * canvasScale
+            }));
+        }
+    }
+    
+    function drawImage() {
+        // Draw the camera image on the canvas
+        imageCtx.drawImage(cameraImage, 0, 0, imageCanvas.width, imageCanvas.height);
+    }
+    
+    function drawPoints() {
+        // Clear the drawing canvas
+        drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+        
+        // Draw the polygon if we have points
+        if (points.length > 0) {
+            // Draw the polygon
+            drawingCtx.beginPath();
+            drawingCtx.moveTo(points[0].x, points[0].y);
+            
+            for (let i = 1; i < points.length; i++) {
+                drawingCtx.lineTo(points[i].x, points[i].y);
+            }
+            
+            // Close the polygon if we have at least 3 points
+            if (points.length >= 3) {
+                drawingCtx.lineTo(points[0].x, points[0].y);
+            }
+            
+            drawingCtx.strokeStyle = '#2196F3';
+            drawingCtx.lineWidth = 2;
+            drawingCtx.stroke();
+            
+            // Fill the polygon with semi-transparent color
+            if (points.length >= 3) {
+                drawingCtx.fillStyle = 'rgba(33, 150, 243, 0.2)';
+                drawingCtx.fill();
+            }
+            
+            // Draw the points
+            for (let i = 0; i < points.length; i++) {
+                drawingCtx.beginPath();
+                drawingCtx.arc(points[i].x, points[i].y, 5, 0, Math.PI * 2);
+                
+                // Highlight selected point
+                if (i === selectedPointIndex) {
+                    drawingCtx.fillStyle = '#FF0000';
+                } else {
+                    drawingCtx.fillStyle = '#FFFFFF';
+                }
+                
+                drawingCtx.fill();
+                drawingCtx.strokeStyle = '#000000';
+                drawingCtx.lineWidth = 1;
+                drawingCtx.stroke();
+            }
+        }
+    }
+    
+    function updatePointsTable() {
+        // Clear the table
+        pointsTable.innerHTML = '';
+        
+        // Add each point to the table
+        for (let i = 0; i < points.length; i++) {
+            const row = pointsTable.insertRow();
+            
+            // Highlight selected point
+            if (i === selectedPointIndex) {
+                row.classList.add('table-danger');
+            }
+            
+            // Add point index
+            const cellIndex = row.insertCell(0);
+            cellIndex.textContent = i + 1;
+            
+            // Add X coordinate (scaled back to original image coordinates)
+            const cellX = row.insertCell(1);
+            cellX.textContent = Math.round(points[i].x / canvasScale);
+            
+            // Add Y coordinate (scaled back to original image coordinates)
+            const cellY = row.insertCell(2);
+            cellY.textContent = Math.round(points[i].y / canvasScale);
+            
+            // Add delete button
+            const cellDelete = row.insertCell(3);
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn btn-sm btn-outline-danger';
+            deleteBtn.innerHTML = '<i class="bi bi-x"></i>';
+            deleteBtn.onclick = function() {
+                points.splice(i, 1);
+                selectedPointIndex = -1;
+                drawPoints();
+                updatePointsTable();
+            };
+            cellDelete.appendChild(deleteBtn);
+        }
+    }
+    
+    // Event listeners
+    drawingCanvas.addEventListener('mousedown', function(e) {
+        const rect = drawingCanvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        // Check if we clicked on an existing point
+        for (let i = 0; i < points.length; i++) {
+            const distance = Math.sqrt(Math.pow(points[i].x - x, 2) + Math.pow(points[i].y - y, 2));
+            if (distance <= 10) { // 10px radius for selection
+                selectedPointIndex = i;
+                isDragging = true;
+                drawPoints();
+                updatePointsTable();
+                return;
+            }
+        }
+        
+        // If we didn't click on a point, add a new one
+        points.push({ x, y });
+        selectedPointIndex = points.length - 1;
+        drawPoints();
+        updatePointsTable();
+    });
+    
+    drawingCanvas.addEventListener('mousemove', function(e) {
+        if (isDragging && selectedPointIndex !== -1) {
+            const rect = drawingCanvas.getBoundingClientRect();
+            points[selectedPointIndex].x = e.clientX - rect.left;
+            points[selectedPointIndex].y = e.clientY - rect.top;
+            drawPoints();
+            updatePointsTable();
+        }
+    });
+    
+    drawingCanvas.addEventListener('mouseup', function() {
+        isDragging = false;
+    });
+    
+    drawingCanvas.addEventListener('mouseleave', function() {
+        isDragging = false;
+    });
+    
+    // Handle key events for deleting points
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Delete' && selectedPointIndex !== -1) {
+            points.splice(selectedPointIndex, 1);
+            selectedPointIndex = -1;
+            drawPoints();
+            updatePointsTable();
+        }
+    });
+    
+    // Button event listeners
+    document.getElementById('clearBtn').addEventListener('click', function() {
+        if (confirm('Are you sure you want to clear all points?')) {
+            points = [];
+            selectedPointIndex = -1;
+            drawPoints();
+            updatePointsTable();
+        }
+    });
+    
+    document.getElementById('resetBtn').addEventListener('click', function() {
+        if (confirm('Are you sure you want to reset to the last saved points?')) {
+            points = JSON.parse(JSON.stringify(originalPoints)); // Deep copy
+            selectedPointIndex = -1;
+            drawPoints();
+            updatePointsTable();
+        }
+    });
+    
+    document.getElementById('saveBtn').addEventListener('click', function() {
+        // Convert points back to original image coordinates
+        const scaledPoints = points.map(point => ({
+            x: Math.round(point.x / canvasScale),
+            y: Math.round(point.y / canvasScale)
+        }));
+        
+        // Get the enable detection area checkbox value
+        const enableDetectionArea = document.getElementById('enableDetectionArea').checked;
+        
+        // Send the points to the server
+        fetch('/camera/detection-area/{{ camera_id }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                points: scaledPoints,
+                use_detection_area: enableDetectionArea
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Detection area saved successfully!');
+                // Update original points
+                originalPoints = JSON.parse(JSON.stringify(scaledPoints));
+            } else {
+                alert('Error saving detection area: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error saving detection area');
+        });
+    });
+    
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        setupCanvas();
+        drawImage();
+        drawPoints();
+        updatePointsTable();
+    });
+</script>
+{% endblock %}

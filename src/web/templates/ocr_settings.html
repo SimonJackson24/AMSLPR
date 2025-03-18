@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}OCR Settings{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="my-4">OCR Settings</h1>
+    
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">License Plate Recognition Configuration</h6>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5 class="mb-3">General Settings</h5>
+                        
+                        <div class="form-group">
+                            <label for="ocr_method">OCR Method</label>
+                            <select class="form-control" id="ocr_method" name="ocr_method">
+                                <option value="tesseract" {% if config.ocr_method == 'tesseract' %}selected{% endif %}>Tesseract OCR</option>
+                                <option value="deep_learning" {% if config.ocr_method == 'deep_learning' %}selected{% endif %} {% if not hailo_available %}disabled{% endif %}>Deep Learning OCR</option>
+                                <option value="hybrid" {% if config.ocr_method == 'hybrid' %}selected{% endif %} {% if not hailo_available %}disabled{% endif %}>Hybrid (Tesseract + Deep Learning)</option>
+                            </select>
+                            {% if not hailo_available %}
+                            <small class="form-text text-warning">Hailo TPU not detected. Deep learning options are disabled.</small>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="use_hailo_tpu" name="use_hailo_tpu" {% if config.use_hailo_tpu %}checked{% endif %} {% if not hailo_available %}disabled{% endif %}>
+                                <label class="custom-control-label" for="use_hailo_tpu">Use Hailo TPU for hardware acceleration</label>
+                            </div>
+                            {% if not hailo_available %}
+                            <small class="form-text text-warning">Hailo TPU not detected.</small>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="confidence_threshold">Confidence Threshold</label>
+                            <input type="range" class="custom-range" id="confidence_threshold" name="confidence_threshold" min="0.1" max="0.9" step="0.05" value="{{ config.confidence_threshold }}">
+                            <div class="d-flex justify-content-between">
+                                <span>0.1 (More detections, less accurate)</span>
+                                <span id="confidence_value">{{ config.confidence_threshold }}</span>
+                                <span>0.9 (Fewer detections, more accurate)</span>
+                            </div>
+                        </div>
+                        
+                        <h5 class="mt-4 mb-3">Tesseract Settings</h5>
+                        
+                        <div class="form-group">
+                            <label for="psm_mode">Page Segmentation Mode</label>
+                            <select class="form-control" id="psm_mode" name="psm_mode">
+                                <option value="6" {% if config.tesseract_config.psm_mode == 6 %}selected{% endif %}>6 - Assume a single uniform block of text</option>
+                                <option value="7" {% if config.tesseract_config.psm_mode == 7 %}selected{% endif %}>7 - Treat the image as a single line of text</option>
+                                <option value="8" {% if config.tesseract_config.psm_mode == 8 %}selected{% endif %}>8 - Treat the image as a single word</option>
+                                <option value="10" {% if config.tesseract_config.psm_mode == 10 %}selected{% endif %}>10 - Treat the image as a single character</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="oem_mode">OCR Engine Mode</label>
+                            <select class="form-control" id="oem_mode" name="oem_mode">
+                                <option value="0" {% if config.tesseract_config.oem_mode == 0 %}selected{% endif %}>0 - Legacy engine only</option>
+                                <option value="1" {% if config.tesseract_config.oem_mode == 1 %}selected{% endif %}>1 - Neural nets LSTM engine only</option>
+                                <option value="2" {% if config.tesseract_config.oem_mode == 2 %}selected{% endif %}>2 - Legacy + LSTM engines</option>
+                                <option value="3" {% if config.tesseract_config.oem_mode == 3 %}selected{% endif %}>3 - Default, based on what is available</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="whitelist">Character Whitelist</label>
+                            <input type="text" class="form-control" id="whitelist" name="whitelist" value="{{ config.tesseract_config.whitelist }}">
+                            <small class="form-text text-muted">Characters to recognize. Default is alphanumeric characters.</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Preprocessing Settings</h5>
+                        
+                        <div class="form-group">
+                            <label for="resize_factor">Resize Factor</label>
+                            <input type="number" class="form-control" id="resize_factor" name="resize_factor" min="1" max="4" step="0.1" value="{{ config.preprocessing.resize_factor }}">
+                            <small class="form-text text-muted">Factor to resize the license plate image by before OCR.</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="apply_contrast_enhancement" name="apply_contrast_enhancement" {% if config.preprocessing.apply_contrast_enhancement %}checked{% endif %}>
+                                <label class="custom-control-label" for="apply_contrast_enhancement">Apply contrast enhancement</label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="apply_noise_reduction" name="apply_noise_reduction" {% if config.preprocessing.apply_noise_reduction %}checked{% endif %}>
+                                <label class="custom-control-label" for="apply_noise_reduction">Apply noise reduction</label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="apply_perspective_correction" name="apply_perspective_correction" {% if config.preprocessing.apply_perspective_correction %}checked{% endif %}>
+                                <label class="custom-control-label" for="apply_perspective_correction">Apply perspective correction</label>
+                            </div>
+                            <small class="form-text text-muted">Attempts to correct for skewed license plate angles. May increase processing time.</small>
+                        </div>
+                        
+                        <h5 class="mt-4 mb-3">Postprocessing Settings</h5>
+                        
+                        <div class="form-group">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="apply_regex_validation" name="apply_regex_validation" {% if config.postprocessing.apply_regex_validation %}checked{% endif %}>
+                                <label class="custom-control-label" for="apply_regex_validation">Apply regex validation</label>
+                            </div>
+                            <small class="form-text text-muted">Validate recognized text against the plate format pattern.</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="min_plate_length">Minimum Plate Length</label>
+                            <input type="number" class="form-control" id="min_plate_length" name="min_plate_length" min="2" max="10" value="{{ config.postprocessing.min_plate_length }}">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="max_plate_length">Maximum Plate Length</label>
+                            <input type="number" class="form-control" id="max_plate_length" name="max_plate_length" min="4" max="20" value="{{ config.postprocessing.max_plate_length }}">
+                        </div>
+                        
+                        <h5 class="mt-4 mb-3">Regional Settings</h5>
+                        
+                        <div class="form-group">
+                            <label for="country_code">Country Code</label>
+                            <input type="text" class="form-control" id="country_code" name="country_code" value="{{ config.regional_settings.country_code }}">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="plate_format">Plate Format (Regex)</label>
+                            <input type="text" class="form-control" id="plate_format" name="plate_format" value="{{ config.regional_settings.plate_format }}">
+                            <small class="form-text text-muted">Regular expression pattern for license plate format validation.</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                    <a href="/ocr/test" class="btn btn-secondary ml-2">Test OCR</a>
+                    <button type="button" id="reload-config" class="btn btn-info ml-2">Reload Configuration</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">OCR Documentation</h6>
+        </div>
+        <div class="card-body">
+            <p>The OCR system uses advanced techniques to recognize license plates. For detailed information, see the <a href="/docs/ocr_system.html" target="_blank">OCR System Documentation</a>.</p>
+            
+            <h5 class="mt-3">Quick Tips</h5>
+            <ul>
+                <li>Use the <strong>Hybrid</strong> method for maximum reliability.</li>
+                <li>If using the Hailo TPU, ensure it is properly connected and the drivers are installed.</li>
+                <li>Adjust the confidence threshold based on your specific requirements.</li>
+                <li>For best results, ensure proper camera positioning and lighting.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Update confidence value display
+    document.getElementById('confidence_threshold').addEventListener('input', function() {
+        document.getElementById('confidence_value').textContent = this.value;
+    });
+    
+    // Disable deep learning options if Hailo TPU is not available
+    document.getElementById('ocr_method').addEventListener('change', function() {
+        const useHailoCheckbox = document.getElementById('use_hailo_tpu');
+        
+        if (this.value === 'tesseract') {
+            useHailoCheckbox.checked = false;
+            useHailoCheckbox.disabled = true;
+        } else {
+            useHailoCheckbox.disabled = {% if not hailo_available %}true{% else %}false{% endif %};
+        }
+    });
+    
+    // Handle reload configuration button
+    document.getElementById('reload-config').addEventListener('click', function() {
+        fetch('/ocr/api/reload', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('OCR configuration reloaded successfully');
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error);
+        });
+    });
+    
+    // Initialize the state
+    document.getElementById('ocr_method').dispatchEvent(new Event('change'));
+</script>
+{% endblock %}

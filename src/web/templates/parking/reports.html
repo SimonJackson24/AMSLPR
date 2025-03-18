@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+
+{% block title %}Parking Reports - AMSLPR{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="bi bi-chart-bar"></i> Parking Reports</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="/parking">Parking</a></li>
+                    <li class="breadcrumb-item active">Reports</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+    
+    <!-- Date Range Selector -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Date Range</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" action="{{ url_for('parking.parking_reports') }}">
+                <div class="row mb-3">
+                    <div class="col-md-5">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ request.args.get('start_date', '') }}">
+                    </div>
+                    <div class="col-md-5">
+                        <label for="end_date" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ request.args.get('end_date', '') }}">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-filter"></i> Apply</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Summary Cards -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Sessions</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_sessions }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-car-front fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Revenue</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ config.parking.currency_symbol }}{{ stats.total_revenue }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-money-bill fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Average Fee</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ config.parking.currency_symbol }}{{ stats.avg_fee }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Average Duration</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.avg_duration_minutes }} min</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts -->
+    <div class="row">
+        <!-- Daily Revenue Chart -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Daily Revenue</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area">
+                        <canvas id="dailyRevenueChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Payment Methods Chart -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Payment Methods</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie pt-4 pb-2">
+                        <canvas id="paymentMethodsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Detailed Stats -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Detailed Statistics</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Total Sessions</td>
+                            <td>{{ stats.total_sessions }}</td>
+                        </tr>
+                        <tr>
+                            <td>Total Revenue</td>
+                            <td>{{ config.parking.currency_symbol }}{{ stats.total_revenue }}</td>
+                        </tr>
+                        <tr>
+                            <td>Average Fee</td>
+                            <td>{{ config.parking.currency_symbol }}{{ stats.avg_fee }}</td>
+                        </tr>
+                        <tr>
+                            <td>Average Duration</td>
+                            <td>{{ stats.avg_duration_minutes }} minutes</td>
+                        </tr>
+                        <tr>
+                            <td>Maximum Fee</td>
+                            <td>{{ config.parking.currency_symbol }}{{ stats.max_fee }}</td>
+                        </tr>
+                        <tr>
+                            <td>Maximum Duration</td>
+                            <td>{{ stats.max_duration_minutes }} minutes</td>
+                        </tr>
+                        <tr>
+                            <td>Free Sessions (Grace Period)</td>
+                            <td>{{ stats.free_sessions }}</td>
+                        </tr>
+                        <tr>
+                            <td>Card Payments</td>
+                            <td>{{ stats.card_payments }} ({{ stats.card_payments_percentage }}%)</td>
+                        </tr>
+                        <tr>
+                            <td>Cash Payments</td>
+                            <td>{{ stats.cash_payments }} ({{ stats.cash_payments_percentage }}%)</td>
+                        </tr>
+                        <tr>
+                            <td>Other Payments</td>
+                            <td>{{ stats.other_payments }} ({{ stats.other_payments_percentage }}%)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Export Options -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Export Data</h6>
+        </div>
+        <div class="card-body">
+            <p>Export parking data for the selected date range.</p>
+            <a href="{{ url_for('parking.export_data', format='csv', start_date=request.args.get('start_date', ''), end_date=request.args.get('end_date', '')) }}" class="btn btn-primary"><i class="bi bi-file-csv"></i> Export as CSV</a>
+            <a href="{{ url_for('parking.export_data', format='excel', start_date=request.args.get('start_date', ''), end_date=request.args.get('end_date', '')) }}" class="btn btn-success"><i class="bi bi-file-excel"></i> Export as Excel</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Sample data - this would be replaced with actual data from the server
+    const dailyRevenueData = {
+        labels: {{ daily_labels|default('[]')|safe }},
+        datasets: [{
+            label: 'Daily Revenue',
+            backgroundColor: 'rgba(78, 115, 223, 0.05)',
+            borderColor: 'rgba(78, 115, 223, 1)',
+            pointRadius: 3,
+            pointBackgroundColor: 'rgba(78, 115, 223, 1)',
+            pointBorderColor: 'rgba(78, 115, 223, 1)',
+            pointHoverRadius: 3,
+            pointHoverBackgroundColor: 'rgba(78, 115, 223, 1)',
+            pointHoverBorderColor: 'rgba(78, 115, 223, 1)',
+            pointHitRadius: 10,
+            pointBorderWidth: 2,
+            data: {{ daily_data|default('[]')|safe }}
+        }]
+    };
+    
+    const paymentMethodsData = {
+        labels: ['Cash', 'Card', 'Mobile App', 'Other'],
+        datasets: [{
+            data: [
+                {{ stats.cash_payments|default(0) }},
+                {{ stats.card_payments|default(0) }},
+                {{ stats.app_payments|default(0) }},
+                {{ stats.other_payments|default(0) }}
+            ],
+            backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e'],
+            hoverBackgroundColor: ['#2e59d9', '#17a673', '#2c9faf', '#f4b619'],
+            hoverBorderColor: 'rgba(234, 236, 244, 1)'
+        }]
+    };
+    
+    // Daily Revenue Chart
+    const dailyRevenueCtx = document.getElementById('dailyRevenueChart');
+    const dailyRevenueChart = new Chart(dailyRevenueCtx, {
+        type: 'line',
+        data: dailyRevenueData,
+        options: {
+            maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    left: 10,
+                    right: 25,
+                    top: 25,
+                    bottom: 0
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        maxTicksLimit: 7
+                    }
+                },
+                y: {
+                    ticks: {
+                        maxTicksLimit: 5,
+                        padding: 10,
+                        callback: function(value, index, values) {
+                            return '{{ config.parking.currency_symbol }}' + value;
+                        }
+                    },
+                    grid: {
+                        color: 'rgb(234, 236, 244)',
+                        drawBorder: false,
+                        borderDash: [2],
+                        zeroLineBorderDash: [2]
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    backgroundColor: 'rgb(255, 255, 255)',
+                    bodyColor: '#858796',
+                    titleMarginBottom: 10,
+                    titleColor: '#6e707e',
+                    titleFontSize: 14,
+                    borderColor: '#dddfeb',
+                    borderWidth: 1,
+                    xPadding: 15,
+                    yPadding: 15,
+                    displayColors: false,
+                    intersect: false,
+                    mode: 'index',
+                    caretPadding: 10,
+                    callbacks: {
+                        label: function(context) {
+                            return 'Revenue: {{ config.parking.currency_symbol }}' + context.raw;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Payment Methods Chart
+    const paymentMethodsCtx = document.getElementById('paymentMethodsChart');
+    const paymentMethodsChart = new Chart(paymentMethodsCtx, {
+        type: 'doughnut',
+        data: paymentMethodsData,
+        options: {
+            maintainAspectRatio: false,
+            cutout: '80%',
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgb(255, 255, 255)',
+                    bodyColor: '#858796',
+                    borderColor: '#dddfeb',
+                    borderWidth: 1,
+                    xPadding: 15,
+                    yPadding: 15,
+                    displayColors: false,
+                    caretPadding: 10,
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            const total = context.dataset.data.reduce((acc, data) => acc + data, 0);
+                            const percentage = Math.round((value / total) * 100);
+                            return `${label}: ${value} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

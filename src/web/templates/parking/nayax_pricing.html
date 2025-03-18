@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block title %}Nayax Pricing Configuration - AMSLPR{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="bi bi-cash-coin"></i> Nayax Pricing Configuration</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="/parking">Parking</a></li>
+                    <li class="breadcrumb-item"><a href="/parking/settings">Settings</a></li>
+                    <li class="breadcrumb-item active">Nayax Pricing</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+    
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Nayax Pricing Configuration</h6>
+        </div>
+        <div class="card-body">
+            {% if not config.get('nayax', {}).get('enabled', False) %}
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle"></i> Nayax integration is not enabled. Please enable it in <a href="{{ url_for('parking.parking_settings') }}">Parking Settings</a> first.
+            </div>
+            {% else %}
+            <form method="post" action="{{ url_for('parking.nayax_pricing') }}">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> Configure pricing tiers and free period settings for Nayax payment integration.
+                </div>
+                
+                <!-- Free Period Settings -->
+                <h5 class="mt-4 mb-3">Free Period Settings</h5>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="free_period_enabled"><strong>Enable Free Period</strong></label>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="free_period_enabled" name="free_period_enabled" 
+                                    {% if config.get('parking', {}).get('nayax', {}).get('free_period_enabled', False) %}checked{% endif %}>
+                                <label class="form-check-label" for="free_period_enabled">Allow initial free parking period</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="free_period_minutes"><strong>Free Period Duration (minutes)</strong></label>
+                            <input type="number" class="form-control" id="free_period_minutes" name="free_period_minutes" 
+                                value="{{ config.get('parking', {}).get('nayax', {}).get('free_period_minutes', 30) }}" min="0" max="1440">
+                            <small class="form-text text-muted">Time allowed before charging begins (0-1440 minutes)</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Pricing Mode -->
+                <h5 class="mt-4 mb-3">Pricing Mode</h5>
+                <div class="form-group mb-3">
+                    <label for="pricing_mode"><strong>Pricing Mode</strong></label>
+                    <select class="form-select" id="pricing_mode" name="pricing_mode">
+                        <option value="fixed" {% if config.get('parking', {}).get('nayax', {}).get('pricing_mode') == 'fixed' %}selected{% endif %}>Fixed Rate</option>
+                        <option value="hourly" {% if config.get('parking', {}).get('nayax', {}).get('pricing_mode') == 'hourly' %}selected{% endif %}>Hourly Rate</option>
+                        <option value="tiered" {% if config.get('parking', {}).get('nayax', {}).get('pricing_mode') == 'tiered' %}selected{% endif %}>Tiered Pricing</option>
+                    </select>
+                    <small class="form-text text-muted">Select how parking fees are calculated: fixed rate, hourly rate, or tiered pricing based on duration.</small>
+                </div>
+                
+                <!-- Fixed Rate Settings -->
+                <div id="fixed_rate_settings" class="pricing-settings" {% if config.get('parking', {}).get('nayax', {}).get('pricing_mode') != 'fixed' %}style="display: none;"{% endif %}>
+                    <div class="form-group mb-3">
+                        <label for="fixed_rate"><strong>Fixed Rate Amount</strong></label>
+                        <div class="input-group">
+                            <span class="input-group-text">{{ config.get('parking', {}).get('currency_symbol', '$') }}</span>
+                            <input type="number" step="0.01" class="form-control" id="fixed_rate" name="fixed_rate" 
+                                value="{{ config.get('parking', {}).get('nayax', {}).get('fixed_rate', 5.00) }}" min="0">
+                        </div>
+                        <small class="form-text text-muted">Flat rate charged regardless of duration</small>
+                    </div>
+                </div>
+                
+                <!-- Hourly Rate Settings -->
+                <div id="hourly_rate_settings" class="pricing-settings" {% if config.get('parking', {}).get('nayax', {}).get('pricing_mode') != 'hourly' %}style="display: none;"{% endif %}>
+                    <div class="form-group mb-3">
+                        <label for="hourly_rate"><strong>Hourly Rate</strong></label>
+                        <div class="input-group">
+                            <span class="input-group-text">{{ config.get('parking', {}).get('currency_symbol', '$') }}</span>
+                            <input type="number" step="0.01" class="form-control" id="hourly_rate" name="hourly_rate" 
+                                value="{{ config.get('parking', {}).get('nayax', {}).get('hourly_rate', 2.00) }}" min="0">
+                        </div>
+                        <small class="form-text text-muted">Rate charged per hour</small>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="daily_max_rate"><strong>Daily Maximum Rate</strong></label>
+                        <div class="input-group">
+                            <span class="input-group-text">{{ config.get('parking', {}).get('currency_symbol', '$') }}</span>
+                            <input type="number" step="0.01" class="form-control" id="daily_max_rate" name="daily_max_rate" 
+                                value="{{ config.get('parking', {}).get('nayax', {}).get('daily_max_rate', 20.00) }}" min="0">
+                        </div>
+                        <small class="form-text text-muted">Maximum charge for a 24-hour period</small>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="partial_hour_billing" name="partial_hour_billing" 
+                                {% if config.get('parking', {}).get('nayax', {}).get('partial_hour_billing', True) %}checked{% endif %}>
+                            <label class="form-check-label" for="partial_hour_billing">Bill for Partial Hours</label>
+                        </div>
+                        <small class="form-text text-muted">If enabled, partial hours will be charged proportionally</small>
+                    </div>
+                </div>
+                
+                <!-- Tiered Rate Settings -->
+                <div id="tiered_rate_settings" class="pricing-settings" {% if config.get('parking', {}).get('nayax', {}).get('pricing_mode') != 'tiered' %}style="display: none;"{% endif %}>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> Tiers must be in ascending order by duration. The system will automatically charge the appropriate tier based on parking duration.
+                    </div>
+                    
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered" id="tiered_rates_table">
+                            <thead>
+                                <tr>
+                                    <th>Duration (hours)</th>
+                                    <th>Rate</th>
+                                    <th width="100">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set tiers = config.get('parking', {}).get('nayax', {}).get('tiers', [{'hours': 1, 'rate': 2.00}, {'hours': 3, 'rate': 5.00}, {'hours': 8, 'rate': 10.00}, {'hours': 24, 'rate': 20.00}]) %}
+                                {% for tier in tiers %}
+                                <tr class="tier-row">
+                                    <td>
+                                        <input type="number" class="form-control" name="tier_hours[]" value="{{ tier.hours }}" min="0" step="0.5" required>
+                                    </td>
+                                    <td>
+                                        <div class="input-group">
+                                            <span class="input-group-text">{{ config.get('parking', {}).get('currency_symbol', '$') }}</span>
+                                            <input type="number" step="0.01" class="form-control" name="tier_rates[]" value="{{ tier.rate }}" min="0" required>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-danger btn-sm remove-tier"><i class="bi bi-trash"></i></button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <button type="button" class="btn btn-secondary" id="add_tier_btn" data-currency="{{ config.get('parking', {}).get('currency_symbol', '$') }}">
+                        <i class="bi bi-plus-lg"></i> Add Tier
+                    </button>
+                </div>
+                
+                <!-- Special Rates -->
+                <h5 class="mt-4 mb-3">Special Rates</h5>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="weekend_rates_enabled" name="weekend_rates_enabled" 
+                                    {% if config.get('parking', {}).get('nayax', {}).get('weekend_rates_enabled', False) %}checked{% endif %}>
+                                <label class="form-check-label" for="weekend_rates_enabled">Enable Weekend Rates</label>
+                            </div>
+                            <small class="form-text text-muted">Apply different rates on weekends</small>
+                        </div>
+                        
+                        <div id="weekend_rates" {% if not config.get('parking', {}).get('nayax', {}).get('weekend_rates_enabled', False) %}style="display: none;"{% endif %}>
+                            <div class="form-group mb-3">
+                                <label for="weekend_hourly_rate"><strong>Weekend Hourly Rate</strong></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">{{ config.get('parking', {}).get('currency_symbol', '$') }}</span>
+                                    <input type="number" step="0.01" class="form-control" id="weekend_hourly_rate" name="weekend_hourly_rate" 
+                                        value="{{ config.get('parking', {}).get('nayax', {}).get('weekend_hourly_rate', 1.50) }}" min="0">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label for="weekend_daily_max"><strong>Weekend Daily Maximum</strong></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">{{ config.get('parking', {}).get('currency_symbol', '$') }}</span>
+                                    <input type="number" step="0.01" class="form-control" id="weekend_daily_max" name="weekend_daily_max" 
+                                        value="{{ config.get('parking', {}).get('nayax', {}).get('weekend_daily_max', 15.00) }}" min="0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="overnight_rate_enabled" name="overnight_rate_enabled" 
+                                    {% if config.get('parking', {}).get('nayax', {}).get('overnight_rate_enabled', False) %}checked{% endif %}>
+                                <label class="form-check-label" for="overnight_rate_enabled">Enable Overnight Rate</label>
+                            </div>
+                            <small class="form-text text-muted">Apply special rate for overnight parking</small>
+                        </div>
+                        
+                        <div id="overnight_rate_settings" {% if not config.get('parking', {}).get('nayax', {}).get('overnight_rate_enabled', False) %}style="display: none;"{% endif %}>
+                            <div class="form-group mb-3">
+                                <label for="overnight_rate"><strong>Overnight Rate</strong></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">{{ config.get('parking', {}).get('currency_symbol', '$') }}</span>
+                                    <input type="number" step="0.01" class="form-control" id="overnight_rate" name="overnight_rate" 
+                                        value="{{ config.get('parking', {}).get('nayax', {}).get('overnight_rate', 10.00) }}" min="0">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label for="overnight_start_hour"><strong>Overnight Period Start (hour)</strong></label>
+                                <input type="number" class="form-control" id="overnight_start_hour" name="overnight_start_hour" 
+                                    value="{{ config.get('parking', {}).get('nayax', {}).get('overnight_start_hour', 20) }}" min="0" max="23">
+                                <small class="form-text text-muted">24-hour format (0-23)</small>
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label for="overnight_end_hour"><strong>Overnight Period End (hour)</strong></label>
+                                <input type="number" class="form-control" id="overnight_end_hour" name="overnight_end_hour" 
+                                    value="{{ config.get('parking', {}).get('nayax', {}).get('overnight_end_hour', 8) }}" min="0" max="23">
+                                <small class="form-text text-muted">24-hour format (0-23)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Settings</button>
+                    <a href="{{ url_for('parking.parking_settings') }}" class="btn btn-secondary"><i class="bi bi-x-lg"></i> Cancel</a>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Show/hide pricing settings based on selected mode
+        $('#pricing_mode').change(function() {
+            $('.pricing-settings').hide();
+            const mode = $(this).val();
+            
+            if (mode === 'fixed') {
+                $('#fixed_rate_settings').show();
+            } else if (mode === 'hourly') {
+                $('#hourly_rate_settings').show();
+            } else if (mode === 'tiered') {
+                $('#tiered_rate_settings').show();
+            }
+        });
+        
+        // Toggle weekend rates settings
+        $('#weekend_rates_enabled').change(function() {
+            if ($(this).is(':checked')) {
+                $('#weekend_rates').show();
+            } else {
+                $('#weekend_rates').hide();
+            }
+        });
+        
+        // Toggle overnight rate settings
+        $('#overnight_rate_enabled').change(function() {
+            if ($(this).is(':checked')) {
+                $('#overnight_rate_settings').show();
+            } else {
+                $('#overnight_rate_settings').hide();
+            }
+        });
+        
+        // Add new tier row
+        $('#add_tier_btn').click(function() {
+            // Get currency symbol from a data attribute we'll add to the button
+            const currencySymbol = $(this).data('currency');
+            const newRow = `
+                <tr class="tier-row">
+                    <td>
+                        <input type="number" class="form-control" name="tier_hours[]" value="1" min="0" step="0.5" required>
+                    </td>
+                    <td>
+                        <div class="input-group">
+                            <span class="input-group-text">${currencySymbol}</span>
+                            <input type="number" step="0.01" class="form-control" name="tier_rates[]" value="2.00" min="0" required>
+                        </div>
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-danger btn-sm remove-tier"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>
+            `;
+            $('#tiered_rates_table tbody').append(newRow);
+            bindRemoveTierEvent();
+        });
+        
+        // Remove tier row
+        function bindRemoveTierEvent() {
+            $('.remove-tier').off('click').on('click', function() {
+                // Don't remove if it's the last row
+                if ($('.tier-row').length > 1) {
+                    $(this).closest('tr').remove();
+                } else {
+                    alert('You must have at least one pricing tier.');
+                }
+            });
+        }
+        
+        // Initial binding
+        bindRemoveTierEvent();
+    });
+</script>
+{% endblock %}

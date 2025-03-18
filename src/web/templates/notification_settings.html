@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block title %}Notification Settings - AMSLPR{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="bi bi-bell"></i> Notification Settings</h2>
+        <p class="lead">Configure how you receive notifications about unauthorized access attempts.</p>
+    </div>
+</div>
+
+{% if message %}
+<div class="alert alert-{{ message_type }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
+<form action="/settings/notifications" method="post">
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="bi bi-envelope"></i> Email Notifications
+        </div>
+        <div class="card-body">
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" id="email-enabled" name="email_enabled" {% if config.email_enabled %}checked{% endif %}>
+                <label class="form-check-label" for="email-enabled">Enable Email Notifications</label>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="email-from" class="form-label">From Email Address</label>
+                    <input type="email" class="form-control" id="email-from" name="email_from" value="{{ config.email_from }}">
+                </div>
+                <div class="col-md-6">
+                    <label for="email-to" class="form-label">To Email Address</label>
+                    <input type="email" class="form-control" id="email-to" name="email_to" value="{{ config.email_to }}">
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="smtp-server" class="form-label">SMTP Server</label>
+                    <input type="text" class="form-control" id="smtp-server" name="smtp_server" value="{{ config.smtp_server }}">
+                </div>
+                <div class="col-md-6">
+                    <label for="smtp-port" class="form-label">SMTP Port</label>
+                    <input type="number" class="form-control" id="smtp-port" name="smtp_port" value="{{ config.smtp_port }}">
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="smtp-username" class="form-label">SMTP Username</label>
+                    <input type="text" class="form-control" id="smtp-username" name="smtp_username" value="{{ config.smtp_username }}">
+                </div>
+                <div class="col-md-6">
+                    <label for="smtp-password" class="form-label">SMTP Password</label>
+                    <input type="password" class="form-control" id="smtp-password" name="smtp_password" value="{{ config.smtp_password }}">
+                </div>
+            </div>
+            
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="smtp-use-tls" name="smtp_use_tls" {% if config.smtp_use_tls %}checked{% endif %}>
+                <label class="form-check-label" for="smtp-use-tls">Use TLS</label>
+            </div>
+            
+            <button type="button" class="btn btn-secondary" id="test-email">
+                <i class="bi bi-send"></i> Test Email
+            </button>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="bi bi-chat-text"></i> SMS Notifications
+        </div>
+        <div class="card-body">
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" id="sms-enabled" name="sms_enabled" {% if config.sms_enabled %}checked{% endif %}>
+                <label class="form-check-label" for="sms-enabled">Enable SMS Notifications</label>
+            </div>
+            
+            <div class="mb-3">
+                <label for="sms-provider" class="form-label">SMS Provider</label>
+                <select class="form-select" id="sms-provider" name="sms_provider">
+                    <option value="twilio" {% if config.sms_provider == 'twilio' %}selected{% endif %}>Twilio</option>
+                    <option value="http_api" {% if config.sms_provider == 'http_api' %}selected{% endif %}>HTTP API</option>
+                </select>
+            </div>
+            
+            <div id="twilio-settings" class="{% if config.sms_provider != 'twilio' %}d-none{% endif %}">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="twilio-account-sid" class="form-label">Twilio Account SID</label>
+                        <input type="text" class="form-control" id="twilio-account-sid" name="twilio_account_sid" value="{{ config.twilio_account_sid }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="twilio-auth-token" class="form-label">Twilio Auth Token</label>
+                        <input type="password" class="form-control" id="twilio-auth-token" name="twilio_auth_token" value="{{ config.twilio_auth_token }}">
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="twilio-from-number" class="form-label">From Phone Number</label>
+                        <input type="text" class="form-control" id="twilio-from-number" name="twilio_from_number" value="{{ config.twilio_from_number }}" placeholder="+1234567890">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="sms-to-number" class="form-label">To Phone Number</label>
+                        <input type="text" class="form-control" id="sms-to-number" name="sms_to_number" value="{{ config.sms_to_number }}" placeholder="+1234567890">
+                    </div>
+                </div>
+            </div>
+            
+            <div id="http-api-settings" class="{% if config.sms_provider != 'http_api' %}d-none{% endif %}">
+                <div class="mb-3">
+                    <label for="sms-api-url" class="form-label">API URL</label>
+                    <input type="url" class="form-control" id="sms-api-url" name="sms_api_url" value="{{ config.sms_api_url }}">
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="sms-api-number-param" class="form-label">Phone Number Parameter Name</label>
+                        <input type="text" class="form-control" id="sms-api-number-param" name="sms_api_number_param" value="{{ config.sms_api_number_param or 'to' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="sms-api-message-param" class="form-label">Message Parameter Name</label>
+                        <input type="text" class="form-control" id="sms-api-message-param" name="sms_api_message_param" value="{{ config.sms_api_message_param or 'message' }}">
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="sms-api-headers" class="form-label">API Headers (JSON)</label>
+                    <textarea class="form-control" id="sms-api-headers" name="sms_api_headers" rows="3">{{ config.sms_api_headers_json }}</textarea>
+                    <div class="form-text">Enter headers as JSON object, e.g. {"Authorization": "Bearer token"}</div>
+                </div>
+                
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="sms-api-json" name="sms_api_json" {% if config.sms_api_json %}checked{% endif %}>
+                    <label class="form-check-label" for="sms-api-json">Send as JSON (otherwise sent as form data)</label>
+                </div>
+            </div>
+            
+            <button type="button" class="btn btn-secondary" id="test-sms">
+                <i class="bi bi-send"></i> Test SMS
+            </button>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="bi bi-link"></i> Webhook Notifications
+        </div>
+        <div class="card-body">
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" id="webhook-enabled" name="webhook_enabled" {% if config.webhook_enabled %}checked{% endif %}>
+                <label class="form-check-label" for="webhook-enabled">Enable Webhook Notifications</label>
+            </div>
+            
+            <div class="mb-3">
+                <label for="webhook-url" class="form-label">Webhook URL</label>
+                <input type="url" class="form-control" id="webhook-url" name="webhook_url" value="{{ config.webhook_url }}">
+            </div>
+            
+            <div class="mb-3">
+                <label for="webhook-headers" class="form-label">Webhook Headers (JSON)</label>
+                <textarea class="form-control" id="webhook-headers" name="webhook_headers" rows="3">{{ config.webhook_headers_json }}</textarea>
+                <div class="form-text">Enter headers as JSON object, e.g. {"Authorization": "Bearer token"}</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="location-name" class="form-label">Location Name</label>
+                <input type="text" class="form-control" id="location-name" name="location_name" value="{{ config.location_name or 'Main Entrance' }}">
+                <div class="form-text">This name will be included in notifications to identify the location.</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="public-image-base-url" class="form-label">Public Image Base URL</label>
+                <input type="url" class="form-control" id="public-image-base-url" name="public_image_base_url" value="{{ config.public_image_base_url }}">
+                <div class="form-text">Base URL for accessing images in webhook notifications (optional).</div>
+            </div>
+            
+            <button type="button" class="btn btn-secondary" id="test-webhook">
+                <i class="bi bi-send"></i> Test Webhook
+            </button>
+        </div>
+    </div>
+    
+    <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-4">
+        <button type="reset" class="btn btn-secondary me-md-2">
+            <i class="bi bi-arrow-counterclockwise"></i> Reset
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save"></i> Save Settings
+        </button>
+    </div>
+</form>
+
+<!-- Test Notification Modal -->
+<div class="modal fade" id="testNotificationModal" tabindex="-1" aria-labelledby="testNotificationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="testNotificationModalLabel">Test Notification</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="test-plate-number" class="form-label">License Plate Number</label>
+                    <input type="text" class="form-control" id="test-plate-number" value="TEST123">
+                </div>
+                <div id="test-notification-result"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="send-test-notification">Send Test</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Toggle SMS provider settings
+    document.getElementById('sms-provider').addEventListener('change', function() {
+        const provider = this.value;
+        if (provider === 'twilio') {
+            document.getElementById('twilio-settings').classList.remove('d-none');
+            document.getElementById('http-api-settings').classList.add('d-none');
+        } else if (provider === 'http_api') {
+            document.getElementById('twilio-settings').classList.add('d-none');
+            document.getElementById('http-api-settings').classList.remove('d-none');
+        }
+    });
+    
+    // Test notification modal handling
+    const testModal = new bootstrap.Modal(document.getElementById('testNotificationModal'));
+    let currentTestType = '';
+    
+    // Test Email button
+    document.getElementById('test-email').addEventListener('click', function() {
+        currentTestType = 'email';
+        document.getElementById('testNotificationModalLabel').textContent = 'Test Email Notification';
+        document.getElementById('test-notification-result').innerHTML = '';
+        testModal.show();
+    });
+    
+    // Test SMS button
+    document.getElementById('test-sms').addEventListener('click', function() {
+        currentTestType = 'sms';
+        document.getElementById('testNotificationModalLabel').textContent = 'Test SMS Notification';
+        document.getElementById('test-notification-result').innerHTML = '';
+        testModal.show();
+    });
+    
+    // Test Webhook button
+    document.getElementById('test-webhook').addEventListener('click', function() {
+        currentTestType = 'webhook';
+        document.getElementById('testNotificationModalLabel').textContent = 'Test Webhook Notification';
+        document.getElementById('test-notification-result').innerHTML = '';
+        testModal.show();
+    });
+    
+    // Send test notification
+    document.getElementById('send-test-notification').addEventListener('click', function() {
+        const plateNumber = document.getElementById('test-plate-number').value;
+        const resultElement = document.getElementById('test-notification-result');
+        
+        resultElement.innerHTML = '<div class="alert alert-info">Sending test notification...</div>';
+        
+        fetch('/api/test_notification', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                type: currentTestType,
+                plate_number: plateNumber
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                resultElement.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+            } else {
+                resultElement.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+            }
+        })
+        .catch(error => {
+            resultElement.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+        });
+    });
+</script>
+{% endblock %}

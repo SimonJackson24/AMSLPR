@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}System Settings - AMSLPR{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="d-flex align-items-center">
+            <i class="bi bi-server me-3 text-primary"></i> System Settings
+        </h2>
+        <p class="text-muted">Configure system-wide settings and preferences</p>
+    </div>
+</div>
+
+{% if messages %}
+<div class="row mb-4">
+    <div class="col">
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}" role="alert">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">General Settings</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" action="/system/settings">
+                    <div class="mb-3">
+                        <label for="systemName" class="form-label">System Name</label>
+                        <input type="text" class="form-control" id="systemName" name="system_name" value="{{ config.get('system_name', 'AMSLPR') }}">
+                        <div class="form-text">The name of your AMSLPR installation</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="timezone" class="form-label">Timezone</label>
+                        <select class="form-select" id="timezone" name="timezone">
+                            <option value="UTC" {% if config.get('timezone') == 'UTC' %}selected{% endif %}>UTC</option>
+                            <option value="America/New_York" {% if config.get('timezone') == 'America/New_York' %}selected{% endif %}>Eastern Time (ET)</option>
+                            <option value="America/Chicago" {% if config.get('timezone') == 'America/Chicago' %}selected{% endif %}>Central Time (CT)</option>
+                            <option value="America/Denver" {% if config.get('timezone') == 'America/Denver' %}selected{% endif %}>Mountain Time (MT)</option>
+                            <option value="America/Los_Angeles" {% if config.get('timezone') == 'America/Los_Angeles' %}selected{% endif %}>Pacific Time (PT)</option>
+                            <option value="Europe/London" {% if config.get('timezone') == 'Europe/London' %}selected{% endif %}>London (GMT)</option>
+                            <option value="Europe/Paris" {% if config.get('timezone') == 'Europe/Paris' %}selected{% endif %}>Central European Time (CET)</option>
+                        </select>
+                        <div class="form-text">System timezone for date and time display</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="operatingMode" class="form-label">Operating Mode</label>
+                        <select class="form-select" id="operatingMode" name="operating_mode">
+                            <option value="standalone" {% if config.get('operating_mode') == 'standalone' %}selected{% endif %}>Standalone Mode</option>
+                            <option value="paxton" {% if config.get('operating_mode') == 'paxton' %}selected{% endif %}>Paxton Mode</option>
+                            <option value="nayax" {% if config.get('operating_mode') == 'nayax' %}selected{% endif %}>Nayax Mode</option>
+                        </select>
+                        <div class="form-text">Changes the system's operating mode and available features</div>
+                        <div class="alert alert-info mt-2">
+                            <strong>Note:</strong> Changing the operating mode affects which features are available to different user roles.
+                            <ul class="mb-0 mt-1">
+                                <li><strong>Standalone Mode:</strong> Basic vehicle recognition with the system controlling the barrier directly</li>
+                                <li><strong>Paxton Mode:</strong> Sends license plates to Paxton via Wiegand 26-bit protocol, and Paxton controls the barrier</li>
+                                <li><strong>Nayax Mode:</strong> Full parking management with Nayax payment integration for charging parking fees</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="logLevel" class="form-label">Log Level</label>
+                        <select class="form-select" id="logLevel" name="log_level">
+                            <option value="DEBUG" {% if config.get('log_level') == 'DEBUG' %}selected{% endif %}>Debug</option>
+                            <option value="INFO" {% if config.get('log_level') == 'INFO' %}selected{% endif %}>Info</option>
+                            <option value="WARNING" {% if config.get('log_level') == 'WARNING' %}selected{% endif %}>Warning</option>
+                            <option value="ERROR" {% if config.get('log_level') == 'ERROR' %}selected{% endif %}>Error</option>
+                        </select>
+                        <div class="form-text">Verbosity level for system logs</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="dataRetention" class="form-label">Data Retention (days)</label>
+                        <input type="number" class="form-control" id="dataRetention" name="data_retention" value="{{ config.get('data_retention', 90) }}" min="1" max="365">
+                        <div class="form-text">Number of days to keep logs and historical data</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="enableBackups" name="enable_backups" {% if config.get('enable_backups', True) %}checked{% endif %}>
+                            <label class="form-check-label" for="enableBackups">Enable Automatic Backups</label>
+                        </div>
+                        <div class="form-text">Automatically backup the database and configuration files</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="enableNotifications" name="enable_notifications" {% if config.get('enable_notifications', True) %}checked{% endif %}>
+                            <label class="form-check-label" for="enableNotifications">Enable System Notifications</label>
+                        </div>
+                        <div class="form-text">Send notifications for system events and alerts</div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- System Information -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">System Information</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6>Disk Usage</h6>
+                    <div class="progress mb-2">
+                        <div class="progress-bar" role="progressbar" style="width: {{ disk_usage.percent }}%;" aria-valuenow="{{ disk_usage.percent }}" aria-valuemin="0" aria-valuemax="100">{{ disk_usage.percent|round }}%</div>
+                    </div>
+                    <small class="text-muted">{{ disk_usage.used }} GB used of {{ disk_usage.total }} GB ({{ disk_usage.free }} GB free)</small>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>Version Information</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <td>AMSLPR Version</td>
+                            <td>{{ config.get('version', '1.0.0') }}</td>
+                        </tr>
+                        <tr>
+                            <td>Last Updated</td>
+                            <td>{{ config.get('last_updated', '2025-03-16') }}</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <a href="/system/status" class="btn btn-outline-primary">View System Status</a>
+                    <a href="/system/logs" class="btn btn-outline-secondary">View System Logs</a>
+                    <a href="/system/api-keys" class="btn btn-outline-info">Manage API Keys</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/system/backup" class="btn btn-outline-primary">Create Backup</a>
+                    <a href="/system/clear-cache" class="btn btn-outline-warning">Clear Cache</a>
+                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#restartModal">Restart System</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Restart Confirmation Modal -->
+<div class="modal fade" id="restartModal" tabindex="-1" aria-labelledby="restartModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="restartModalLabel">Confirm Restart</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to restart the AMSLPR system? This will temporarily interrupt all services.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <a href="/system/restart" class="btn btn-danger">Restart System</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

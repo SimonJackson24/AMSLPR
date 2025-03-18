@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block title %}System Logs{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mt-4 mb-4">System Logs</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5 class="card-title mb-0">Application Logs</h5>
+                </div>
+                <div class="col-md-6 text-end">
+                    <button id="refreshLogs" class="btn btn-sm btn-light">Refresh</button>
+                    <button id="downloadLogs" class="btn btn-sm btn-light">Download</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+            {% endif %}
+            
+            {% if logs %}
+                <div class="log-container bg-dark text-light p-3" style="height: 500px; overflow-y: auto; font-family: monospace;">
+                    {% for log in logs %}
+                        <div class="log-line {% if 'ERROR' in log %}text-danger{% elif 'WARNING' in log %}text-warning{% elif 'INFO' in log %}text-info{% endif %}">
+                            {{ log }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>No logs available.</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Log Settings</h5>
+                </div>
+                <div class="card-body">
+                    <form id="logSettingsForm">
+                        <div class="mb-3">
+                            <label for="logLevel" class="form-label">Log Level</label>
+                            <select class="form-select" id="logLevel" name="logLevel">
+                                <option value="DEBUG">DEBUG</option>
+                                <option value="INFO" selected>INFO</option>
+                                <option value="WARNING">WARNING</option>
+                                <option value="ERROR">ERROR</option>
+                                <option value="CRITICAL">CRITICAL</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="logLines" class="form-label">Number of Lines</label>
+                            <input type="number" class="form-control" id="logLines" name="logLines" value="100" min="10" max="1000">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Apply Settings</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Log Files</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        <a href="#" class="list-group-item list-group-item-action active" data-log-file="amslpr.log">amslpr.log</a>
+                        <a href="#" class="list-group-item list-group-item-action" data-log-file="error.log">error.log</a>
+                        <a href="#" class="list-group-item list-group-item-action" data-log-file="access.log">access.log</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Refresh logs
+        $('#refreshLogs').click(function() {
+            location.reload();
+        });
+        
+        // Download logs
+        $('#downloadLogs').click(function() {
+            window.location.href = '{{ url_for("system.download_logs") }}';
+        });
+        
+        // Log settings form
+        $('#logSettingsForm').submit(function(e) {
+            e.preventDefault();
+            
+            var logLevel = $('#logLevel').val();
+            var logLines = $('#logLines').val();
+            
+            window.location.href = '{{ url_for("system.view_logs") }}?level=' + logLevel + '&lines=' + logLines;
+        });
+        
+        // Log file selection
+        $('.list-group-item').click(function(e) {
+            e.preventDefault();
+            
+            $('.list-group-item').removeClass('active');
+            $(this).addClass('active');
+            
+            var logFile = $(this).data('log-file');
+            window.location.href = '{{ url_for("system.view_logs") }}?file=' + logFile;
+        });
+        
+        // Scroll to bottom of log container
+        var logContainer = $('.log-container');
+        logContainer.scrollTop(logContainer.prop('scrollHeight'));
+    });
+</script>
+{% endblock %}

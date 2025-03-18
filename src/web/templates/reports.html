@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - AMSLPR{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="bi bi-file-pdf"></i> Reports</h2>
+        <p class="lead">Generate and download reports for your AMSLPR system.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-calendar-day"></i> Daily Report
+            </div>
+            <div class="card-body">
+                <p>Generate a daily report with traffic statistics, vehicle information, and parking duration data for a specific date.</p>
+                <form action="/reports/daily" method="post">
+                    <div class="mb-3">
+                        <label for="daily-date" class="form-label">Date</label>
+                        <input type="date" class="form-control" id="daily-date" name="date" value="{{ today }}" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-file-arrow-down"></i> Generate Report
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-calendar-week"></i> Weekly Report
+            </div>
+            <div class="card-body">
+                <p>Generate a weekly report with traffic trends, vehicle statistics, and parking patterns for a 7-day period.</p>
+                <form action="/reports/weekly" method="post">
+                    <div class="mb-3">
+                        <label for="weekly-end-date" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="weekly-end-date" name="end_date" value="{{ today }}" required>
+                        <div class="form-text">The report will cover the 7-day period ending on this date.</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-file-arrow-down"></i> Generate Report
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-calendar"></i> Monthly Report
+            </div>
+            <div class="card-body">
+                <p>Generate a comprehensive monthly report with detailed statistics and analysis for a specific month.</p>
+                <form action="/reports/monthly" method="post">
+                    <div class="mb-3">
+                        <label for="monthly-year" class="form-label">Year</label>
+                        <select class="form-select" id="monthly-year" name="year" required>
+                            {% for year in years %}
+                            <option value="{{ year }}" {% if year == current_year %}selected{% endif %}>{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="monthly-month" class="form-label">Month</label>
+                        <select class="form-select" id="monthly-month" name="month" required>
+                            {% for month_num, month_name in months %}
+                            <option value="{{ month_num }}" {% if month_num == current_month %}selected{% endif %}>{{ month_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-file-arrow-down"></i> Generate Report
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-clock-history"></i> Previous Reports
+            </div>
+            <div class="card-body">
+                <p>Access previously generated reports.</p>
+                {% if previous_reports %}
+                <div class="list-group">
+                    {% for report in previous_reports %}
+                    <a href="/reports/download/{{ report.filename }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-file-pdf me-2"></i> {{ report.display_name }}
+                            <small class="text-muted d-block">Generated: {{ report.created_at }}</small>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">
+                            <i class="bi bi-download"></i>
+                        </span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> No previous reports found.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

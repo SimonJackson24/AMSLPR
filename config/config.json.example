@@ -1,0 +1,85 @@
+{
+    "database": {
+        "type": "sqlite",
+        "path": "data/amslpr.db"
+    },
+    "recognition": {
+        "model": "data/models/lpr_model.pth",
+        "confidence_threshold": 0.7,
+        "processing_interval": 0.5,
+        "save_images": true,
+        "image_path": "data/images"
+    },
+    "barrier": {
+        "type": "gpio",
+        "open_pin": 17,
+        "close_pin": 18,
+        "sensor_pin": 27,
+        "open_time": 5
+    },
+    "web": {
+        "host": "0.0.0.0",
+        "port": 5000,
+        "debug": false,
+        "secret_key": "change_this_to_a_random_string"
+    },
+    "ssl": {
+        "enabled": false,
+        "cert_file": "/etc/amslpr/ssl/cert.pem",
+        "key_file": "/etc/amslpr/ssl/key.pem",
+        "auto_generate": true,
+        "days": 365,
+        "key_size": 2048
+    },
+    "camera": {
+        "type": "picamera",
+        "resolution": [1280, 720],
+        "framerate": 30,
+        "rotation": 0
+    },
+    "notifications": {
+        "email": {
+            "enabled": false,
+            "smtp_server": "smtp.example.com",
+            "smtp_port": 587,
+            "use_tls": true,
+            "username": "your_email@example.com",
+            "password": "your_password",
+            "from_address": "your_email@example.com",
+            "to_addresses": ["recipient@example.com"]
+        },
+        "sms": {
+            "enabled": false,
+            "provider": "twilio",
+            "account_sid": "your_twilio_account_sid",
+            "auth_token": "your_twilio_auth_token",
+            "from_number": "+1234567890",
+            "to_numbers": ["+1234567890"]
+        },
+        "webhook": {
+            "enabled": false,
+            "url": "https://example.com/webhook",
+            "method": "POST",
+            "headers": {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer your_token"
+            }
+        }
+    },
+    "logging": {
+        "level": "INFO",
+        "file": "data/logs/amslpr.log",
+        "max_size": 10485760,
+        "backup_count": 5
+    },
+    "security": {
+        "rate_limiting": {
+            "enabled": true,
+            "max_requests": 100,
+            "window_seconds": 60
+        },
+        "failed_login_delay": 3,
+        "max_failed_logins": 5,
+        "lockout_time": 300
+    }
+}

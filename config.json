@@ -1,0 +1,17 @@
+{
+    "operating_mode": "nayax",
+    "paxton": {
+        "enabled": false,
+        "wiegand": {
+            "data0_pin": 23,
+            "data1_pin": 24,
+            "facility_code": 1
+        }
+    },
+    "nayax": {
+        "enabled": true,
+        "api_key": "",
+        "terminal_id": "",
+        "merchant_id": ""
+    }
+}

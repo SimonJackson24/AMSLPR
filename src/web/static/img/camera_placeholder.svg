@@ -1,0 +1,7 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="600" fill="#f0f0f0"/>
+  <text x="400" y="300" font-family="Arial" font-size="24" text-anchor="middle" fill="#666">Camera Image Not Available</text>
+  <path d="M350,250 C350,238 360,230 370,230 L430,230 C440,230 450,238 450,250 L450,280 C450,292 440,300 430,300 L370,300 C360,300 350,292 350,280 Z" fill="#999"/>
+  <circle cx="400" cy="265" r="20" fill="#666"/>
+  <circle cx="400" cy="265" r="10" fill="#999"/>
+</svg>

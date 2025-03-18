@@ -1,0 +1,5 @@
+{
+    "confidence_threshold": 0.8,
+    "ocr_method": "hybrid",
+    "use_hailo_tpu": true
+}
