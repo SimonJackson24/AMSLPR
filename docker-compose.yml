@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   amslpr:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "5000:5000"
     volumes:
@@ -13,4 +15,4 @@ services:
     environment:
       - TZ=UTC
       - PYTHONUNBUFFERED=1
-    network_mode: "host"  # This gives full network access like the host machine
+    network_mode: "host"
