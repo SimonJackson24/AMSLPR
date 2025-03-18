@@ -1,23 +1,20 @@
 # Core dependencies
-opencv-python>=4.5.0
+opencv-python-headless>=4.5.0  # Headless version for Docker
 numpy>=1.19.0
 pytesseract>=0.3.8
-pillow>=8.0.0
+Pillow>=8.0.0
 
 # OCR and Image Processing
-# tesseract>=4.1.1  # This is a system package, not a pip package
 imutils>=0.5.4
 scikit-image>=0.19.0
 
 # Deep Learning OCR dependencies
 tensorflow>=2.5.0  # For CPU-based inference as fallback
-# hailo-platform>=4.0.0  # Uncomment when using Hailo TPU
-# hailo-model-zoo>=1.0.0  # Uncomment when using Hailo TPU
 
 # Web Framework
-flask>=2.0.0
-flask-login>=0.5.0
-flask-wtf>=1.0.0
+Flask>=2.0.0
+Flask-Login>=0.5.0
+Flask-WTF>=1.0.0
 Flask-Session>=0.4.0
 Flask-Limiter>=3.3.0
 Flask-SQLAlchemy>=3.0.0
@@ -33,54 +30,37 @@ bcrypt>=4.0.0
 PyJWT>=2.8.0
 
 # Database and ORM
-sqlalchemy>=1.4.0
+SQLAlchemy>=1.4.0
 alembic>=1.12.0
-psycopg2-binary>=2.9.0  # PostgreSQL adapter
-pymysql>=1.1.0  # MySQL adapter
-sqlite3-binary>=0.0.1
-
-# Raspberry Pi specific
-# RPi.GPIO>=0.7.0  # Only needed on Raspberry Pi
-# picamera>=1.13  # Only needed on Raspberry Pi
+psycopg2-binary>=2.9.0
+PyMySQL>=1.1.0
 
 # Statistics and Analytics
 pandas>=1.3.0
 matplotlib>=3.4.0
 seaborn>=0.12.0
-plotly>=5.16.0
 
 # Reporting and PDF
 reportlab>=3.6.0
 fpdf2>=2.5.0
 PyPDF2>=3.0.0
-weasyprint>=60.0
 
 # Notifications and Communication
 requests>=2.27.0
 twilio>=7.0.0
-sendgrid>=6.10.0
-paho-mqtt>=1.6.0  # For MQTT communication
+paho-mqtt>=1.6.0
 
 # Camera Integration
 onvif-zeep>=0.2.12
 python-rtsp>=1.3.0
-av>=10.0.0  # For video handling
-
-# Payment Integration
-pyserial>=3.5
-stripe>=6.6.0
 
 # Testing and Development
 pytest>=6.2.0
 pytest-cov>=4.1.0
-black>=23.9.0
-flake8>=6.1.0
-mypy>=1.5.0
 
 # Utilities
 loguru>=0.5.0
-pyyaml>=6.0
+PyYAML>=6.0
 python-dotenv>=1.0.0
-schedule>=1.2.0
-apscheduler>=3.10.0
+APScheduler>=3.10.0
 tqdm>=4.66.0
