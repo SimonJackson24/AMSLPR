@@ -9,27 +9,8 @@ services:
       - ./data:/app/data
       - ./logs:/app/logs
       - ./config:/app/config
-    devices:
-      - /dev/video0:/dev/video0  # For camera access
     restart: unless-stopped
     environment:
       - TZ=UTC
       - PYTHONUNBUFFERED=1
     network_mode: "host"  # This gives full network access like the host machine
-
-  portainer:
-    image: portainer/portainer-ce:latest
-    container_name: portainer
-    restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - portainer_data:/data
-    ports:
-      - "8000:8000"
-      - "9443:9443"
-
-volumes:
-  portainer_data:
