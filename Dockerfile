@@ -16,9 +16,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxext6 \
     libxrender1 \
     libffi-dev \
-    libssl-dev \
-    openssl \
-    ca-certificates \
     tesseract-ocr \
     && rm -rf /var/lib/apt/lists/*
 
@@ -32,10 +29,8 @@ RUN python -m pip install --upgrade pip setuptools wheel && \
 # Copy application code
 COPY . .
 
-# Set Python path and SSL configuration
-ENV PYTHONPATH="/app" \
-    REQUESTS_CA_BUNDLE="/etc/ssl/certs/ca-certificates.crt" \
-    SSL_CERT_FILE="/etc/ssl/certs/ca-certificates.crt"
+# Set Python path
+ENV PYTHONPATH="/app"
 
 # Expose port
 EXPOSE 5000
