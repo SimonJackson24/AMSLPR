@@ -29,9 +29,8 @@ services:
     deploy:
       resources:
         limits:
-          # Limit to 2 cores for RPi 4
-          cpus: '2'
-          # Limit to 1GB for RPi 4 (leaving room for system)
+          memory: 2G
+        reservations:
           memory: 1G
     healthcheck:
       test: ["CMD-SHELL", "curl -s http://127.0.0.1:5001/ocr/api/status | grep -q 'available'"]
