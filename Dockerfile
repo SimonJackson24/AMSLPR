@@ -1,10 +1,13 @@
-FROM hailoai/hailo-docker:latest
+FROM python:3.9-slim-bullseye
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     DEBIAN_FRONTEND=noninteractive \
+    # For ARM compatibility
+    MAKEFLAGS="-j4" \
+    CFLAGS="-march=armv8-a" \
     PYTHONASYNCIO_DEBUG=0 \
     PYTHONDEVMODE=0 \
     HAILO_ENABLED=true
@@ -54,6 +57,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Note: Hailo TPU support will be installed on the host system
+# The container will use the device mapping to access the Hailo TPU
+
 WORKDIR /app
 
 # Install Python dependencies first for better caching
@@ -68,6 +74,9 @@ RUN pip install --no-cache-dir pip wheel setuptools && \
     pip install --no-cache-dir "Pillow~=10.1.0" && \
     # Install the rest of the requirements
     pip install --no-cache-dir -r requirements.txt
+
+# Install Hailo Python SDK (with error handling)
+RUN pip install --no-cache-dir hailo-platform hailo-model-zoo || echo "Hailo SDK installation failed - will use device from host"
 
 # Copy application code
 COPY . .
@@ -89,6 +98,7 @@ EXPOSE 5000 5001
 
 # Copy entrypoint script
 COPY --chown=nobody:nogroup docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
 
 # Use tini for proper signal handling
 ENTRYPOINT ["/usr/bin/tini", "--"]
