@@ -3,6 +3,7 @@ version: '3.8'
 services:
   amslpr:
     build: .
+    container_name: amslpr
     network_mode: "host"
     volumes:
       - ./data:/app/data
@@ -32,11 +33,8 @@ services:
           cpus: '2'
           # Limit to 1GB for RPi 4 (leaving room for system)
           memory: 1G
-        reservations:
-          cpus: '0.5'
-          memory: 256M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/health", "||", "exit", "1"]
+      test: ["CMD-SHELL", "curl -s http://127.0.0.1:5001/ocr/api/status | grep -q 'available'"]
       interval: 30s
       timeout: 10s
       retries: 3

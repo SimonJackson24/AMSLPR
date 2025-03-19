@@ -2,7 +2,7 @@
 set -e
 
 # Set default port if not provided
-PORT=${PORT:-5000}
+PORT=${PORT:-5001}
 
 # Print startup message
 echo "Starting AMSLPR on port $PORT"
@@ -15,5 +15,7 @@ if [ "$HAILO_ENABLED" = "true" ]; then
     # Add any Hailo-specific initialization here
 fi
 
-# Execute the main application
-exec python3 -m uvicorn src.web.app:asgi_app --host 0.0.0.0 --port "$PORT" --workers 2 --loop uvloop
+# Skip installing xlsxwriter for now - we'll add it to the Dockerfile instead
+
+# Execute the main application using the standard run_server.py script
+exec python3 run_server.py --port $PORT
