@@ -70,12 +70,13 @@ class DatabaseManager:
             self._engine.dispose()
             logger.info("Database connections closed")
     
-    def get_access_logs(self, limit=None, vehicle_id=None, start_date=None, end_date=None):
+    def get_access_logs(self, limit=None, vehicle_id=None, plate_number=None, start_date=None, end_date=None):
         """Get access logs with optional filtering.
         
         Args:
             limit: Maximum number of logs to return
             vehicle_id: Filter by vehicle ID
+            plate_number: Filter by plate number (alternative to vehicle_id)
             start_date: Filter logs after this date
             end_date: Filter logs before this date
             
@@ -90,6 +91,8 @@ class DatabaseManager:
             
             if vehicle_id:
                 query = query.filter(AccessLog.vehicle_id == vehicle_id)
+            elif plate_number:
+                query = query.filter(Vehicle.plate_number == plate_number)
                 
             if start_date:
                 query = query.filter(AccessLog.timestamp >= start_date)
