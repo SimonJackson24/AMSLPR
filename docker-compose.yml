@@ -23,9 +23,9 @@ services:
       - PORT=5001
     # Run as the same user that owns the files
     user: "1000:1000"
-    # Enable the Hailo TPU device mapping
-    devices:
-      - /dev/hailo0:/dev/hailo0  # Map the Hailo TPU device to the container
+    # Uncomment the devices section when running on hardware with Hailo TPU
+    # devices:
+    #   - /dev/hailo0:/dev/hailo0  # Map the Hailo TPU device to the container
     deploy:
       resources:
         limits:
