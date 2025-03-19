@@ -65,14 +65,14 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install build dependencies in the correct order
-RUN pip install --no-cache-dir pip wheel setuptools && 
+RUN pip install --no-cache-dir pip wheel setuptools && \
     # Install numpy first (required by OpenCV)
-    pip install --no-cache-dir "numpy~=1.24.0" && 
+    pip install --no-cache-dir "numpy~=1.24.0" && \
     # Install key dependencies separately
-    pip install --no-cache-dir "opencv-python-headless-rolling" && 
-    pip install --no-cache-dir "Pillow~=10.1.0" && 
+    pip install --no-cache-dir "opencv-python-headless-rolling" && \
+    pip install --no-cache-dir "Pillow~=10.1.0" && \
     # Install the rest of the requirements
-    pip install --no-cache-dir -r requirements.txt && 
+    pip install --no-cache-dir -r requirements.txt && \
     # Try to install Hailo Python SDK (optional)
     pip install --no-cache-dir hailo-platform hailo-model-zoo || echo "Hailo SDK not available - will use device from host"
 
