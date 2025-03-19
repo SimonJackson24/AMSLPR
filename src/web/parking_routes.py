@@ -5,6 +5,10 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from functools import wraps
 from src.config.settings import save_config
 from src.utils.mode_permissions import mode_access_required
+import io
+import csv
+import xlsxwriter
+from flask import make_response
 
 logger = logging.getLogger('AMSLPR.web.parking')
 
@@ -30,7 +34,7 @@ def parking_dashboard():
     """
     try:
         db_manager = current_app.config.get('DB_MANAGER')
-        config = current_app.config.get('AMSLPR_CONFIG', {})
+        app_config = current_app.config.get('AMSLPR_CONFIG', {})
         
         # If DB_MANAGER is not available, use mock data
         if not db_manager:
@@ -40,34 +44,66 @@ def parking_dashboard():
                 'active_sessions': 0,
                 'completed_sessions': 0,
                 'total_revenue': 0,
-                'avg_duration_minutes': 0
+                'avg_duration_minutes': 0,
+                'payment_methods': {},
+                'special_rates': {},
+                'start_date': datetime.now().strftime('%Y-%m-%d'),
+                'end_date': datetime.now().strftime('%Y-%m-%d')
             }
             active_sessions = []
             completed_sessions = []
         else:
             # Get parking statistics
             stats = db_manager.get_parking_statistics()
+            if not stats:
+                stats = {
+                    'total_sessions': 0,
+                    'active_sessions': 0,
+                    'completed_sessions': 0,
+                    'total_revenue': 0,
+                    'avg_duration_minutes': 0,
+                    'payment_methods': {},
+                    'special_rates': {},
+                    'start_date': datetime.now().strftime('%Y-%m-%d'),
+                    'end_date': datetime.now().strftime('%Y-%m-%d')
+                }
             
             # Get active sessions
             active_sessions = []
-            sessions = db_manager.get_parking_sessions(status='pending', limit=10)
-            for session in sessions:
-                if not session.get('exit_time'):
-                    # Calculate current duration
-                    entry_time = datetime.strptime(session['entry_time'], '%Y-%m-%d %H:%M:%S')
-                    duration = (datetime.now() - entry_time).total_seconds() / 60
-                    session['current_duration'] = round(duration, 1)
+            try:
+                sessions = db_manager.get_parking_sessions(status='pending', limit=10)
+                for session in sessions:
                     active_sessions.append(session)
+            except Exception as e:
+                logger.error(f"Error getting active sessions: {e}")
+                active_sessions = []
             
-            # Get recent completed sessions
-            completed_sessions = db_manager.get_parking_sessions(status='paid', limit=10)
+            # Get completed sessions
+            completed_sessions = []
+            try:
+                sessions = db_manager.get_parking_sessions(status='completed', limit=10)
+                for session in sessions:
+                    completed_sessions.append(session)
+            except Exception as e:
+                logger.error(f"Error getting completed sessions: {e}")
+                completed_sessions = []
+        
+        # Ensure the parking config section exists
+        if 'parking' not in app_config:
+            app_config['parking'] = {}
+            
+        # Ensure currency settings exist
+        if 'currency_symbol' not in app_config['parking']:
+            app_config['parking']['currency_symbol'] = '$'
+        if 'currency' not in app_config['parking']:
+            app_config['parking']['currency'] = 'USD'
         
         return render_template(
             'parking/dashboard.html',
             stats=stats,
             active_sessions=active_sessions,
             completed_sessions=completed_sessions,
-            config=config
+            config=app_config
         )
     except Exception as e:
         logger.error(f"Error in parking dashboard: {str(e)}")
@@ -84,34 +120,34 @@ def parking_settings():
     Parking settings.
     """
     try:
-        config = current_app.config.get('AMSLPR_CONFIG', {})
+        app_config = current_app.config.get('AMSLPR_CONFIG', {})
         
         # Ensure parking config section exists
-        if 'parking' not in config:
-            config['parking'] = {}
-        if 'rates' not in config['parking']:
-            config['parking']['rates'] = {}
-        if 'nayax' not in config:
-            config['nayax'] = {}
+        if 'parking' not in app_config:
+            app_config['parking'] = {}
+        if 'rates' not in app_config['parking']:
+            app_config['parking']['rates'] = {}
+        if 'nayax' not in app_config:
+            app_config['nayax'] = {}
         
         if request.method == 'POST':
             # Update car park operating mode settings
-            config['parking']['entry_exit_mode'] = request.form.get('entry_exit_mode', 'single_camera')
-            config['parking']['payment_mode'] = request.form.get('payment_mode', 'hourly')
-            config['parking']['max_capacity'] = int(request.form.get('max_capacity', 100))
-            config['parking']['grace_period'] = int(request.form.get('grace_period', 15))
-            config['parking']['require_payment_on_exit'] = 'require_payment_on_exit' in request.form
+            app_config['parking']['entry_exit_mode'] = request.form.get('entry_exit_mode', 'single_camera')
+            app_config['parking']['payment_mode'] = request.form.get('payment_mode', 'hourly')
+            app_config['parking']['max_capacity'] = int(request.form.get('max_capacity', 100))
+            app_config['parking']['grace_period'] = int(request.form.get('grace_period', 15))
+            app_config['parking']['require_payment_on_exit'] = 'require_payment_on_exit' in request.form
             
             # Update currency settings
-            config['parking']['currency'] = request.form.get('currency', 'USD')
-            config['parking']['currency_symbol'] = request.form.get('currency_symbol', '$')
+            app_config['parking']['currency'] = request.form.get('currency', 'USD')
+            app_config['parking']['currency_symbol'] = request.form.get('currency_symbol', '$')
             
             # Update rates based on payment mode
             payment_mode = request.form.get('payment_mode', 'hourly')
             if payment_mode == 'fixed':
-                config['parking']['fixed_rate'] = float(request.form.get('fixed_rate', 5.00))
+                app_config['parking']['fixed_rate'] = float(request.form.get('fixed_rate', 5.00))
             elif payment_mode == 'hourly':
-                config['parking']['hourly_rate'] = float(request.form.get('hourly_rate', 2.00))
+                app_config['parking']['hourly_rate'] = float(request.form.get('hourly_rate', 2.00))
             elif payment_mode == 'tiered':
                 # Process tiered rates
                 tier_hours = request.form.getlist('tier_hours[]')
@@ -128,43 +164,43 @@ def parking_settings():
                         except (ValueError, TypeError):
                             pass
                 
-                config['parking']['tiered_rates'] = tiered_rates
+                app_config['parking']['tiered_rates'] = tiered_rates
             
             # Update payment integration settings
-            config['parking']['payment_enabled'] = 'payment_enabled' in request.form
-            config['parking']['payment_methods'] = request.form.getlist('payment_methods[]')
+            app_config['parking']['payment_enabled'] = 'payment_enabled' in request.form
+            app_config['parking']['payment_methods'] = request.form.getlist('payment_methods[]')
             
             # Update Nayax settings if present in the form
             if 'nayax_enabled' in request.form:
-                config['nayax']['enabled'] = True
-                config['nayax']['api_key'] = request.form.get('nayax_api_key', '')
-                config['nayax']['terminal_id'] = request.form.get('nayax_terminal_id', '')
+                app_config['nayax']['enabled'] = True
+                app_config['nayax']['api_key'] = request.form.get('nayax_api_key', '')
+                app_config['nayax']['terminal_id'] = request.form.get('nayax_terminal_id', '')
                 
                 # If Nayax is enabled, make sure the pricing settings are initialized
-                if 'nayax' not in config['parking']:
-                    config['parking']['nayax'] = {}
+                if 'nayax' not in app_config['parking']:
+                    app_config['parking']['nayax'] = {}
                     
                 # Copy the general pricing settings to Nayax pricing settings if they don't exist
-                if 'pricing_mode' not in config['parking']['nayax']:
-                    config['parking']['nayax']['pricing_mode'] = payment_mode
+                if 'pricing_mode' not in app_config['parking']['nayax']:
+                    app_config['parking']['nayax']['pricing_mode'] = payment_mode
                     
                     if payment_mode == 'fixed':
-                        config['parking']['nayax']['fixed_rate'] = config['parking']['fixed_rate']
+                        app_config['parking']['nayax']['fixed_rate'] = app_config['parking']['fixed_rate']
                     elif payment_mode == 'hourly':
-                        config['parking']['nayax']['hourly_rate'] = config['parking']['hourly_rate']
+                        app_config['parking']['nayax']['hourly_rate'] = app_config['parking']['hourly_rate']
                     elif payment_mode == 'tiered':
-                        if 'tiered_rates' in config['parking']:
-                            config['parking']['nayax']['tiers'] = [{'hours': tier['hours'], 'rate': tier['rate']} for tier in config['parking']['tiered_rates']]
+                        if 'tiered_rates' in app_config['parking']:
+                            app_config['parking']['nayax']['tiers'] = [{'hours': tier['hours'], 'rate': tier['rate']} for tier in app_config['parking']['tiered_rates']]
             else:
-                config['nayax']['enabled'] = False
+                app_config['nayax']['enabled'] = False
             
             # Save config
-            save_config(config)
+            save_config(app_config)
             
             flash('Parking settings updated successfully', 'success')
             return redirect(url_for('parking.parking_settings'))
         
-        return render_template('parking/settings.html', config=config)
+        return render_template('parking/settings.html', config=app_config)
     except Exception as e:
         logger.error(f"Error updating parking settings: {e}")
         flash(f"Error updating parking settings: {str(e)}", 'danger')
@@ -177,43 +213,43 @@ def nayax_pricing():
     Configure Nayax pricing tiers and free period settings.
     """
     try:
-        config = current_app.config.get('AMSLPR_CONFIG', {})
+        app_config = current_app.config.get('AMSLPR_CONFIG', {})
         
         # Ensure the nayax config sections exist
-        if 'nayax' not in config:
-            config['nayax'] = {'enabled': False}
+        if 'nayax' not in app_config:
+            app_config['nayax'] = {'enabled': False}
             
-        if 'parking' not in config:
-            config['parking'] = {}
+        if 'parking' not in app_config:
+            app_config['parking'] = {}
             
-        if 'nayax' not in config['parking']:
-            config['parking']['nayax'] = {}
+        if 'nayax' not in app_config['parking']:
+            app_config['parking']['nayax'] = {}
             
         # If Nayax is not enabled, redirect to parking settings
-        if not config['nayax'].get('enabled', False):
+        if not app_config['nayax'].get('enabled', False):
             flash('Nayax integration is not enabled. Please enable it in parking settings first.', 'warning')
             return redirect(url_for('parking.parking_settings'))
         
         if request.method == 'POST':
             # Free Period Settings
-            config['parking']['nayax']['free_period_enabled'] = 'free_period_enabled' in request.form
-            config['parking']['nayax']['free_period_minutes'] = int(request.form.get('free_period_minutes', 30))
+            app_config['parking']['nayax']['free_period_enabled'] = 'free_period_enabled' in request.form
+            app_config['parking']['nayax']['free_period_minutes'] = int(request.form.get('free_period_minutes', 30))
             
             # Pricing Mode
-            config['parking']['nayax']['pricing_mode'] = request.form.get('pricing_mode', 'hourly')
+            app_config['parking']['nayax']['pricing_mode'] = request.form.get('pricing_mode', 'hourly')
             
             # Fixed Rate Settings
-            if config['parking']['nayax']['pricing_mode'] == 'fixed':
-                config['parking']['nayax']['fixed_rate'] = float(request.form.get('fixed_rate', 5.00))
+            if app_config['parking']['nayax']['pricing_mode'] == 'fixed':
+                app_config['parking']['nayax']['fixed_rate'] = float(request.form.get('fixed_rate', 5.00))
             
             # Hourly Rate Settings
-            if config['parking']['nayax']['pricing_mode'] == 'hourly':
-                config['parking']['nayax']['hourly_rate'] = float(request.form.get('hourly_rate', 2.00))
-                config['parking']['nayax']['daily_max_rate'] = float(request.form.get('daily_max_rate', 20.00))
-                config['parking']['nayax']['partial_hour_billing'] = 'partial_hour_billing' in request.form
+            if app_config['parking']['nayax']['pricing_mode'] == 'hourly':
+                app_config['parking']['nayax']['hourly_rate'] = float(request.form.get('hourly_rate', 2.00))
+                app_config['parking']['nayax']['daily_max_rate'] = float(request.form.get('daily_max_rate', 20.00))
+                app_config['parking']['nayax']['partial_hour_billing'] = 'partial_hour_billing' in request.form
             
             # Tiered Rate Settings
-            if config['parking']['nayax']['pricing_mode'] == 'tiered':
+            if app_config['parking']['nayax']['pricing_mode'] == 'tiered':
                 tier_hours = request.form.getlist('tier_hours[]')
                 tier_rates = request.form.getlist('tier_rates[]')
                 
@@ -227,29 +263,29 @@ def nayax_pricing():
                 
                 # Sort tiers by hours
                 tiers.sort(key=lambda x: x['hours'])
-                config['parking']['nayax']['tiers'] = tiers
+                app_config['parking']['nayax']['tiers'] = tiers
             
             # Special Rates
-            config['parking']['nayax']['weekend_rates_enabled'] = 'weekend_rates_enabled' in request.form
-            if config['parking']['nayax']['weekend_rates_enabled']:
-                config['parking']['nayax']['weekend_hourly_rate'] = float(request.form.get('weekend_hourly_rate', 1.50))
-                config['parking']['nayax']['weekend_daily_max'] = float(request.form.get('weekend_daily_max', 15.00))
+            app_config['parking']['nayax']['weekend_rates_enabled'] = 'weekend_rates_enabled' in request.form
+            if app_config['parking']['nayax']['weekend_rates_enabled']:
+                app_config['parking']['nayax']['weekend_hourly_rate'] = float(request.form.get('weekend_hourly_rate', 1.50))
+                app_config['parking']['nayax']['weekend_daily_max'] = float(request.form.get('weekend_daily_max', 15.00))
             
-            config['parking']['nayax']['overnight_rate_enabled'] = 'overnight_rate_enabled' in request.form
-            if config['parking']['nayax']['overnight_rate_enabled']:
-                config['parking']['nayax']['overnight_rate'] = float(request.form.get('overnight_rate', 10.00))
-                config['parking']['nayax']['overnight_start_hour'] = int(request.form.get('overnight_start_hour', 20))
-                config['parking']['nayax']['overnight_end_hour'] = int(request.form.get('overnight_end_hour', 8))
+            app_config['parking']['nayax']['overnight_rate_enabled'] = 'overnight_rate_enabled' in request.form
+            if app_config['parking']['nayax']['overnight_rate_enabled']:
+                app_config['parking']['nayax']['overnight_rate'] = float(request.form.get('overnight_rate', 10.00))
+                app_config['parking']['nayax']['overnight_start_hour'] = int(request.form.get('overnight_start_hour', 20))
+                app_config['parking']['nayax']['overnight_end_hour'] = int(request.form.get('overnight_end_hour', 8))
             
             # Save config
-            save_config(config)
+            save_config(app_config)
             flash('Nayax pricing settings updated successfully', 'success')
             
-        return render_template('parking/nayax_pricing.html', config=config)
+        return render_template('parking/nayax_pricing.html', config=app_config)
     except Exception as e:
         logger.error(f"Error in Nayax pricing settings: {str(e)}")
         flash(f"Error updating Nayax pricing settings: {str(e)}", 'danger')
-        return render_template('parking/nayax_pricing.html', config=config)
+        return render_template('parking/nayax_pricing.html', config=app_config)
 
 @parking_bp.route('/sessions', methods=['GET'])
 @mode_access_required('parking', get_user_manager)
@@ -266,30 +302,44 @@ def parking_sessions():
         end_date = request.args.get('end_date', '')
         status = request.args.get('status', 'all')
         
+        # If DB_MANAGER is not available, use mock data
         if not db_manager:
             # Mock data for development/testing
             sessions = []
+            logger.warning("DB_MANAGER not found in app config. Using empty sessions list.")
         else:
             # Get sessions based on filters
             filter_params = {}
             if plate_number:
-                filter_params['license_plate'] = plate_number
+                filter_params['plate_number'] = plate_number
             if status and status != 'all':
                 filter_params['status'] = status
                 
             # Apply date filters if provided
-            if start_date or end_date:
-                # Date filtering would be implemented in the db_manager
-                pass
+            if start_date:
+                filter_params['start_time'] = start_date
+            if end_date:
+                filter_params['end_time'] = end_date
                 
-            sessions = db_manager.get_parking_sessions(**filter_params, limit=50)
+            # Get sessions with filters
+            try:
+                sessions = db_manager.get_parking_sessions(**filter_params, limit=50)
+                logger.debug(f"Retrieved {len(sessions)} parking sessions with filters: {filter_params}")
+            except Exception as e:
+                logger.error(f"Error retrieving parking sessions: {e}")
+                sessions = []
+                flash(f"Error retrieving parking sessions: {str(e)}", 'danger')
             
             # Calculate current duration for active sessions
             for session in sessions:
                 if not session.get('exit_time') and session.get('entry_time'):
-                    entry_time = datetime.strptime(session['entry_time'], '%Y-%m-%d %H:%M:%S')
-                    duration = (datetime.now() - entry_time).total_seconds() / 60
-                    session['current_duration'] = round(duration, 1)
+                    try:
+                        entry_time = datetime.strptime(session['entry_time'], '%Y-%m-%d %H:%M:%S')
+                        duration = (datetime.now() - entry_time).total_seconds() / 60
+                        session['current_duration'] = round(duration, 1)
+                    except Exception as e:
+                        logger.error(f"Error calculating duration for session {session.get('id')}: {e}")
+                        session['current_duration'] = 0
         
         # Handle export formats
         export_format = request.args.get('format')
@@ -302,12 +352,25 @@ def parking_sessions():
             # Implementation would go here
             pass
         
-        return render_template('parking/sessions.html', sessions=sessions)
+        # Get the full config object
+        app_config = current_app.config.get('AMSLPR_CONFIG', {})
+        
+        # Ensure the parking config section exists
+        if 'parking' not in app_config:
+            app_config['parking'] = {}
+            
+        # Ensure currency settings exist
+        if 'currency_symbol' not in app_config['parking']:
+            app_config['parking']['currency_symbol'] = '$'
+        if 'currency' not in app_config['parking']:
+            app_config['parking']['currency'] = 'USD'
+        
+        return render_template('parking/sessions.html', sessions=sessions, config=app_config)
     except Exception as e:
         logger.error(f"Error in parking sessions: {str(e)}")
         return render_template('error.html', 
                               error_title="Parking Sessions Error",
-                              error_message="There was an error loading the parking sessions.",
+                              error_message=f"There was an error loading the parking sessions: {str(e)}",
                               back_url="/dashboard")
 
 @parking_bp.route('/session/<session_id>')
@@ -320,31 +383,48 @@ def view_session(session_id):
         db_manager = current_app.config.get('DB_MANAGER')
         
         if not db_manager:
-            # Mock data for development/testing
-            session = {
-                'id': session_id,
-                'license_plate': 'DEMO123',
-                'entry_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'exit_time': None,
-                'status': 'pending',
-                'fee': 0,
-                'payment_method': None,
-                'notes': 'Demo session'
-            }
-        else:
-            # Get session details
-            session = db_manager.get_parking_session(session_id)
-            if not session:
-                flash('Parking session not found.', 'error')
-                return redirect(url_for('parking.parking_sessions'))
+            logger.warning("DB_MANAGER not found in app config. Using mock data.")
+            flash("Database manager not available. Cannot view session details.", "warning")
+            return redirect(url_for('parking.parking_sessions'))
         
-        return render_template('parking/session_details.html', session=session)
+        # Get session details
+        session_data = db_manager.get_parking_session(session_id)
+        
+        if not session_data:
+            flash(f"Parking session with ID {session_id} not found.", "warning")
+            return redirect(url_for('parking.parking_sessions'))
+        
+        # Calculate current duration for active sessions
+        if not session_data.get('exit_time') and session_data.get('entry_time'):
+            try:
+                entry_time = datetime.strptime(session_data['entry_time'], '%Y-%m-%d %H:%M:%S')
+                duration = (datetime.now() - entry_time).total_seconds() / 60
+                session_data['current_duration'] = round(duration, 1)
+            except Exception as e:
+                logger.error(f"Error calculating duration: {e}")
+                session_data['current_duration'] = 0
+        
+        # Get payment transactions for this session
+        payment_transactions = []
+        try:
+            payment_transactions = db_manager.get_payment_transactions(session_id)
+        except Exception as e:
+            logger.error(f"Error getting payment transactions: {e}")
+        
+        # Get config for pricing
+        config = current_app.config.get('AMSLPR_CONFIG', {})
+        
+        return render_template(
+            'parking/view_session.html', 
+            session=session_data,
+            payment_transactions=payment_transactions,
+            config=config
+        )
+    
     except Exception as e:
-        logger.error(f"Error in view session: {str(e)}")
-        return render_template('error.html', 
-                              error_title="Session Details Error",
-                              error_message=f"There was an error loading the parking session details for ID: {session_id}.",
-                              back_url="/parking/sessions")
+        logger.error(f"Error viewing parking session {session_id}: {str(e)}")
+        flash(f"Error viewing parking session: {str(e)}", "danger")
+        return redirect(url_for('parking.parking_sessions'))
 
 @parking_bp.route('/reports', methods=['GET'])
 @mode_access_required('parking', get_user_manager)
@@ -383,57 +463,95 @@ def parking_reports():
             daily_labels = []
             daily_data = []
         else:
-            # Get parking statistics for the date range
-            stats = db_manager.get_parking_statistics(start_date=start_date, end_date=end_date)
-            
-            # Add missing fields required by the template
-            payment_methods = stats.get('payment_methods', {})
-            total_paid = sum(payment_methods.values()) if payment_methods else 0
-            
-            # Calculate payment method stats
-            stats['card_payments'] = payment_methods.get('card', 0)
-            stats['cash_payments'] = payment_methods.get('cash', 0)
-            stats['app_payments'] = payment_methods.get('app', 0)
-            stats['other_payments'] = sum([v for k, v in payment_methods.items() if k not in ['card', 'cash', 'app']]) if payment_methods else 0
-            
-            # Calculate percentages
-            if total_paid > 0:
-                stats['card_payments_percentage'] = round((stats['card_payments'] / total_paid) * 100)
-                stats['cash_payments_percentage'] = round((stats['cash_payments'] / total_paid) * 100)
-                stats['other_payments_percentage'] = round(((stats['other_payments'] + stats['app_payments']) / total_paid) * 100)
-            else:
-                stats['card_payments_percentage'] = 0
-                stats['cash_payments_percentage'] = 0
-                stats['other_payments_percentage'] = 0
-            
-            # Calculate average fee
-            if stats.get('completed_sessions', 0) > 0 and stats.get('total_revenue', 0) > 0:
-                stats['avg_fee'] = round(stats['total_revenue'] / stats['completed_sessions'], 2)
-            else:
-                stats['avg_fee'] = 0
+            try:
+                # Get parking statistics for the date range
+                stats = db_manager.get_parking_statistics(start_date=start_date, end_date=end_date)
                 
-            # Set default values for missing fields
-            stats['max_fee'] = 0
-            stats['max_duration_minutes'] = 0
-            stats['free_sessions'] = 0
+                # Add missing fields required by the template
+                payment_methods = stats.get('payment_methods', {})
+                total_paid = sum(payment_methods.values()) if payment_methods else 0
+                
+                # Calculate payment method stats
+                stats['card_payments'] = payment_methods.get('card', 0)
+                stats['cash_payments'] = payment_methods.get('cash', 0)
+                stats['app_payments'] = payment_methods.get('app', 0)
+                stats['other_payments'] = sum([v for k, v in payment_methods.items() if k not in ['card', 'cash', 'app']]) if payment_methods else 0
+                
+                # Calculate percentages
+                if total_paid > 0:
+                    stats['card_payments_percentage'] = round((stats['card_payments'] / total_paid) * 100)
+                    stats['cash_payments_percentage'] = round((stats['cash_payments'] / total_paid) * 100)
+                    stats['other_payments_percentage'] = round(((stats['other_payments'] + stats['app_payments']) / total_paid) * 100)
+                else:
+                    stats['card_payments_percentage'] = 0
+                    stats['cash_payments_percentage'] = 0
+                    stats['other_payments_percentage'] = 0
+                
+                # Calculate average fee
+                if stats.get('completed_sessions', 0) > 0 and stats.get('total_revenue', 0) > 0:
+                    stats['avg_fee'] = round(stats['total_revenue'] / stats['completed_sessions'], 2)
+                else:
+                    stats['avg_fee'] = 0
+                    
+                # Set default values for missing fields
+                stats['max_fee'] = 0
+                stats['max_duration_minutes'] = 0
+                stats['free_sessions'] = 0
+                
+                # Get daily revenue data for chart
+                daily_revenue = db_manager.get_daily_revenue(start_date=start_date, end_date=end_date)
+                daily_labels = [day['date'] for day in daily_revenue]
+                daily_data = [day['revenue'] for day in daily_revenue]
+            except Exception as e:
+                # If there's an error with the database, use empty data
+                logger.error(f"Error getting parking data: {str(e)}")
+                flash(f"Error retrieving parking data: {str(e)}", "warning")
+                stats = {
+                    'total_sessions': 0,
+                    'active_sessions': 0,
+                    'completed_sessions': 0,
+                    'total_revenue': 0,
+                    'avg_fee': 0,
+                    'avg_duration_minutes': 0,
+                    'max_fee': 0,
+                    'max_duration_minutes': 0,
+                    'free_sessions': 0,
+                    'card_payments': 0,
+                    'cash_payments': 0,
+                    'app_payments': 0,
+                    'other_payments': 0,
+                    'card_payments_percentage': 0,
+                    'cash_payments_percentage': 0,
+                    'other_payments_percentage': 0
+                }
+                daily_labels = []
+                daily_data = []
+        
+        # Get the full config object
+        app_config = current_app.config.get('AMSLPR_CONFIG', {})
+        
+        # Ensure the parking config section exists
+        if 'parking' not in app_config:
+            app_config['parking'] = {}
             
-            # Get daily revenue data for chart
-            daily_revenue = db_manager.get_daily_revenue(start_date=start_date, end_date=end_date)
-            daily_labels = [day['date'] for day in daily_revenue]
-            daily_data = [day['revenue'] for day in daily_revenue]
+        # Ensure currency settings exist
+        if 'currency_symbol' not in app_config['parking']:
+            app_config['parking']['currency_symbol'] = '$'
+        if 'currency' not in app_config['parking']:
+            app_config['parking']['currency'] = 'USD'
         
         return render_template(
             'parking/reports.html',
             stats=stats,
             daily_labels=daily_labels,
             daily_data=daily_data,
-            config=current_app.config.get('AMSLPR_CONFIG', {})
+            config=app_config
         )
     except Exception as e:
         logger.error(f"Error in parking reports: {str(e)}")
         return render_template('error.html', 
                               error_title="Parking Reports Error",
-                              error_message="There was an error loading the parking reports.",
+                              error_message=f"There was an error loading the parking reports: {str(e)}",
                               back_url="/dashboard")
 
 @parking_bp.route('/api/session/<session_id>', methods=['GET'])
@@ -606,3 +724,88 @@ def api_manual_payment():
     except Exception as e:
         logger.error(f"Error recording manual payment: {e}")
         return jsonify({'error': str(e)}), 500
+
+@parking_bp.route('/export', methods=['GET'])
+@mode_access_required('parking', get_user_manager)
+def export_data():
+    """Export parking data in CSV or Excel format"""
+    try:
+        # Get the format from the request args
+        export_format = request.args.get('format', 'csv')
+        start_date = request.args.get('start_date', '')
+        end_date = request.args.get('end_date', '')
+        
+        # Get the parking sessions data
+        sessions = []
+        try:
+            db_manager = current_app.config.get('DB_MANAGER')
+            # Use start_time and end_time instead of start_date and end_date
+            sessions = db_manager.get_parking_sessions(start_time=start_date, end_time=end_date)
+        except Exception as e:
+            logger.error(f"Error getting parking sessions for export: {e}")
+            return render_template('error.html', error=f"Error exporting data: {str(e)}")
+        
+        if not sessions:
+            flash("No data to export for the selected date range.", "warning")
+            return redirect(url_for('parking.parking_reports'))
+        
+        # Prepare the data for export
+        export_data = []
+        for session in sessions:
+            export_data.append({
+                'ID': session.get('id', ''),
+                'License Plate': session.get('license_plate', ''),
+                'Entry Time': session.get('entry_time', ''),
+                'Exit Time': session.get('exit_time', ''),
+                'Duration (min)': session.get('duration', ''),
+                'Fee': session.get('fee', ''),
+                'Payment Method': session.get('payment_method', ''),
+                'Status': session.get('status', '')
+            })
+        
+        # Create the appropriate response based on the format
+        if export_format == 'csv':
+            # Create a CSV file
+            output = io.StringIO()
+            writer = csv.DictWriter(output, fieldnames=export_data[0].keys())
+            writer.writeheader()
+            writer.writerows(export_data)
+            
+            # Create the response
+            response = make_response(output.getvalue())
+            response.headers["Content-Disposition"] = f"attachment; filename=parking_data_{datetime.now().strftime('%Y%m%d')}.csv"
+            response.headers["Content-type"] = "text/csv"
+            return response
+            
+        elif export_format == 'excel':
+            # Create an Excel file
+            output = io.BytesIO()
+            workbook = xlsxwriter.Workbook(output)
+            worksheet = workbook.add_worksheet()
+            
+            # Write the header row
+            headers = list(export_data[0].keys())
+            for col, header in enumerate(headers):
+                worksheet.write(0, col, header)
+            
+            # Write the data rows
+            for row, data in enumerate(export_data, start=1):
+                for col, key in enumerate(headers):
+                    worksheet.write(row, col, data[key])
+            
+            workbook.close()
+            output.seek(0)
+            
+            # Create the response
+            response = make_response(output.getvalue())
+            response.headers["Content-Disposition"] = f"attachment; filename=parking_data_{datetime.now().strftime('%Y%m%d')}.xlsx"
+            response.headers["Content-type"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            return response
+        
+        else:
+            flash("Invalid export format specified.", "error")
+            return redirect(url_for('parking.parking_reports'))
+            
+    except Exception as e:
+        logger.error(f"Error in export data: {str(e)}")
+        return render_template('error.html', error=f"Error exporting data: {str(e)}")

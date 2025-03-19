@@ -42,6 +42,13 @@ data/logs/*
 data/models/*
 !data/models/.gitkeep
 
+# Flask session
+instance/flask_session/
+flask_session/
+
+# Cookies
+cookies.txt
+
 # OS specific
 .DS_Store
 Thumbs.db
