@@ -1,56 +1,56 @@
 # Core Vision
-opencv-python-headless~=4.9.0  # Latest stable version with Python 3.12 support
-numpy~=1.26.0  # Compatible with Python 3.12
-Pillow~=10.1.0  # Latest stable with ARM support
-tensorflow~=2.18.1  # Latest stable version compatible with Python 3.12
+opencv-python-headless>=4.5.0,<4.9.0  # Latest stable version with Python 3.12 support
+numpy>=1.19.0,<1.26.0  # Compatible with Python 3.12
+Pillow>=8.0.0,<10.0.0  # Latest stable with ARM support
+tensorflow>=2.9.0,<2.18.0  # Latest stable version compatible with Python 3.12
 
 # OCR
-pytesseract~=0.3.10
-imutils~=0.5.4
+pytesseract>=0.3.8
+imutils>=0.5.4
 
 # Web Framework
-Flask~=2.3.0  # Latest LTS version
-Flask-Login~=0.6.3
-Flask-WTF~=1.2.1
-Flask-Session~=0.5.0
-Flask-SQLAlchemy~=3.1.1
-Flask-Limiter~=3.5.0
-Werkzeug~=2.3.0  # Required for Flask 2.3
+Flask>=2.0.0,<2.3.0  # Latest LTS version
+Flask-Login>=0.5.0
+Flask-WTF>=1.0.0
+Flask-Session>=0.4.0
+Flask-SQLAlchemy>=2.5.0,<3.0.0
+Flask-Limiter>=2.5.0
+Werkzeug>=2.0.0,<2.3.0  # Required for Flask 2.3
 
 # ASGI Server
-uvicorn[standard]~=0.27.0  # Latest stable
-uvloop~=0.19.0  # Latest stable with ARM support
-asgiref~=3.7.2  # For WSGI to ASGI compatibility
+uvicorn[standard]>=0.15.0  # Latest stable
+uvloop>=0.15.0  # Latest stable with ARM support
+asgiref>=3.4.0  # For WSGI to ASGI compatibility
 
 # Security
-bcrypt~=4.0.1
-pyOpenSSL~=24.0.0
+bcrypt>=3.2.0
+pyOpenSSL>=20.0.0
 
 # Database
-SQLAlchemy~=2.0.0  # Latest with async support
+SQLAlchemy>=1.4.0,<2.0.0  # Latest with async support
 
 # Reporting and Export
-xlsxwriter~=3.2.0  # For Excel export functionality
+xlsxwriter>=3.0.0  # For Excel export functionality
 
 # Camera Integration
-onvif-zeep~=0.2.12  # Latest stable version
-zeep~=4.2.1
-aiohttp~=3.9.0
-yarl~=1.9.2
-multidict~=6.0.4
-async-timeout~=4.0.3
-requests~=2.31.0
+onvif-zeep>=0.2.12  # Latest stable version
+zeep>=4.0.0
+aiohttp>=3.7.0
+yarl>=1.6.0
+multidict>=5.0.0
+async-timeout>=4.0.0
+requests>=2.25.0
 
 # Monitoring
-loguru~=0.7.0
+loguru>=0.5.0
 
 # Configuration
-python-dotenv~=1.0.0
-PyYAML~=6.0.1
+python-dotenv>=0.15.0
+PyYAML>=5.4.0
 
 # Async Support
-typing-extensions~=4.9.0
+typing-extensions>=4.0.0
 
 # Build Dependencies
-setuptools>=69.0.0
-wheel>=0.42.0
+setuptools>=50.0.0
+wheel>=0.36.0

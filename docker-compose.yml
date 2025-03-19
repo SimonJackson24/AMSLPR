@@ -1,9 +1,8 @@
-version: '3.8'
+version: '3'
 
 services:
   amslpr:
     build: .
-    container_name: amslpr
     ports:
       - "5001:5001"
     volumes:
@@ -14,16 +13,5 @@ services:
     environment:
       - TZ=UTC
       - PYTHONUNBUFFERED=1
-      - PYTHONMALLOC=malloc
-      - PYTHONGC=1
       - HAILO_ENABLED=true
       - PORT=5001
-    # Uncomment the devices section when running on hardware with Hailo TPU
-    # devices:
-    #   - /dev/hailo0:/dev/hailo0  # Map the Hailo TPU device to the container
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-        reservations:
-          memory: 1G
