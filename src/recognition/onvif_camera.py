@@ -44,46 +44,46 @@ class ONVIFCameraManager:
         self.default_username = config.get('default_username', 'admin')
         self.default_password = config.get('default_password', 'admin')
         
-        # Create event loop for async operations
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
-        
-        # Initialize pre-configured cameras
-        self.loop.run_until_complete(self._init_cameras())
+        # Initialize cameras without using event loop
+        self._init_cameras_sync()
     
-    async def _init_cameras(self):
+    def _init_cameras_sync(self):
         """
-        Initialize pre-configured cameras from config.
+        Initialize pre-configured cameras synchronously.
         """
         preconfigured_cameras = self.config.get('cameras', [])
         for camera_config in preconfigured_cameras:
             try:
                 camera_id = camera_config.get('id')
                 if not camera_id:
-                    logger.warning("Skipping camera without ID")
                     continue
+                    
+                # Store camera config for later connection
+                self.cameras[camera_id] = {
+                    'id': camera_id,
+                    'ip': camera_config.get('ip'),
+                    'port': camera_config.get('port', 80),
+                    'name': camera_config.get('name', f"Camera {camera_id}"),
+                    'location': camera_config.get('location', 'Unknown'),
+                    'username': camera_config.get('username', self.default_username),
+                    'password': camera_config.get('password', self.default_password),
+                    'connected': False,
+                    'last_error': None,
+                    'capabilities': {}
+                }
                 
-                # Encrypt credentials if present
-                if 'username' in camera_config and 'password' in camera_config:
-                    credentials = {
-                        'username': camera_config['username'],
-                        'password': camera_config['password']
-                    }
-                    camera_config['encrypted_credentials'] = self.credential_manager.encrypt_credentials(credentials)
-                    camera_config.pop('username', None)
-                    camera_config.pop('password', None)
-                
-                await self.add_camera(
-                    camera_id=camera_id,
-                    ip=camera_config.get('ip'),
-                    port=camera_config.get('port', 80),
-                    name=camera_config.get('name', f"Camera {camera_id}"),
-                    location=camera_config.get('location', 'Unknown')
-                )
+                logger.info(f"Added pre-configured camera {camera_id} from config")
             except Exception as e:
-                logger.error(f"Error initializing camera {camera_config.get('id')}: {e}")
+                logger.error(f"Error initializing camera from config: {e}")
     
-    async def add_camera(self, camera_id, ip, port=80, name=None, location=None):
+    async def _init_cameras(self):
+        """
+        Initialize pre-configured cameras from config.
+        This is a placeholder for async initialization if needed.
+        """
+        pass
+    
+    async def add_camera(self, camera_id, ip, port=80, name=None, location=None, username=None, password=None):
         """
         Add a new ONVIF camera to the manager.
         
@@ -93,6 +93,8 @@ class ONVIFCameraManager:
             port (int): Port number for the camera (default: 80)
             name (str): Human-readable name for the camera
             location (str): Physical location of the camera
+            username (str): Username for camera authentication
+            password (str): Password for camera authentication
             
         Returns:
             bool: True if camera was added successfully, False otherwise
@@ -102,8 +104,12 @@ class ONVIFCameraManager:
                 logger.warning(f"Camera with ID {camera_id} already exists")
                 return False
             
+            # Use provided credentials or fall back to defaults
+            cam_username = username or self.default_username
+            cam_password = password or self.default_password
+            
             # Create ONVIF camera object
-            camera = ONVIFCamera(ip, port, self.default_username, self.default_password)
+            camera = ONVIFCamera(ip, port, cam_username, cam_password)
             await camera.update_xaddrs()  # Initialize services
             
             # Get camera information

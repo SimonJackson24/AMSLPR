@@ -1,3 +1,4 @@
+"""License plate detection and recognition module."""
 import cv2
 import numpy as np
 import os
@@ -43,6 +44,7 @@ class LicensePlateDetector:
         self.image_save_path = config.get('image_save_path', 'data/images')
         self.use_onvif = config.get('use_onvif', False)
         self.onvif_camera_manager = None
+        self.mock_mode = config.get('mock_mode', False)
         
         # Load OCR configuration
         if ocr_config is None:
@@ -73,7 +75,11 @@ class LicensePlateDetector:
             os.makedirs(self.image_save_path)
         
         # Initialize camera
-        self._init_camera()
+        try:
+            self._init_camera()
+        except Exception as e:
+            logger.warning(f"Failed to initialize camera: {e}. Running in mock mode.")
+            self.mock_mode = True
         
         # Initialize detector
         self._init_detector()
@@ -84,6 +90,8 @@ class LicensePlateDetector:
         logger.info(f"License plate detector initialized with OCR method: {self.ocr_method}")
         if self.use_hailo_tpu:
             logger.info("Using Hailo TPU for acceleration")
+        if self.mock_mode:
+            logger.info("Running in mock mode - no camera available")
 
     def _init_ocr_models(self):
         """
@@ -161,6 +169,10 @@ class LicensePlateDetector:
         """
         Initialize the camera.
         """
+        if self.mock_mode:
+            logger.info("Running in mock mode - no camera initialization needed")
+            return
+            
         try:
             if self.use_onvif:
                 # Use ONVIF camera manager if provided

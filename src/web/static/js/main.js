@@ -248,3 +248,78 @@ document.addEventListener('DOMContentLoaded', function() {
             toastEl.remove();
         });
     }
+
+    // AMSLPR Main JavaScript
+
+    // Sidebar Toggle
+    const sidebarCollapse = document.getElementById('sidebarCollapse');
+    const sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
+    const sidebar = document.getElementById('sidebar');
+    const content = document.getElementById('content');
+    
+    if (sidebarCollapse) {
+        sidebarCollapse.addEventListener('click', function() {
+            sidebar.classList.toggle('active');
+            content.classList.toggle('active');
+        });
+    }
+    
+    if (sidebarCollapseBtn) {
+        sidebarCollapseBtn.addEventListener('click', function() {
+            sidebar.classList.toggle('active');
+            content.classList.toggle('active');
+        });
+    }
+
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Initialize popovers
+    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+    var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+        return new bootstrap.Popover(popoverTriggerEl);
+    });
+
+    // Auto-hide alerts after 5 seconds
+    setTimeout(function() {
+        var alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
+        alerts.forEach(function(alert) {
+            var bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+
+    // Form validation
+    (function() {
+        'use strict';
+        window.addEventListener('load', function() {
+            var forms = document.getElementsByClassName('needs-validation');
+            Array.prototype.filter.call(forms, function(form) {
+                form.addEventListener('submit', function(event) {
+                    if (form.checkValidity() === false) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                }, false);
+            });
+        }, false);
+    })();
+
+    // Update current time
+    function updateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString();
+        const timeElement = document.getElementById('currentTime');
+        if (timeElement) {
+            timeElement.textContent = timeString;
+        }
+    }
+
+    // Update time every second
+    setInterval(updateTime, 1000);
+    updateTime();
+})

@@ -6,16 +6,18 @@ Main routes for the AMSLPR web interface.
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify
 from functools import wraps
+from loguru import logger
+from src.utils.user_management import login_required, UserManager
 
 # Create blueprint
-main_bp = Blueprint('main_dashboard', __name__, url_prefix='/')
+main_bp = Blueprint('main', __name__, url_prefix='/')
 
 # Global variables
 db_manager = None
 barrier_controller = None
 paxton_integration = None
 nayax_integration = None
-
+user_manager = UserManager()
 
 def init_main_routes(database_manager):
     """
@@ -34,46 +36,68 @@ def index():
     Main index route. Redirects to dashboard if logged in, otherwise to login page.
     """
     if 'username' in session:
-        return redirect(url_for('main_dashboard.dashboard'))
+        return redirect(url_for('main.dashboard'))
     
     # If auth module is not available, go directly to dashboard
     try:
         return redirect(url_for('auth.login'))
     except:
-        return redirect(url_for('main_dashboard.dashboard'))
+        return redirect(url_for('main.dashboard'))
 
 
 @main_bp.route('/dashboard')
+@login_required(user_manager)
 def dashboard():
     """
     Dashboard page showing system overview.
     """
-    # Skip auth check for debugging
+    if 'username' not in session:
+        return redirect(url_for('auth.login'))
+    
     # Get statistics for dashboard
     stats = {}
     if db_manager:
-        # Get recent access logs
-        stats['recent_logs'] = db_manager.get_access_logs(limit=10)
-        
-        # Get vehicle counts
-        stats['total_vehicles'] = db_manager.get_vehicle_count()
-        stats['authorized_vehicles'] = db_manager.get_vehicle_count(authorized=True)
-        
-        # Get access log counts
-        stats['total_logs'] = db_manager.get_access_log_count()
-        stats['today_logs'] = db_manager.get_access_log_count(today_only=True)
+        try:
+            # Get recent access logs
+            if hasattr(db_manager, 'get_access_logs'):
+                stats['recent_logs'] = db_manager.get_access_logs(limit=10)
+            else:
+                stats['recent_logs'] = []
+            
+            # Get vehicle counts
+            if hasattr(db_manager, 'get_vehicle_count'):
+                stats['total_vehicles'] = db_manager.get_vehicle_count()
+                stats['authorized_vehicles'] = db_manager.get_vehicle_count(authorized=True)
+            else:
+                stats['total_vehicles'] = 0
+                stats['authorized_vehicles'] = 0
+            
+            # Get access log counts
+            if hasattr(db_manager, 'get_access_log_count'):
+                stats['total_logs'] = db_manager.get_access_log_count()
+                stats['today_logs'] = db_manager.get_access_log_count(today_only=True)
+            else:
+                stats['total_logs'] = 0
+                stats['today_logs'] = 0
+        except Exception as e:
+            flash(f'Error loading dashboard data: {str(e)}', 'danger')
+            stats = {
+                'recent_logs': [],
+                'total_vehicles': 0,
+                'authorized_vehicles': 0,
+                'total_logs': 0,
+                'today_logs': 0
+            }
     
     return render_template('dashboard.html', stats=stats)
 
 
 @main_bp.route('/logs')
+@login_required(user_manager)
 def logs():
     """
     Access logs page.
     """
-    if 'username' not in session:
-        return redirect(url_for('auth.login'))
-    
     # Get query parameters
     page = request.args.get('page', 1, type=int)
     limit = request.args.get('limit', 50, type=int)
@@ -86,14 +110,23 @@ def logs():
     logs = []
     total_logs = 0
     if db_manager:
+        # Get vehicle_id from plate_number if provided
+        vehicle_id = None
+        if plate_number:
+            try:
+                from src.db.models import Vehicle
+                session = db_manager.get_session()
+                vehicle = session.query(Vehicle).filter(Vehicle.plate_number == plate_number).first()
+                if vehicle:
+                    vehicle_id = vehicle.id
+            except Exception as e:
+                logger.error(f"Error getting vehicle ID: {str(e)}")
+        
         logs = db_manager.get_access_logs(
-            plate_number=plate_number if plate_number else None,
-            limit=limit,
-            offset=offset
+            vehicle_id=vehicle_id,
+            limit=limit
         )
-        total_logs = db_manager.get_access_log_count(
-            plate_number=plate_number if plate_number else None
-        )
+        total_logs = db_manager.get_access_log_count()
     
     # Calculate pagination
     total_pages = (total_logs + limit - 1) // limit
@@ -110,6 +143,7 @@ def logs():
 
 
 @main_bp.route('/statistics')
+@login_required(user_manager)
 def statistics():
     """
     Statistics page.
@@ -167,6 +201,7 @@ def statistics():
 
 
 @main_bp.route('/reports')
+@login_required(user_manager)
 def reports():
     """
     Reports page.
@@ -205,6 +240,7 @@ def reports():
 
 
 @main_bp.route('/notification_settings')
+@login_required(user_manager)
 def notification_settings():
     """
     Notification settings page.
@@ -216,6 +252,7 @@ def notification_settings():
 
 
 @main_bp.route('/log_details/<int:log_id>')
+@login_required(user_manager)
 def log_details(log_id):
     """
     Display detailed information for a specific log entry.
@@ -241,7 +278,7 @@ def log_details(log_id):
     
     if not log:
         flash('Log entry not found', 'error')
-        return redirect(url_for('main_dashboard.logs'))
+        return redirect(url_for('main.logs'))
     
     return render_template('log_details.html', log=log, related_logs=related_logs)
 

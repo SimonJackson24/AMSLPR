@@ -2,7 +2,7 @@
 
 <!-- Main Navigation -->
 <li class="{% if request.path == '/dashboard' %}active{% endif %}">
-    <a href="{{ url_for('main_dashboard.dashboard') }}">
+    <a href="{{ url_for('main.dashboard') }}">
         <i class="bi bi-speedometer2"></i>
         <span>Dashboard</span>
     </a>
@@ -18,7 +18,7 @@
 
 <!-- Access Logs - Always visible -->
 <li class="{% if '/logs' in request.path %}active{% endif %}">
-    <a href="{{ url_for('main_dashboard.logs') }}">
+    <a href="{{ url_for('main.logs') }}">
         <i class="bi bi-list-check"></i>
         <span>Access Logs</span>
     </a>
@@ -26,7 +26,7 @@
 
 <!-- Statistics - Always visible -->
 <li class="{% if '/statistics' in request.path %}active{% endif %}">
-    <a href="{{ url_for('main_dashboard.statistics') }}">
+    <a href="{{ url_for('main.statistics') }}">
         <i class="bi bi-graph-up"></i>
         <span>Statistics</span>
     </a>
@@ -47,7 +47,7 @@
             </a>
         </li>
         <li class="{% if '/camera/health' in request.path %}active{% endif %}">
-            <a href="{{ url_for('camera.camera_health') }}">
+            <a href="/camera/health">
                 <i class="bi bi-heart-pulse"></i>
                 <span>Camera Health</span>
             </a>
@@ -63,7 +63,7 @@
 {% endif %}
 
 <!-- Parking - Only visible in nayax mode or for admin users -->
-{% if config.get('operating_mode') == 'nayax' or 'admin' in session.permissions %}
+{% if (config and config.get('operating_mode') == 'nayax') or 'admin' in session.permissions %}
 <li>
     <a href="#parkingSubmenu" data-bs-toggle="collapse" aria-expanded="{% if request.path.startswith('/parking') %}true{% else %}false{% endif %}" class="dropdown-toggle">
         <i class="bi bi-p-square-fill"></i>
@@ -124,8 +124,8 @@
                 <span>Integration</span>
             </a>
         </li>
-        <li class="{% if '/system/users' in request.path %}active{% endif %}">
-            <a href="/system/users">
+        <li class="{% if '/auth/users' in request.path %}active{% endif %}">
+            <a href="/auth/users">
                 <i class="bi bi-people"></i>
                 <span>Users</span>
             </a>
@@ -143,7 +143,7 @@
             </a>
         </li>
         <li class="{% if '/ocr/settings' in request.path %}active{% endif %}">
-            <a href="/ocr/settings">
+            <a href="{{ url_for('user.ocr_settings_redirect') }}">
                 <i class="bi bi-camera"></i>
                 <span>OCR Settings</span>
             </a>

@@ -125,7 +125,7 @@
                             {% for plate, count in vehicle_stats.most_frequent_vehicles.items() %}
                             <tr>
                                 <td>
-                                    <a href="{{ url_for('main_dashboard.logs') }}?plate_number={{ plate }}">
+                                    <a href="{{ url_for('main.logs') }}?plate_number={{ plate }}">
                                         {{ plate }}
                                     </a>
                                 </td>

@@ -9,72 +9,27 @@ import sys
 import json
 from src.web.app import create_app
 from src.database.db_manager import DatabaseManager
-
-# Default configuration for testing
-default_config = {
-    "web": {
-        "secret_key": "development-key-for-testing",
-        "debug": True,
-        "host": "127.0.0.1",
-        "port": 5060,
-        "upload_folder": "uploads",
-        "ssl": {
-            "enabled": False,
-            "cert_path": "",
-            "key_path": ""
-        }
-    },
-    "database": {
-        "db_path": "data/amslpr.db",
-        "backup_interval": 86400
-    },
-    "notifications": {
-        "email_enabled": False,
-        "email_from": "noreply@example.com",
-        "email_to": "admin@example.com",
-        "smtp_server": "smtp.example.com",
-        "smtp_port": 587,
-        "smtp_username": "",
-        "smtp_password": "",
-        "smtp_use_tls": True,
-        "sms_enabled": False,
-        "sms_provider": "twilio",
-        "sms_to_number": "+1234567890",
-        "webhook_enabled": False,
-        "webhook_url": "https://example.com/webhook",
-        "location_name": "Main Entrance"
-    }
-}
+from src.utils.config import load_config
+from src.recognition.detector import LicensePlateDetector
 
 def main():
-    # Create data directory if it doesn't exist
-    os.makedirs("data", exist_ok=True)
+    # Load configuration
+    config = load_config()
     
-    # Create reports directory if it doesn't exist
-    os.makedirs("/home/simon/Projects/AMSLPR/reports", exist_ok=True)
+    # Create instance directory if it doesn't exist
+    os.makedirs("instance", exist_ok=True)
+    
+    # Create uploads directory if it doesn't exist
+    os.makedirs(config["web"]["upload_folder"], exist_ok=True)
     
     # Initialize database manager
-    db_manager = DatabaseManager(default_config["database"])
+    db_manager = DatabaseManager(config)
     
-    # Create a mock detector for testing
-    class MockDetector:
-        def __init__(self):
-            pass
-        
-        def detect(self, image):
-            return []
+    # Initialize license plate detector
+    detector = LicensePlateDetector(config["recognition"])
     
     # Create and run app
-    app = create_app(default_config, db_manager, MockDetector())
-    
-    # Add a test route to set a mock session for testing
-    @app.route('/test_login')
-    def test_login():
-        from flask import session, redirect, url_for
-        session['username'] = 'admin'
-        session['user_id'] = 1
-        session['role'] = 'admin'
-        return redirect(url_for('main.dashboard'))
+    app = create_app(config, db_manager, detector)
     
     # Add Jinja2 filter for formatDateTime
     @app.template_filter('formatDateTime')
@@ -90,9 +45,9 @@ def main():
         return value.strftime('%Y-%m-%d %H:%M:%S')
     
     app.run(
-        host=default_config["web"]["host"],
-        port=default_config["web"]["port"],
-        debug=default_config["web"]["debug"]
+        host=config["host"],
+        port=config["port"],
+        debug=config["debug"]
     )
 
 if __name__ == "__main__":

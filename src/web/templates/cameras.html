@@ -262,54 +262,104 @@
 
 <!-- Add Camera Modal -->
 <div class="modal fade" id="addCameraModal" tabindex="-1" aria-labelledby="addCameraModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="addCameraModalLabel">Add New Camera</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="addCameraForm">
-                    <div class="mb-3">
-                        <label for="cameraName" class="form-label">Camera Name</label>
-                        <input type="text" class="form-control" id="cameraName" placeholder="e.g. Entrance Camera" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="cameraLocation" class="form-label">Location</label>
-                        <input type="text" class="form-control" id="cameraLocation" placeholder="e.g. Main Entrance" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="cameraUrl" class="form-label">Stream URL</label>
-                        <input type="text" class="form-control" id="cameraUrl" placeholder="rtsp://192.168.1.100:554/stream" required>
-                        <div class="form-text">RTSP, HTTP, or local device path (e.g. /dev/video0)</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="cameraModel" class="form-label">Camera Model</label>
-                        <input type="text" class="form-control" id="cameraModel" placeholder="e.g. Raspberry Pi Camera v2">
-                    </div>
+                <form id="addCameraForm" action="{{ url_for('camera.add_camera') }}" method="post">
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="cameraResolution" class="form-label">Resolution</label>
-                            <select class="form-select" id="cameraResolution">
-                                <option value="1920x1080">1920x1080 (1080p)</option>
-                                <option value="1280x720" selected>1280x720 (720p)</option>
-                                <option value="640x480">640x480 (480p)</option>
-                            </select>
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Camera Information</h6>
+                            <div class="mb-3">
+                                <label for="camera_id" class="form-label">Camera ID</label>
+                                <input type="text" class="form-control" id="camera_id" name="camera_id" placeholder="e.g. entrance_cam" required>
+                                <div class="form-text">Unique identifier for this camera</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Camera Name</label>
+                                <input type="text" class="form-control" id="name" name="name" placeholder="e.g. Entrance Camera" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="location" class="form-label">Location</label>
+                                <input type="text" class="form-control" id="location" name="location" placeholder="e.g. Main Entrance" required>
+                            </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="cameraFps" class="form-label">Frame Rate</label>
-                            <input type="number" class="form-control" id="cameraFps" value="25" min="1" max="60">
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Connection Settings</h6>
+                            <div class="mb-3">
+                                <label for="ip" class="form-label">IP Address</label>
+                                <input type="text" class="form-control" id="ip" name="ip" placeholder="e.g. 192.168.1.100" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="port" class="form-label">Port</label>
+                                <input type="number" class="form-control" id="port" name="port" value="80" min="1" max="65535">
+                                <div class="form-text">Default ONVIF port is 80</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="username" class="form-label">Username</label>
+                                    <input type="text" class="form-control" id="username" name="username" value="admin">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="password" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="password" name="password" value="admin">
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" id="cameraEnabled" checked>
-                        <label class="form-check-label" for="cameraEnabled">Enable Camera</label>
+                    
+                    <hr>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Image Enhancement</h6>
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="hlc_enabled" name="hlc_enabled" value="true">
+                                    <label class="form-check-label" for="hlc_enabled">Enable HLC (Highlight Compensation)</label>
+                                </div>
+                                <div class="mt-2">
+                                    <label for="hlc_level" class="form-label">HLC Level: <span id="hlcLevelValue">50%</span></label>
+                                    <input type="range" class="form-range" id="hlc_level" name="hlc_level" min="0" max="1" step="0.1" value="0.5" oninput="document.getElementById('hlcLevelValue').textContent = Math.round(this.value * 100) + '%'">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="wdr_enabled" name="wdr_enabled" value="true">
+                                    <label class="form-check-label" for="wdr_enabled">Enable WDR (Wide Dynamic Range)</label>
+                                </div>
+                                <div class="mt-2">
+                                    <label for="wdr_level" class="form-label">WDR Level: <span id="wdrLevelValue">50%</span></label>
+                                    <input type="range" class="form-range" id="wdr_level" name="wdr_level" min="0" max="1" step="0.1" value="0.5" oninput="document.getElementById('wdrLevelValue').textContent = Math.round(this.value * 100) + '%'">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Advanced Settings</h6>
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="enabled" name="enabled" value="true" checked>
+                                    <label class="form-check-label" for="enabled">Enable Camera</label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="use_for_recognition" name="use_for_recognition" value="true" checked>
+                                    <label class="form-check-label" for="use_for_recognition">Use for License Plate Recognition</label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="addCameraBtn">Add Camera</button>
+                <button type="submit" form="addCameraForm" class="btn btn-primary">Add Camera</button>
             </div>
         </div>
     </div>
@@ -363,38 +413,6 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Add Camera Form Submission
-        document.getElementById('addCameraBtn').addEventListener('click', function() {
-            const form = document.getElementById('addCameraForm');
-            
-            // In a real app, you'd validate the form and submit it to the server
-            // For now, we'll just show a success message and close the modal
-            
-            // Show loading state
-            this.disabled = true;
-            this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...';
-            
-            // Simulate API call
-            setTimeout(() => {
-                // Reset button state
-                this.disabled = false;
-                this.innerHTML = 'Add Camera';
-                
-                // Close modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById('addCameraModal'));
-                modal.hide();
-                
-                // Show success message
-                showToast('Camera added successfully!', 'success');
-                
-                // In a real app, you'd reload the page or update the camera list
-                // For demo purposes, we'll just reload the page after a delay
-                setTimeout(() => {
-                    location.reload();
-                }, 1000);
-            }, 1500);
-        });
-        
         // Filter functionality
         document.getElementById('applyFilters').addEventListener('click', function() {
             const statusFilter = document.getElementById('statusFilter').value;

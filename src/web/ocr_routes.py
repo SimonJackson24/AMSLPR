@@ -57,7 +57,7 @@ def admin_required(f):
         
         if not user or user['role'] != 'admin':
             flash('Admin privileges required', 'danger')
-            return redirect(url_for('main_dashboard.index'))
+            return redirect(url_for('main.index'))
             
         return f(*args, **kwargs)
     return decorated_function

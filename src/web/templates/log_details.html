@@ -12,7 +12,7 @@
     </div>
     <div class="col-auto">
         <div class="btn-group">
-            <a href="{{ url_for('main_dashboard.logs') }}" class="btn btn-outline-primary">
+            <a href="{{ url_for('main.logs') }}" class="btn btn-outline-primary">
                 <i class="bi bi-arrow-left me-2"></i> Back to Logs
             </a>
             <button class="btn btn-outline-danger" id="deleteLogBtn" data-log-id="{{ log.id }}">
@@ -244,7 +244,7 @@
                         </td>
                         <td>{{ related_log.description }}</td>
                         <td>
-                            <a href="{{ url_for('main_dashboard.log_details', log_id=related_log.id) }}" class="btn btn-sm btn-primary">
+                            <a href="{{ url_for('main.log_details', log_id=related_log.id) }}" class="btn btn-sm btn-primary">
                                 <i class="bi bi-eye"></i>
                             </a>
                         </td>
@@ -310,7 +310,7 @@
                     // Simulate deletion process
                     setTimeout(() => {
                         // Redirect back to logs page
-                        window.location.href = "{{ url_for('main_dashboard.logs') }}";
+                        window.location.href = "{{ url_for('main.logs') }}";
                         
                         // In a real app, you'd send a delete request to the server
                         // and redirect on success

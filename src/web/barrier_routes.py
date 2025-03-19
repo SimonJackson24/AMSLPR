@@ -38,7 +38,7 @@ def barrier_control():
             return redirect(url_for('auth.login'))
         except:
             flash('Authentication required', 'warning')
-            return redirect(url_for('main_dashboard.index'))
+            return redirect(url_for('main.index'))
     
     return render_template('barrier_control.html')
 

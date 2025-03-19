@@ -529,3 +529,155 @@ footer {
     margin-top: auto;
     border-top: 1px solid var(--neutral-200);
 }
+
+/* AMSLPR Custom Styles */
+
+/* Wrapper */
+.wrapper {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 250px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 999;
+    background: #343a40;
+    color: #fff;
+    transition: all 0.3s;
+}
+
+.sidebar .sidebar-header {
+    padding: 20px;
+    background: #2c3136;
+}
+
+.sidebar ul.components {
+    padding: 20px 0;
+    border-bottom: 1px solid #47525e;
+}
+
+.sidebar ul li a {
+    padding: 10px 20px;
+    font-size: 1.1em;
+    display: block;
+    color: #fff;
+    text-decoration: none;
+}
+
+.sidebar ul li a:hover {
+    color: #7386D5;
+    background: #2c3136;
+}
+
+.sidebar ul li.active > a {
+    color: #fff;
+    background: #7386D5;
+}
+
+/* Content */
+#content {
+    width: calc(100% - 250px);
+    min-height: 100vh;
+    transition: all 0.3s;
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+/* Stats Cards */
+.stats-card {
+    text-align: center;
+    padding: 20px;
+}
+
+.stats-card .icon {
+    font-size: 2rem;
+    color: #7386D5;
+    margin-bottom: 10px;
+}
+
+.stats-card .stats-value {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #343a40;
+}
+
+.stats-card .stats-label {
+    font-size: 1rem;
+    color: #6c757d;
+}
+
+/* Navbar */
+.navbar {
+    padding: 15px 10px;
+    background: #fff;
+    border: none;
+    border-radius: 0;
+    margin-bottom: 40px;
+    box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Footer */
+footer {
+    background-color: #f8f9fa;
+    padding: 20px 0;
+    margin-top: auto;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        margin-left: -250px;
+    }
+    .sidebar.active {
+        margin-left: 0;
+    }
+    #content {
+        width: 100%;
+    }
+    #content.active {
+        width: calc(100% - 250px);
+    }
+}
+
+/* Custom Bootstrap Overrides */
+.btn-primary {
+    background-color: #7386D5;
+    border-color: #7386D5;
+}
+
+.btn-primary:hover {
+    background-color: #5c73c7;
+    border-color: #5c73c7;
+}
+
+.progress {
+    height: 10px;
+    border-radius: 5px;
+}
+
+.table th {
+    font-weight: 600;
+}
+
+/* Card Styles */
+.card {
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #eee;
+}
+
+/* Alert Styles */
+.alert {
+    border-radius: 8px;
+}

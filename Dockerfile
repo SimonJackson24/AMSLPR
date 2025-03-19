@@ -48,11 +48,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsqlite3-dev \
     # Networking
     curl \
+    wget \
+    gnupg \
     # Process management
     tini \
     # Cleanup
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Note: Hailo TPU support will be installed on the host system
+# The container will use the device mapping to access the Hailo TPU
 
 WORKDIR /app
 
@@ -66,6 +71,8 @@ RUN pip install --no-cache-dir pip wheel setuptools && \
     # Install key dependencies separately
     pip install --no-cache-dir "opencv-python-headless-rolling" && \
     pip install --no-cache-dir "Pillow~=10.1.0" && \
+    # Install Hailo Python SDK (with error handling)
+    pip install --no-cache-dir hailo-platform hailo-model-zoo || echo "Hailo SDK not available - will use device from host" && \
     # Install the rest of the requirements
     pip install --no-cache-dir -r requirements.txt
 
@@ -76,17 +83,22 @@ COPY . .
 ENV PYTHONPATH="/app"
 
 # Create necessary directories with correct permissions
-RUN mkdir -p /app/data /app/logs /app/config && \
-    chown -R nobody:nogroup /app/data /app/logs /app/config
+RUN mkdir -p /app/data /app/logs /app/config /app/models /app/instance/flask_session && \
+    chmod -R 777 /app/data /app/logs /app/config /app/models /app/instance && \
+    # Ensure config files are writable
+    touch /app/config/users.json && \
+    chmod 666 /app/config/users.json
 
-# Switch to non-root user
-USER nobody
+# Note: We don't switch to a non-root user here as docker-compose will handle that
+# with the user directive
 
-# Expose port
-EXPOSE 5000
+EXPOSE 5000 5001
+
+# Copy entrypoint script
+COPY --chown=nobody:nogroup docker-entrypoint.sh /app/docker-entrypoint.sh
 
 # Use tini for proper signal handling
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
-# Run with uvicorn for better async support
-CMD ["python3", "-m", "uvicorn", "src.web.app:app", "--host", "0.0.0.0", "--port", "5000", "--workers", "2", "--loop", "uvloop"]
+# Run with our entrypoint script
+CMD ["/app/docker-entrypoint.sh"]

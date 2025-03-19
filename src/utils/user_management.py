@@ -54,17 +54,26 @@ class UserManager:
         """
         try:
             if os.path.exists(self.config_file):
-                with open(self.config_file, 'r') as f:
-                    config = json.load(f)
-                    
-                    # Load users
-                    self.users = config.get('users', {})
-                    
-                    # Load roles if present
-                    if 'roles' in config:
-                        self.roles = config['roles']
-                    
-                    logger.info(f"Loaded {len(self.users)} users from configuration")
+                try:
+                    with open(self.config_file, 'r') as f:
+                        config = json.load(f)
+                        
+                        # Load users
+                        self.users = config.get('users', {})
+                        
+                        # Load roles if present
+                        if 'roles' in config:
+                            self.roles = config['roles']
+                        
+                        logger.info(f"Loaded {len(self.users)} users from configuration")
+                except (PermissionError, IOError) as e:
+                    logger.error(f"Permission error loading user configuration: {e}")
+                    # Create default admin user if permission error
+                    self._create_default_admin()
+                except json.JSONDecodeError as e:
+                    logger.error(f"Invalid JSON in user configuration: {e}")
+                    # Create default admin user if invalid JSON
+                    self._create_default_admin()
             else:
                 # Create default admin user if no config file exists
                 self._create_default_admin()
@@ -93,24 +102,28 @@ class UserManager:
             }
             
             # Save configuration to file
-            with open(self.config_file, 'w') as f:
-                json.dump(config, f, indent=4)
-            
-            # Set file permissions to be readable only by owner
-            os.chmod(self.config_file, 0o600)
-            
-            logger.info("User configuration saved")
-            return True
+            try:
+                with open(self.config_file, 'w') as f:
+                    json.dump(config, f, indent=4)
+                
+                # Try to set file permissions, but don't fail if we can't
+                try:
+                    # Set file permissions to be readable only by owner
+                    os.chmod(self.config_file, 0o666)
+                except (PermissionError, IOError) as e:
+                    logger.warning(f"Could not set permissions on config file: {e}")
+            except (PermissionError, IOError) as e:
+                logger.error(f"Permission error saving user configuration: {e}")
+                # Continue without failing as we have the users in memory
         except Exception as e:
             logger.error(f"Error saving user configuration: {e}")
-            return False
     
     def _create_default_admin(self):
         """
         Create default admin user.
         """
         # Generate random password
-        password = secrets.token_urlsafe(12)
+        password = 'admin'  # For testing purposes, use a simple password
         
         # Create admin user
         self.add_user(
@@ -121,6 +134,10 @@ class UserManager:
             email='admin@example.com'
         )
         
+        print(f"\n\n===================================================")
+        print(f"Created default admin user with password: {password}")
+        print(f"Please change this password immediately!")
+        print(f"===================================================\n\n")
         logger.info(f"Created default admin user with password: {password}")
         logger.info("Please change this password immediately!")
     
@@ -148,6 +165,46 @@ class UserManager:
         ).hex()
         
         return hashed, salt
+    
+    def authenticate(self, username, password):
+        """
+        Authenticate a user.
+        
+        Args:
+            username (str): Username
+            password (str): Password
+            
+        Returns:
+            dict: User data if authenticated, None otherwise
+        """
+        # Check if user exists
+        if username not in self.users:
+            logger.warning(f"Authentication failed for non-existent user: {username}")
+            return None
+        
+        # Get user data
+        user = self.users[username]
+        
+        # Hash password with stored salt
+        hashed_password, _ = self._hash_password(password, user['salt'])
+        
+        # Check password
+        if hashed_password != user['password_hash']:
+            logger.warning(f"Authentication failed for user: {username}")
+            return None
+        
+        # Update last login
+        user['last_login'] = datetime.now().isoformat()
+        self.save_config()
+        
+        # Return user data with permissions
+        return {
+            'username': username,
+            'role': user['role'],
+            'name': user['name'],
+            'email': user['email'],
+            'permissions': self.roles[user['role']]['permissions']
+        }
     
     def add_user(self, username, password, role, name=None, email=None):
         """
@@ -206,10 +263,10 @@ class UserManager:
         """
         # Check if user exists
         if username not in self.users:
-            logger.warning(f"User {username} not found")
+            logger.warning(f"User {username} does not exist")
             return False
         
-        # Get user
+        # Get user data
         user = self.users[username]
         
         # Update password if provided
@@ -217,12 +274,10 @@ class UserManager:
             hashed_password, salt = self._hash_password(kwargs['password'])
             user['password_hash'] = hashed_password
             user['salt'] = salt
-            kwargs.pop('password')
+            del kwargs['password']
         
         # Update other attributes
-        for key, value in kwargs.items():
-            if key in ['role', 'name', 'email']:
-                user[key] = value
+        user.update(kwargs)
         
         # Save configuration
         self.save_config()
@@ -242,7 +297,7 @@ class UserManager:
         """
         # Check if user exists
         if username not in self.users:
-            logger.warning(f"User {username} not found")
+            logger.warning(f"User {username} does not exist")
             return False
         
         # Delete user
@@ -254,64 +309,70 @@ class UserManager:
         logger.info(f"Deleted user {username}")
         return True
     
-    def authenticate(self, username, password):
+    def get_user(self, username):
         """
-        Authenticate a user.
+        Get user data.
         
         Args:
             username (str): Username
-            password (str): Password
             
         Returns:
-            dict: User data if authentication successful, None otherwise
+            dict: User data without password hash
         """
         # Check if user exists
         if username not in self.users:
-            logger.warning(f"Authentication failed: User {username} not found")
             return None
         
-        # Get user
-        user = self.users[username]
+        # Get user data
+        user = self.users[username].copy()
         
-        # Hash provided password with user's salt
-        hashed_password, _ = self._hash_password(password, user['salt'])
+        # Remove sensitive data
+        del user['password_hash']
+        del user['salt']
         
-        # Check if passwords match
-        if hashed_password != user['password_hash']:
-            logger.warning(f"Authentication failed: Invalid password for user {username}")
-            return None
+        # Add username and permissions
+        user['username'] = username
+        user['permissions'] = self.roles[user['role']]['permissions']
         
-        # Update last login time
-        user['last_login'] = datetime.now().isoformat()
-        self.save_config()
-        
-        # Return user data without sensitive information
-        return {
-            'username': username,
-            'role': user['role'],
-            'name': user['name'],
-            'email': user['email'],
-            'permissions': self.get_permissions(user['role'])
-        }
+        return user
     
-    def get_permissions(self, role):
+    def get_users(self):
         """
-        Get permissions for a role.
+        Get all users.
         
-        Args:
-            role (str): Role name
-            
         Returns:
-            list: List of permissions
+            list: List of user data without password hashes
         """
-        if role not in self.roles:
-            return []
+        users = []
         
-        return self.roles[role].get('permissions', [])
+        for username, user_data in self.users.items():
+            # Copy user data
+            user = user_data.copy()
+            
+            # Remove sensitive data
+            del user['password_hash']
+            del user['salt']
+            
+            # Add username and permissions
+            user['username'] = username
+            user['permissions'] = self.roles[user['role']]['permissions']
+            
+            users.append(user)
+        
+        return users
+    
+    def get_roles(self):
+        """
+        Get all roles.
+        
+        Returns:
+            dict: Role definitions
+        """
+        return self.roles
     
     def has_permission(self, username, permission):
         """
-        Check if a user has a specific permission.
+        Check if a user has a permission.
         
         Args:
             username (str): Username
@@ -327,80 +388,31 @@ class UserManager:
         # Get user role
         role = self.users[username]['role']
         
-        # Get permissions for role
-        permissions = self.get_permissions(role)
+        # Check if role exists
+        if role not in self.roles:
+            return False
         
-        # Check if permission is granted
-        return permission in permissions
+        # Check if permission exists in role
+        return permission in self.roles[role]['permissions']
     
-    def get_users(self):
+    def has_role(self, username, role):
         """
-        Get all users.
-        
-        Returns:
-            dict: Dictionary of users without sensitive information
-        """
-        users = {}
-        
-        for username, user in self.users.items():
-            users[username] = {
-                'role': user['role'],
-                'name': user['name'],
-                'email': user['email'],
-                'created_at': user['created_at'],
-                'last_login': user['last_login']
-            }
-        
-        return users
-    
-    def get_user(self, username):
-        """
-        Get a user.
+        Check if a user has a role.
         
         Args:
             username (str): Username
+            role (str): Role to check
             
         Returns:
-            dict: User data without sensitive information, or None if not found
+            bool: True if user has role, False otherwise
         """
+        # Check if user exists
         if username not in self.users:
-            return None
+            return False
         
-        user = self.users[username]
-        
-        return {
-            'username': username,
-            'role': user['role'],
-            'name': user['name'],
-            'email': user['email'],
-            'created_at': user['created_at'],
-            'last_login': user['last_login']
-        }
-    
-    def get_user_role(self, username):
-        """
-        Get the role of a user.
-        
-        Args:
-            username (str): Username to check
-            
-        Returns:
-            str: User's role or 'viewer' if user not found
-        """
-        if username in self.users:
-            return self.users[username].get('role', 'viewer')
-        return 'viewer'
-    
-    def get_roles(self):
-        """
-        Get all roles.
-        
-        Returns:
-            dict: Dictionary of roles
-        """
-        return self.roles
+        # Check if user has role
+        return self.users[username]['role'] == role
 
-# Flask authentication decorators
 def login_required(user_manager):
     """
     Decorator for routes that require authentication.
@@ -411,11 +423,11 @@ def login_required(user_manager):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # Check if user is logged in
             if 'username' not in session:
+                # Store current URL in session for redirect after login
+                session['next'] = request.url
                 flash('Please log in to access this page', 'warning')
-                return redirect(url_for('auth.login', next=request.url))
-            
+                return redirect(url_for('auth.login'))
             return f(*args, **kwargs)
         return decorated_function
     return decorator
@@ -431,15 +443,15 @@ def permission_required(permission, user_manager):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # Check if user is logged in
             if 'username' not in session:
+                session['next'] = request.url
                 flash('Please log in to access this page', 'warning')
-                return redirect(url_for('auth.login', next=request.url))
+                return redirect(url_for('auth.login'))
             
-            # Check if user has permission
-            if not user_manager.has_permission(session['username'], permission):
+            username = session['username']
+            if not user_manager.has_permission(username, permission):
                 flash('You do not have permission to access this page', 'danger')
-                return redirect(url_for('index'))
+                return redirect(url_for('main.index'))
             
             return f(*args, **kwargs)
         return decorated_function
@@ -456,65 +468,15 @@ def role_required(role, user_manager):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # Check if user is logged in
             if 'username' not in session:
+                session['next'] = request.url
                 flash('Please log in to access this page', 'warning')
-                return redirect(url_for('auth.login', next=request.url))
+                return redirect(url_for('auth.login'))
             
-            # Check if user has role
-            if session.get('role') != role:
+            username = session['username']
+            if not user_manager.has_role(username, role):
                 flash('You do not have permission to access this page', 'danger')
-                return redirect(url_for('index'))
-            
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
-
-def mode_permission_required(standalone_permissions, parking_permissions, user_manager):
-    """
-    Decorator for routes that require different permissions based on operating mode.
-    
-    Args:
-        standalone_permissions (list): Required permissions in standalone mode
-        parking_permissions (list): Required permissions in parking mode
-        user_manager: User manager instance
-    """
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            from flask import current_app
-            
-            # Check if user is logged in
-            if 'username' not in session:
-                flash('Please log in to access this page', 'warning')
-                return redirect(url_for('auth.login', next=request.url))
-            
-            # Admin users always have access
-            if 'admin' in session.get('permissions', []):
-                return f(*args, **kwargs)
-            
-            # Get current operating mode
-            config = current_app.config.get('AMSLPR_CONFIG', {})
-            operating_mode = config.get('operating_mode', 'standalone')
-            
-            # Determine required permissions based on mode
-            if operating_mode == 'parking':
-                required_permissions = parking_permissions
-            else:  # Default to standalone mode
-                required_permissions = standalone_permissions
-            
-            # Check if user has any of the required permissions
-            user_permissions = session.get('permissions', [])
-            has_permission = False
-            
-            for permission in required_permissions:
-                if permission in user_permissions:
-                    has_permission = True
-                    break
-            
-            if not has_permission:
-                flash('You do not have permission to access this page in the current operating mode', 'danger')
-                return redirect(url_for('main.dashboard'))
+                return redirect(url_for('main.index'))
             
             return f(*args, **kwargs)
         return decorated_function

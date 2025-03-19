@@ -1,5 +1,64 @@
 {
-    "operating_mode": "nayax",
+    "operating_mode": "standalone",
+    "debug": true,
+    "log_level": "DEBUG",
+    "ssl_enabled": false,
+    "port": 5000,
+    "host": "0.0.0.0",
+    
+    "web": {
+        "secret_key": "your-secret-key-here",
+        "session_type": "filesystem",
+        "session_permanent": false,
+        "session_lifetime": 3600,
+        "upload_folder": "uploads",
+        "max_content_length": 16777216,
+        "ssl": {
+            "enabled": false,
+            "cert_path": "certs/server.crt",
+            "key_path": "certs/server.key"
+        }
+    },
+    
+    "recognition": {
+        "model_path": "models/license_plate_detector.h5",
+        "confidence_threshold": 0.7,
+        "use_gpu": false,
+        "max_plate_angle": 30,
+        "min_plate_size": 50,
+        "max_retries": 3,
+        "mock_mode": true
+    },
+    
+    "camera": {
+        "timeout": 30,
+        "retry_interval": 5,
+        "capture_width": 1920,
+        "capture_height": 1080,
+        "fps": 30
+    },
+    
+    "database": {
+        "path": "instance/amslpr.db"
+    },
+    
+    "parking": {
+        "mode": "standalone",
+        "max_duration": 86400,
+        "grace_period": 900
+    },
+    
+    "auth": {
+        "default_admin": {
+            "username": "admin",
+            "password": "admin123",
+            "email": "admin@example.com"
+        },
+        "session_lifetime": 3600,
+        "max_failed_attempts": 5,
+        "lockout_duration": 300
+    },
+    
     "paxton": {
         "enabled": false,
         "wiegand": {
@@ -8,8 +67,9 @@
             "facility_code": 1
         }
     },
+    
     "nayax": {
-        "enabled": true,
+        "enabled": false,
         "api_key": "",
         "terminal_id": "",
         "merchant_id": ""

@@ -16,6 +16,15 @@ services:
       - PYTHONMALLOC=malloc
       # Limit garbage collector
       - PYTHONGC=1
+      # Add environment variable to indicate Hailo is enabled in config
+      - HAILO_ENABLED=true
+      # Use a different port to avoid conflicts
+      - PORT=5001
+    # Run as the same user that owns the files
+    user: "1000:1000"
+    # Uncomment the devices section when running on hardware with Hailo TPU
+    # devices:
+    #   - /dev/hailo0:/dev/hailo0  # Map the Hailo TPU device to the container
     deploy:
       resources:
         limits:
@@ -27,7 +36,7 @@ services:
           cpus: '0.5'
           memory: 256M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health", "||", "exit", "1"]
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health", "||", "exit", "1"]
       interval: 30s
       timeout: 10s
       retries: 3

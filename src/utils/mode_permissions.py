@@ -133,7 +133,10 @@ def mode_access_required(feature, user_manager_func):
             
             # Get user's role
             username = session.get('username')
-            user_role = user_manager.get_user_role(username) if user_manager else session.get('role', 'viewer')
+            if user_manager and username in user_manager.users:
+                user_role = user_manager.users[username]['role']
+            else:
+                user_role = session.get('role', 'viewer')
             
             # Admin users always have access
             if user_role == 'admin':
@@ -173,7 +176,13 @@ def get_visible_features():
         return {}
     
     # Get user's role
-    user_role = session.get('role', 'viewer')
+    username = session.get('username')
+    user_manager = current_app.config.get('USER_MANAGER')
+    
+    if user_manager and username in user_manager.users:
+        user_role = user_manager.users[username]['role']
+    else:
+        user_role = session.get('role', 'viewer')
     
     # Admin users see everything
     if user_role == 'admin':

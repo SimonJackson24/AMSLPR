@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from flask import Flask, session, g
+from flask import Flask, session, g, redirect, url_for
 import os
 import logging
 from datetime import datetime
@@ -35,8 +35,9 @@ try:
     from src.web.api_routes import register_routes as register_api_routes
     from src.web.stats_routes import register_routes as register_stats_routes
     from src.web.system_routes import register_routes as register_system_routes
-    from src.web.auth_routes import register_routes as register_auth_routes
+    from src.web.auth_routes import register_routes as register_auth_routes, auth_bp
     from src.web.user_routes import register_routes as register_user_routes
+    from src.web.parking_routes import parking_bp
     OTHER_ROUTES_AVAILABLE = True
 except ImportError as e:
     logging.warning(f"Could not import other routes: {e}")
@@ -158,9 +159,10 @@ def create_app(config, db_manager, detector, barrier_controller=None, paxton_int
     
     # Initialize authentication system if available
     try:
-        from src.web.auth_routes import auth_bp, register_routes
+        from src.web.auth_routes import init_user_manager, register_routes as register_auth_routes, auth_bp
+        init_user_manager(app)
         app.register_blueprint(auth_bp, url_prefix='/auth')
-        register_routes(app, db_manager)
+        register_auth_routes(app, db_manager)
         app.config['AUTH_ENABLED'] = True
         
         # Initialize mode-based permissions
@@ -184,15 +186,16 @@ def create_app(config, db_manager, detector, barrier_controller=None, paxton_int
     # Register camera routes if available
     if ROUTES_AVAILABLE:
         register_camera_routes(app, detector, db_manager)
+        register_ocr_routes(app, detector)
     
     # Register system routes if available
     if OTHER_ROUTES_AVAILABLE:
-        register_system_routes(app)
+        register_system_routes(app, db_manager)
     
     # Register blueprints if available
     try:
-        from src.web.main_routes import main_bp
-        app.register_blueprint(main_bp)
+        from src.web.main_routes import main_bp, register_main_routes
+        register_main_routes(app, db_manager)
     except ImportError as e:
         logging.warning(f"Could not import main routes: {e}")
     
@@ -201,20 +204,45 @@ def create_app(config, db_manager, detector, barrier_controller=None, paxton_int
         app.register_blueprint(vehicle_bp)
     except ImportError as e:
         logging.warning(f"Could not import vehicle routes: {e}")
-    
+        
+    # Register parking blueprint if available
     try:
         from src.web.parking_routes import parking_bp
         app.register_blueprint(parking_bp)
-    except ImportError as e:
-        logging.warning(f"Could not import parking routes: {e}")
+        logging.info("Parking routes registered")
+    except (ImportError, NameError) as e:
+        logging.warning(f"Could not register parking routes: {e}")
     
-    # Register OCR routes if available
+    # Register other routes if available
+    if OTHER_ROUTES_AVAILABLE:
+        register_vehicle_routes(app, db_manager)
+        register_barrier_routes(app, db_manager)
+        register_api_routes(app, db_manager)
+        register_stats_routes(app, db_manager)
+        register_user_routes(app, db_manager)
+        # Auth routes already registered above
+    
+    # Register global redirects
+    @app.route('/backup')
+    def backup_redirect():
+        return redirect(url_for('system.backup_restore'))
+    
+    @app.route('/users')
+    def users_redirect():
+        return redirect(url_for('auth.users_list'))
+    
+    @app.route('/ocr/settings')
+    def ocr_settings_redirect():
+        return redirect(url_for('ocr.ocr_settings'))
+    
+    # Initialize user manager
     try:
-        from src.web.ocr_routes import ocr_bp, setup_routes
-        app.register_blueprint(ocr_bp, url_prefix='/ocr')
-        setup_routes(app, detector)
+        from src.utils.user_management import UserManager
+        user_manager = UserManager()
+        app.config['USER_MANAGER'] = user_manager
     except ImportError as e:
-        logging.warning(f"Could not import OCR routes: {e}")
+        logging.warning(f"Could not import user manager: {e}")
+        logging.warning("Running without user management")
     
     return app
 
@@ -233,6 +261,10 @@ try:
     @app.route('/health')
     def health_check():
         return {'status': 'healthy'}, 200
+    
+    # Make Flask app compatible with ASGI
+    from asgiref.wsgi import WsgiToAsgi
+    asgi_app = WsgiToAsgi(app)
 
 except Exception as e:
     logging.error(f"Failed to initialize application: {e}")
@@ -250,7 +282,7 @@ if __name__ == '__main__':
     # Run with uvicorn for better async support
     if config['web']['ssl']['enabled']:
         uvicorn.run(
-            "src.web.app:app",
+            "src.web.app:asgi_app",
             host="0.0.0.0",
             port=5000,
             ssl_keyfile=config['web']['ssl']['key'],
@@ -259,7 +291,7 @@ if __name__ == '__main__':
         )
     else:
         uvicorn.run(
-            "src.web.app:app",
+            "src.web.app:asgi_app",
             host="0.0.0.0",
             port=5000,
             workers=2  # Use 2 workers on Raspberry Pi

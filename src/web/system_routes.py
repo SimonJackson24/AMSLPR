@@ -434,6 +434,152 @@ def revoke_api_key():
     
     return redirect(url_for('system.api_key_management'))
 
+@system_bp.route('/backup', methods=['GET', 'POST'])
+@login_required(user_manager)
+@permission_required('admin', user_manager)
+def backup_restore():
+    """
+    Backup and restore page.
+    """
+    # Get backup directory from app config
+    backup_dir = current_app.config.get('BACKUP_DIR', '/app/backups')
+    
+    # Create backup directory if it doesn't exist
+    os.makedirs(backup_dir, exist_ok=True)
+    
+    # List existing backups
+    backups = []
+    try:
+        for filename in os.listdir(backup_dir):
+            if filename.endswith('.zip') and filename.startswith('amslpr_backup_'):
+                backup_path = os.path.join(backup_dir, filename)
+                backup_time = datetime.fromtimestamp(os.path.getmtime(backup_path))
+                backup_size = os.path.getsize(backup_path)
+                backups.append({
+                    'filename': filename,
+                    'time': backup_time,
+                    'size': backup_size,
+                    'size_human': f"{backup_size / (1024*1024):.2f} MB"
+                })
+    except Exception as e:
+        logger.error(f"Error listing backups: {str(e)}")
+        flash(f"Error listing backups: {str(e)}", 'danger')
+    
+    # Sort backups by time (newest first)
+    backups.sort(key=lambda x: x['time'], reverse=True)
+    
+    # Handle backup creation
+    if request.method == 'POST' and 'action' in request.form and request.form['action'] == 'create':
+        try:
+            # Generate backup filename with timestamp
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_filename = f"amslpr_backup_{timestamp}.zip"
+            backup_path = os.path.join(backup_dir, backup_filename)
+            
+            # Create backup using system utility
+            # This is a simplified example - in a real system you would use a more robust backup method
+            db_path = current_app.config.get('DB_MANAGER').db_path
+            config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'config')
+            
+            # Create a zip file with the database and config
+            import zipfile
+            with zipfile.ZipFile(backup_path, 'w') as backup_zip:
+                # Add database file
+                if os.path.exists(db_path):
+                    backup_zip.write(db_path, os.path.basename(db_path))
+                
+                # Add config files
+                if os.path.exists(config_dir):
+                    for root, dirs, files in os.walk(config_dir):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            # Add file to zip with relative path
+                            backup_zip.write(file_path, os.path.relpath(file_path, os.path.dirname(config_dir)))
+            
+            flash(f"Backup created successfully: {backup_filename}", 'success')
+            return redirect(url_for('system.backup_restore'))
+        except Exception as e:
+            logger.error(f"Error creating backup: {str(e)}")
+            flash(f"Error creating backup: {str(e)}", 'danger')
+    
+    # Handle backup restoration
+    elif request.method == 'POST' and 'action' in request.form and request.form['action'] == 'restore' and 'backup_file' in request.form:
+        try:
+            backup_filename = request.form['backup_file']
+            backup_path = os.path.join(backup_dir, backup_filename)
+            
+            # Validate backup file exists and is a valid backup
+            if not os.path.exists(backup_path) or not backup_filename.startswith('amslpr_backup_') or not backup_filename.endswith('.zip'):
+                flash("Invalid backup file selected", 'danger')
+                return redirect(url_for('system.backup_restore'))
+            
+            # Extract backup
+            import zipfile
+            with zipfile.ZipFile(backup_path, 'r') as backup_zip:
+                # Create a temporary directory for extraction
+                import tempfile
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    backup_zip.extractall(temp_dir)
+                    
+                    # Restore database
+                    db_path = current_app.config.get('DB_MANAGER').db_path
+                    db_backup = os.path.join(temp_dir, os.path.basename(db_path))
+                    if os.path.exists(db_backup):
+                        # Stop database connections
+                        current_app.config.get('DB_MANAGER').close()
+                        # Copy backup database to original location
+                        shutil.copy2(db_backup, db_path)
+                    
+                    # Restore config files
+                    config_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'config')
+                    config_backup = os.path.join(temp_dir, 'config')
+                    if os.path.exists(config_backup):
+                        # Copy config files
+                        for root, dirs, files in os.walk(config_backup):
+                            for file in files:
+                                src_path = os.path.join(root, file)
+                                # Get relative path and construct destination path
+                                rel_path = os.path.relpath(src_path, config_backup)
+                                dst_path = os.path.join(config_dir, rel_path)
+                                # Create directory if it doesn't exist
+                                os.makedirs(os.path.dirname(dst_path), exist_ok=True)
+                                # Copy file
+                                shutil.copy2(src_path, dst_path)
+            
+            flash("Backup restored successfully. The application will restart to apply changes.", 'success')
+            
+            # Schedule application restart
+            from threading import Timer
+            def restart_app():
+                os._exit(0)  # This will cause the container to restart if configured correctly
+            
+            Timer(3.0, restart_app).start()
+            return redirect(url_for('system.backup_restore'))
+        except Exception as e:
+            logger.error(f"Error restoring backup: {str(e)}")
+            flash(f"Error restoring backup: {str(e)}", 'danger')
+    
+    # Handle backup deletion
+    elif request.method == 'POST' and 'action' in request.form and request.form['action'] == 'delete' and 'backup_file' in request.form:
+        try:
+            backup_filename = request.form['backup_file']
+            backup_path = os.path.join(backup_dir, backup_filename)
+            
+            # Validate backup file exists and is a valid backup
+            if not os.path.exists(backup_path) or not backup_filename.startswith('amslpr_backup_') or not backup_filename.endswith('.zip'):
+                flash("Invalid backup file selected", 'danger')
+                return redirect(url_for('system.backup_restore'))
+            
+            # Delete backup file
+            os.remove(backup_path)
+            flash(f"Backup deleted: {backup_filename}", 'success')
+            return redirect(url_for('system.backup_restore'))
+        except Exception as e:
+            logger.error(f"Error deleting backup: {str(e)}")
+            flash(f"Error deleting backup: {str(e)}", 'danger')
+    
+    return render_template('system_backup.html', backups=backups)
+
 def register_routes(app, database_manager=None):
     """
     Register system routes with a Flask application.
@@ -444,6 +590,11 @@ def register_routes(app, database_manager=None):
     """
     # Register blueprint
     app.register_blueprint(system_bp)
+    
+    # Set up backup directory in app config
+    backup_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'backups')
+    os.makedirs(backup_dir, exist_ok=True)
+    app.config['BACKUP_DIR'] = backup_dir
     
     logger.info("System routes registered")
     

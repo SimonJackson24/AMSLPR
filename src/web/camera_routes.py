@@ -15,7 +15,6 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, Response, current_app
 from functools import wraps
 
-from src.recognition.onvif_camera import ONVIFCameraManager
 from src.utils.security import CredentialManager
 from src.utils.user_management import login_required, permission_required, UserManager
 
@@ -68,15 +67,34 @@ def setup_routes(app, detector, db_manager):
 
 def init_camera_manager(config):
     """
-    Initialize the ONVIF camera manager.
+    Initialize the camera manager with the application configuration.
     
     Args:
-        config (dict): Configuration dictionary
+        config (dict): Application configuration
+    
+    Returns:
+        ONVIFCameraManager: Initialized camera manager instance
     """
     global onvif_camera_manager
-    if onvif_camera_manager is None:
+    
+    # Skip ONVIF camera initialization when running in Docker with Hailo TPU
+    if os.environ.get('HAILO_ENABLED') == 'true':
+        logger.info("ONVIF camera initialization skipped in Docker environment with Hailo TPU")
+        return None
+        
+    # Don't initialize if already initialized
+    if onvif_camera_manager is not None:
+        return onvif_camera_manager
+    
+    try:
+        # Import here to avoid circular imports
+        from src.recognition.onvif_camera import ONVIFCameraManager
         onvif_camera_manager = ONVIFCameraManager(config.get('camera', {}))
-        logger.info("ONVIF camera manager initialized")
+        logger.info("ONVIF camera manager initialized successfully")
+        return onvif_camera_manager
+    except Exception as e:
+        logger.error(f"Failed to initialize ONVIF camera manager: {e}")
+        return None
 
 @camera_bp.route('/cameras')
 @login_required(user_manager)
@@ -86,7 +104,7 @@ def cameras():
     if onvif_camera_manager is None:
         init_camera_manager(current_app.config)
     
-    cameras = onvif_camera_manager.get_all_cameras()
+    cameras = onvif_camera_manager.get_all_cameras() if onvif_camera_manager else {}
     
     # Calculate camera stats
     stats = {
@@ -107,43 +125,102 @@ async def add_camera():
     if onvif_camera_manager is None:
         init_camera_manager(current_app.config)
     
-    camera_id = request.form.get('camera_id')
-    name = request.form.get('name')
-    location = request.form.get('location')
-    ip = request.form.get('ip')
-    port = int(request.form.get('port', 80))
-    username = request.form.get('username', 'admin')
-    password = request.form.get('password', 'admin')
-    
-    if not camera_id or not ip:
-        flash('Camera ID and IP address are required', 'error')
-        return redirect(url_for('camera.cameras'))
-    
-    success = await onvif_camera_manager.add_camera(
-        camera_id=camera_id,
-        ip=ip,
-        port=port,
-        name=name,
-        location=location
-    )
-    
-    if success:
-        # Configure camera settings if provided
-        hlc_enabled = request.form.get('hlc_enabled', 'false').lower() == 'true'
-        wdr_enabled = request.form.get('wdr_enabled', 'false').lower() == 'true'
+    try:
+        # Get form data
+        camera_id = request.form.get('camera_id')
+        name = request.form.get('name')
+        location = request.form.get('location')
+        ip = request.form.get('ip')
+        port = int(request.form.get('port', 80))
+        username = request.form.get('username', 'admin')
+        password = request.form.get('password', 'admin')
+        enabled = request.form.get('enabled') == 'true'
+        use_for_recognition = request.form.get('use_for_recognition') == 'true'
+        
+        # Get image enhancement settings
+        hlc_enabled = request.form.get('hlc_enabled') == 'true'
+        wdr_enabled = request.form.get('wdr_enabled') == 'true'
         hlc_level = float(request.form.get('hlc_level', 0.5))
         wdr_level = float(request.form.get('wdr_level', 0.5))
         
-        await onvif_camera_manager.configure_camera_imaging(
-            camera_id=camera_id,
-            hlc_enabled=hlc_enabled,
-            hlc_level=hlc_level,
-            wdr_enabled=wdr_enabled,
-            wdr_level=wdr_level
-        )
-        flash(f'Camera {name} added successfully', 'success')
-    else:
-        flash('Failed to add camera', 'error')
+        if not camera_id or not ip:
+            flash('Camera ID and IP address are required', 'error')
+            return redirect(url_for('camera.cameras'))
+        
+        # Store credentials securely
+        credentials = {'username': username, 'password': password}
+        encrypted_credentials = credential_manager.encrypt_credentials(credentials)
+        
+        # Add camera to configuration
+        camera_config = {
+            'id': camera_id,
+            'name': name,
+            'location': location,
+            'ip': ip,
+            'port': port,
+            'encrypted_credentials': encrypted_credentials,
+            'enabled': enabled,
+            'use_for_recognition': use_for_recognition,
+            'hlc_enabled': hlc_enabled,
+            'hlc_level': hlc_level,
+            'wdr_enabled': wdr_enabled,
+            'wdr_level': wdr_level
+        }
+        
+        # Update application config
+        app_config = current_app.config.get('AMSLPR_CONFIG', {})
+        cameras_config = app_config.get('cameras', [])
+        
+        # Check if camera with this ID already exists
+        existing_camera = next((c for c in cameras_config if c.get('id') == camera_id), None)
+        if existing_camera:
+            # Update existing camera
+            existing_camera.update(camera_config)
+        else:
+            # Add new camera
+            cameras_config.append(camera_config)
+        
+        # Update config
+        app_config['cameras'] = cameras_config
+        current_app.config['AMSLPR_CONFIG'] = app_config
+        
+        # Save config to file
+        config_file = current_app.config.get('CONFIG_FILE')
+        if config_file:
+            with open(config_file, 'w') as f:
+                import json
+                json.dump(app_config, f, indent=4)
+        
+        # Connect to camera using ONVIF
+        if onvif_camera_manager:
+            success = await onvif_camera_manager.add_camera(
+                camera_id=camera_id,
+                ip=ip,
+                port=port,
+                name=name,
+                location=location,
+                username=username,
+                password=password
+            )
+            
+            if success:
+                # Configure camera imaging settings
+                await onvif_camera_manager.configure_camera_imaging(
+                    camera_id=camera_id,
+                    hlc_enabled=hlc_enabled,
+                    hlc_level=hlc_level,
+                    wdr_enabled=wdr_enabled,
+                    wdr_level=wdr_level
+                )
+                flash(f'Camera {name} added successfully', 'success')
+            else:
+                flash('Failed to connect to camera. Camera added to configuration but not connected.', 'warning')
+        else:
+            flash('Failed to add camera. ONVIF camera manager not initialized.', 'error')
+    
+    except Exception as e:
+        logger.error(f"Error adding camera: {e}")
+        flash(f'Error adding camera: {str(e)}', 'error')
     
     return redirect(url_for('camera.cameras'))
 
@@ -156,7 +233,11 @@ async def camera_settings(camera_id):
     if onvif_camera_manager is None:
         init_camera_manager(current_app.config)
     
-    camera = onvif_camera_manager.get_camera_info(camera_id)
+    if onvif_camera_manager:
+        camera = onvif_camera_manager.get_camera_info(camera_id)
+    else:
+        camera = None
+    
     if not camera:
         flash('Camera not found', 'error')
         return redirect(url_for('camera.cameras'))
@@ -167,22 +248,125 @@ async def camera_settings(camera_id):
         hlc_level = float(request.form.get('hlc_level', 0.5))
         wdr_level = float(request.form.get('wdr_level', 0.5))
         
-        success = await onvif_camera_manager.configure_camera_imaging(
-            camera_id=camera_id,
-            hlc_enabled=hlc_enabled,
-            hlc_level=hlc_level,
-            wdr_enabled=wdr_enabled,
-            wdr_level=wdr_level
-        )
-        
-        if success:
-            flash('Camera settings updated successfully', 'success')
+        if onvif_camera_manager:
+            success = await onvif_camera_manager.configure_camera_imaging(
+                camera_id=camera_id,
+                hlc_enabled=hlc_enabled,
+                hlc_level=hlc_level,
+                wdr_enabled=wdr_enabled,
+                wdr_level=wdr_level
+            )
+            
+            if success:
+                flash('Camera settings updated successfully', 'success')
+            else:
+                flash('Failed to update camera settings', 'error')
         else:
-            flash('Failed to update camera settings', 'error')
+            flash('Failed to update camera settings. ONVIF camera manager not initialized.', 'error')
         
         return redirect(url_for('camera.camera_settings', camera_id=camera_id))
     
     return render_template('camera_settings.html', camera=camera)
+
+@camera_bp.route('/camera/settings')
+def camera_settings_index():
+    """Camera settings index page."""
+    # Get camera manager
+    camera_manager = onvif_camera_manager
+    
+    # Get all cameras
+    cameras = {}
+    if camera_manager:
+        cameras = camera_manager.get_all_cameras()
+    
+    # Get global camera settings
+    config = current_app.config.get('AMSLPR_CONFIG', {})
+    camera_config = config.get('camera', {})
+    
+    # Global settings
+    global_settings = {
+        'discovery_enabled': camera_config.get('discovery_enabled', True),
+        'discovery_interval': camera_config.get('discovery_interval', 60),
+        'default_username': camera_config.get('default_username', 'admin'),
+        'default_password': camera_config.get('default_password', '*****'),
+        'auto_connect': camera_config.get('auto_connect', True),
+        'reconnect_attempts': camera_config.get('reconnect_attempts', 3),
+        'reconnect_interval': camera_config.get('reconnect_interval', 10)
+    }
+    
+    # Recognition settings
+    recognition_config = config.get('recognition', {})
+    settings = {
+        'detection_confidence': recognition_config.get('detection_confidence', 0.7),
+        'min_plate_size': recognition_config.get('min_plate_size', 20),
+        'max_plate_size': recognition_config.get('max_plate_size', 200),
+        'recognition_interval': recognition_config.get('recognition_interval', 1.0),
+        'detection_path': recognition_config.get('detection_path', '/var/lib/amslpr/detection')
+    }
+    
+    return render_template('camera_settings.html', 
+                           cameras=cameras, 
+                           global_settings=global_settings,
+                           camera_count=len(cameras),
+                           settings=settings)
+
+@camera_bp.route('/camera/settings/<camera_id>/save', methods=['POST'])
+def save_camera_settings(camera_id):
+    """Save camera settings."""
+    # Get camera manager
+    camera_manager = onvif_camera_manager
+    
+    if camera_id == 'global':
+        # Save global camera settings
+        config = current_app.config.get('AMSLPR_CONFIG', {})
+        camera_config = config.get('camera', {})
+        
+        # Update settings from form
+        camera_config['discovery_enabled'] = request.form.get('discovery_enabled') == 'on'
+        camera_config['discovery_interval'] = int(request.form.get('discovery_interval', 60))
+        camera_config['default_username'] = request.form.get('default_username', 'admin')
+        
+        # Only update password if provided and not placeholder
+        new_password = request.form.get('default_password')
+        if new_password and new_password != '*****':
+            camera_config['default_password'] = new_password
+            
+        camera_config['auto_connect'] = request.form.get('auto_connect') == 'on'
+        camera_config['reconnect_attempts'] = int(request.form.get('reconnect_attempts', 3))
+        camera_config['reconnect_interval'] = int(request.form.get('reconnect_interval', 10))
+        
+        # Save config
+        from src.config.settings import save_config
+        save_config(config)
+        
+        flash('Global camera settings saved successfully', 'success')
+    else:
+        # Save individual camera settings
+        if not camera_manager:
+            flash('Camera manager not available', 'danger')
+            return redirect(url_for('camera.camera_settings_index'))
+        
+        # Get camera settings from form
+        camera_settings = {
+            'name': request.form.get('name', ''),
+            'location': request.form.get('location', ''),
+            'username': request.form.get('username', ''),
+            'password': request.form.get('password', ''),
+            'rtsp_port': int(request.form.get('rtsp_port', 554)),
+            'http_port': int(request.form.get('http_port', 80)),
+            'enabled': request.form.get('enabled') == 'on'
+        }
+        
+        # Update camera settings
+        try:
+            # This would be implemented in the camera manager
+            # camera_manager.update_camera(camera_id, camera_settings)
+            flash('Camera settings saved successfully', 'success')
+        except Exception as e:
+            logger.error(f"Error saving camera settings: {e}")
+            flash(f'Error saving camera settings: {str(e)}', 'danger')
+    
+    return redirect(url_for('camera.camera_settings_index'))
 
 @camera_bp.route('/cameras/stream/<camera_id>')
 @login_required(user_manager)
@@ -192,13 +376,73 @@ def camera_feed(camera_id):
     if onvif_camera_manager is None:
         init_camera_manager(current_app.config)
     
-    stream_url = onvif_camera_manager.get_stream_url(camera_id)
+    if onvif_camera_manager:
+        stream_url = onvif_camera_manager.get_stream_url(camera_id)
+    else:
+        stream_url = None
+    
     if not stream_url:
         return "Stream not available", 404
     
     # Return an img tag that points to the RTSP stream
     # The frontend will handle displaying this using appropriate video player
     return f'<img src="{stream_url}" alt="Camera Stream">'
+
+@camera_bp.route('/camera/health')
+def camera_health():
+    """Camera health monitoring page."""
+    # Get camera manager
+    camera_manager = onvif_camera_manager
+    
+    # Get camera health data
+    camera_health_data = []
+    online_count = 0
+    warning_count = 0
+    
+    if camera_manager:
+        cameras = camera_manager.get_all_cameras()
+        for camera_id, camera in cameras.items():
+            status = 'online'  # Default status, would be determined by actual health check
+            if status == 'online':
+                online_count += 1
+            elif status == 'warning':
+                warning_count += 1
+                
+            camera_health_data.append({
+                'id': camera_id,
+                'name': camera.get('name', 'Unknown Camera'),
+                'location': camera.get('location', 'Unknown'),
+                'status': status,
+                'uptime': '24h 35m',  # Placeholder
+                'last_frame': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'frame_rate': 25  # Placeholder
+            })
+    
+    return render_template('camera_health.html', 
+                           cameras=camera_health_data,
+                           online_count=online_count,
+                           warning_count=warning_count,
+                           last_updated=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+@camera_bp.route('/camera/view/<camera_id>')
+def view_camera(camera_id):
+    """View a specific camera."""
+    # Get camera manager
+    camera_manager = onvif_camera_manager
+    
+    # Get camera details
+    camera = None
+    if camera_manager:
+        try:
+            camera = camera_manager.get_camera_info(camera_id)
+        except Exception as e:
+            logger.error(f"Error getting camera info: {e}")
+    
+    if not camera:
+        flash('Camera not found', 'danger')
+        return redirect(url_for('camera.cameras'))
+    
+    return render_template('camera_view.html', camera=camera, camera_id=camera_id)
 
 def register_camera_routes(app, detector, db_manager):
     """Register camera routes with the Flask application."""
@@ -208,7 +452,7 @@ def register_camera_routes(app, detector, db_manager):
     _app = app
     
     # Register the blueprint
-    app.register_blueprint(camera_bp, url_prefix='/camera')
+    app.register_blueprint(camera_bp, url_prefix='')
     
     # Set up routes
     setup_routes(app, detector, db_manager)

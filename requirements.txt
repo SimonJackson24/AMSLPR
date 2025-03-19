@@ -1,7 +1,8 @@
 # Core Vision
-opencv-python-headless-rolling  # Latest stable version with ARM support
-numpy~=1.24.0  # Compatible with Python 3.9+ and ARM
+opencv-python-headless~=4.9.0  # Latest stable version with Python 3.12 support
+numpy~=1.26.0  # Compatible with Python 3.12
 Pillow~=10.1.0  # Latest stable with ARM support
+tensorflow~=2.18.1  # Latest stable version compatible with Python 3.12
 
 # OCR
 pytesseract~=0.3.10
@@ -19,6 +20,7 @@ Werkzeug~=2.3.0  # Required for Flask 2.3
 # ASGI Server
 uvicorn[standard]~=0.27.0  # Latest stable
 uvloop~=0.19.0  # Latest stable with ARM support
+asgiref~=3.7.2  # For WSGI to ASGI compatibility
 
 # Security
 bcrypt~=4.0.1
@@ -28,7 +30,7 @@ pyOpenSSL~=24.0.0
 SQLAlchemy~=2.0.0  # Latest with async support
 
 # Camera Integration
-python-onvif-zeep-async==0.3.1
+onvif-zeep~=0.2.12  # Latest stable version
 zeep~=4.2.1
 aiohttp~=3.9.0
 yarl~=1.9.2
@@ -45,3 +47,7 @@ PyYAML~=6.0.1
 
 # Async Support
 typing-extensions~=4.9.0
+
+# Build Dependencies
+setuptools>=69.0.0
+wheel>=0.42.0

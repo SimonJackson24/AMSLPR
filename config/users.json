@@ -1,13 +1,13 @@
 {
     "users": {
         "admin": {
-            "password_hash": "943798b6a7e98740dd626b9d2dd5f2a8d8210f8a663ae4621475602ffcd7afdf",
-            "salt": "7db781964f8c3b51b60497c983a06fc1",
+            "password_hash": "68997685673c6554fe658544e4537ef6a6f9996a2c7df555fa40bc5809c2cf6c",
+            "salt": "0449ccfb117c4448629ed88624c28a7b",
             "role": "admin",
             "name": "Administrator",
             "email": "admin@example.com",
-            "created_at": "2025-03-15T13:42:29.403125",
-            "last_login": "2025-03-17T09:13:19.549971"
+            "created_at": "2025-03-18T15:23:55.557999",
+            "last_login": "2025-03-19T15:18:07.542246"
         }
     },
     "roles": {

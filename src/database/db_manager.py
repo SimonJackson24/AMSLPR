@@ -1180,7 +1180,7 @@ class DatabaseManager:
             plate_number (str, optional): Filter by license plate
             start_time (str, optional): Filter by start time
             end_time (str, optional): Filter by end time
-            status (str, optional): Filter by payment status
+            status (str, optional): Filter by payment status ('pending', 'paid', 'canceled')
             limit (int, optional): Maximum number of results
             offset (int, optional): Offset for pagination
             
@@ -1197,20 +1197,27 @@ class DatabaseManager:
             where_clauses = []
             
             if plate_number:
-                where_clauses.append('plate_number = ?')
-                params.append(plate_number)
+                where_clauses.append('plate_number LIKE ?')
+                params.append(f'%{plate_number}%')
             
             if start_time:
                 where_clauses.append('entry_time >= ?')
                 params.append(start_time)
             
             if end_time:
-                where_clauses.append('exit_time <= ?')
-                params.append(end_time)
+                # Add time to make end_date inclusive
+                end_time_with_time = end_time
+                if len(end_time) == 10:  # If only date is provided (YYYY-MM-DD)
+                    end_time_with_time = f"{end_time} 23:59:59"
+                where_clauses.append('entry_time <= ?')
+                params.append(end_time_with_time)
             
             if status:
-                where_clauses.append('payment_status = ?')
-                params.append(status)
+                if status == 'pending':
+                    where_clauses.append('(payment_status IS NULL OR payment_status = "pending")')
+                elif status in ['paid', 'canceled']:
+                    where_clauses.append('payment_status = ?')
+                    params.append(status)
             
             if where_clauses:
                 query += ' WHERE ' + ' AND '.join(where_clauses)
@@ -1218,58 +1225,13 @@ class DatabaseManager:
             query += ' ORDER BY entry_time DESC LIMIT ? OFFSET ?'
             params.extend([limit, offset])
             
+            logger.debug(f"Executing query: {query} with params: {params}")
             cursor.execute(query, params)
             sessions = cursor.fetchall()
             conn.close()
             
             return [dict(session) for session in sessions]
         
-        except Exception as e:
-            logger.error(f"Error getting parking sessions: {e}")
-            return []
-    
-    def get_parking_sessions(self, status=None, limit=10, offset=0):
-        """
-        Get parking sessions with optional filtering.
-        
-        Args:
-            status (str, optional): Filter by status ('pending', 'paid', 'canceled')
-            limit (int, optional): Maximum number of sessions to return
-            offset (int, optional): Offset for pagination
-            
-        Returns:
-            list: List of parking session dictionaries
-        """
-        try:
-            conn = sqlite3.connect(self.db_path)
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
-            query = "SELECT * FROM parking_sessions"
-            params = []
-            
-            # Add status filter if provided
-            if status:
-                if status == 'pending':
-                    query += " WHERE exit_time IS NULL"
-                elif status == 'paid':
-                    query += " WHERE payment_status = 'paid'"
-                elif status == 'canceled':
-                    query += " WHERE payment_status = 'canceled'"
-            
-            # Add ordering
-            query += " ORDER BY entry_time DESC"
-            
-            # Add limit and offset
-            query += " LIMIT ? OFFSET ?"
-            params.extend([limit, offset])
-            
-            cursor.execute(query, params)
-            sessions = [dict(row) for row in cursor.fetchall()]
-            
-            conn.close()
-            return sessions
-            
         except Exception as e:
             logger.error(f"Error getting parking sessions: {e}")
             return []
@@ -1651,4 +1613,37 @@ class DatabaseManager:
             
         except Exception as e:
             logger.error(f"Error getting API keys: {e}")
+            return []
+
+    def get_payment_transactions(self, session_id):
+        """
+        Get payment transactions for a specific parking session.
+        
+        Args:
+            session_id (int): Parking session ID
+            
+        Returns:
+            list: List of payment transaction dictionaries
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT id, parking_session_id, amount, tax_amount, currency, transaction_id,
+                       terminal_id, payment_method, status, response_code, response_message,
+                       receipt_number, created_at
+                FROM payment_transactions
+                WHERE parking_session_id = ?
+                ORDER BY created_at DESC
+            ''', (session_id,))
+            
+            transactions = cursor.fetchall()
+            conn.close()
+            
+            return [dict(transaction) for transaction in transactions]
+        
+        except Exception as e:
+            logger.error(f"Error getting payment transactions: {e}")
             return []

@@ -7,6 +7,7 @@ This module provides routes for user authentication and management.
 
 import logging
 from flask import Blueprint, request, render_template, redirect, url_for, flash, session, current_app, jsonify
+from flask_wtf.csrf import CSRFProtect
 
 from src.utils.user_management import UserManager, login_required, permission_required, role_required
 
@@ -33,6 +34,10 @@ def init_user_manager(app):
     app.permission_required = lambda permission: permission_required(permission, user_manager)
     app.role_required = lambda role: role_required(role, user_manager)
     
+    # Initialize CSRF protection
+    csrf = CSRFProtect()
+    csrf.init_app(app)
+    
     logger.info("User manager initialized")
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
@@ -42,7 +47,7 @@ def login():
     """
     # Check if already logged in
     if 'username' in session:
-        return redirect(url_for('main_dashboard.index'))
+        return redirect(url_for('main.index'))
     
     # Handle login form submission
     if request.method == 'POST':
@@ -60,14 +65,18 @@ def login():
             session['permissions'] = user['permissions']
             session.modified = True
             
+            # Log successful login
+            logger.info(f"User {username} logged in successfully")
+            
             # Redirect to next page or index
             next_page = request.args.get('next')
             if next_page:
                 return redirect(next_page)
             else:
-                return redirect(url_for('main_dashboard.index'))
+                return redirect(url_for('main.dashboard'))
         else:
             flash('Invalid username or password', 'danger')
+            logger.warning(f"Failed login attempt for user {username}")
     
     # Pass current year to the template for copyright notice
     from datetime import datetime
@@ -76,13 +85,17 @@ def login():
     # Get the next page from the query string
     next_page = request.args.get('next', '')
     
-    return render_template('login_standalone.html', current_year=current_year, next=next_page)
+    return render_template('auth/login.html', current_year=current_year, next=next_page)
 
 @auth_bp.route('/logout')
 def logout():
     """
     User logout route.
     """
+    # Log user logout
+    if 'username' in session:
+        logger.info(f"User {session['username']} logged out")
+    
     # Clear session
     session.clear()
     session.modified = True
@@ -102,9 +115,9 @@ def profile():
     
     if not user:
         flash('User not found', 'danger')
-        return redirect(url_for('main_dashboard.index'))
+        return redirect(url_for('main.dashboard'))
     
-    return render_template('profile.html', user=user)
+    return render_template('auth/profile.html', user=user)
 
 @auth_bp.route('/profile/update', methods=['POST'])
 @login_required(user_manager)
@@ -157,8 +170,11 @@ def update_profile():
             if 'name' in updates:
                 session['name'] = updates['name']
                 session.modified = True
+            
+            logger.info(f"User {username} updated their profile")
         else:
             flash('Failed to update profile', 'danger')
+            logger.error(f"Failed to update profile for user {username}")
     
     return redirect(url_for('auth.profile'))
 
@@ -169,13 +185,25 @@ def users_list():
     """
     User management route.
     """
-    # Get all users
-    users = user_manager.get_users()
-    
-    # Get all roles
-    roles = user_manager.get_roles()
-    
-    return render_template('users.html', users=users, roles=roles)
+    try:
+        # Get all users
+        users_list = user_manager.get_users()
+        
+        # Convert list to dictionary with username as key
+        users = {}
+        for user in users_list:
+            username = user.get('username')
+            if username:
+                users[username] = user
+        
+        # Get all roles
+        roles = user_manager.get_roles()
+        
+        return render_template('auth/users.html', users=users, roles=roles)
+    except Exception as e:
+        logger.error(f"Error in users_list: {str(e)}")
+        flash(f"Error loading users: {str(e)}", 'danger')
+        return redirect(url_for('main.index'))
 
 @auth_bp.route('/users/add', methods=['POST'])
 @login_required(user_manager)
@@ -206,13 +234,15 @@ def add_user():
     )
     
     if success:
-        flash(f'User {username} added successfully', 'success')
+        flash('User added successfully', 'success')
+        logger.info(f"User {username} added by {session['username']}")
     else:
-        flash(f'Failed to add user {username}', 'danger')
+        flash('Failed to add user', 'danger')
+        logger.error(f"Failed to add user {username}")
     
     return redirect(url_for('auth.users_list'))
 
-@auth_bp.route('/users/update/<username>', methods=['POST'])
+@auth_bp.route('/users/<username>/update', methods=['POST'])
 @login_required(user_manager)
 @permission_required('admin', user_manager)
 def update_user(username):
@@ -225,41 +255,43 @@ def update_user(username):
     email = request.form.get('email')
     password = request.form.get('password')
     
-    # Validate data
-    if not role:
-        flash('Role is required', 'danger')
-        return redirect(url_for('auth.users_list'))
+    # Update user data
+    updates = {}
     
-    # Prepare updates
-    updates = {
-        'role': role,
-        'name': name,
-        'email': email
-    }
+    if role:
+        updates['role'] = role
     
-    # Add password if provided
+    if name:
+        updates['name'] = name
+    
+    if email:
+        updates['email'] = email
+    
     if password:
         updates['password'] = password
     
     # Update user
-    success = user_manager.update_user(username, **updates)
-    
-    if success:
-        flash(f'User {username} updated successfully', 'success')
-    else:
-        flash(f'Failed to update user {username}', 'danger')
+    if updates:
+        success = user_manager.update_user(username, **updates)
+        
+        if success:
+            flash('User updated successfully', 'success')
+            logger.info(f"User {username} updated by {session['username']}")
+        else:
+            flash('Failed to update user', 'danger')
+            logger.error(f"Failed to update user {username}")
     
     return redirect(url_for('auth.users_list'))
 
-@auth_bp.route('/users/delete/<username>', methods=['POST'])
+@auth_bp.route('/users/<username>/delete', methods=['POST'])
 @login_required(user_manager)
 @permission_required('admin', user_manager)
 def delete_user(username):
     """
     Delete user route.
     """
-    # Check if trying to delete self
-    if username == session.get('username'):
+    # Prevent deleting own account
+    if username == session['username']:
         flash('You cannot delete your own account', 'danger')
         return redirect(url_for('auth.users_list'))
     
@@ -267,33 +299,13 @@ def delete_user(username):
     success = user_manager.delete_user(username)
     
     if success:
-        flash(f'User {username} deleted successfully', 'success')
+        flash('User deleted successfully', 'success')
+        logger.info(f"User {username} deleted by {session['username']}")
     else:
-        flash(f'Failed to delete user {username}', 'danger')
+        flash('Failed to delete user', 'danger')
+        logger.error(f"Failed to delete user {username}")
     
     return redirect(url_for('auth.users_list'))
-
-@auth_bp.route('/forgot-password', methods=['GET', 'POST'])
-def forgot_password():
-    """
-    Forgot password route.
-    """
-    if request.method == 'POST':
-        username = request.form.get('username')
-        email = request.form.get('email')
-        
-        # Check if user exists
-        user = user_manager.get_user(username)
-        
-        if user and user.get('email') == email:
-            # In a real application, this would send a password reset email
-            # For now, just show a success message
-            flash('Password reset instructions have been sent to your email', 'success')
-            return redirect(url_for('auth.login'))
-        else:
-            flash('User not found or email does not match', 'danger')
-    
-    return render_template('forgot_password.html')
 
 def register_routes(app, database_manager=None):
     """
@@ -303,9 +315,7 @@ def register_routes(app, database_manager=None):
         app: Flask application instance
         database_manager: Database manager instance (not used for auth routes)
     """
-    # Initialize user manager in app config
+    # Initialize user manager
     init_user_manager(app)
     
-    # Blueprint is registered in app.py, so we don't need to register it here
-    
-    return app
+    logger.info("User manager initialized")

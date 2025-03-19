@@ -11,7 +11,7 @@ from flask import Blueprint, redirect, url_for
 logger = logging.getLogger('AMSLPR.web.user')
 
 # Create blueprint
-user_bp = Blueprint('user', __name__)
+user_bp = Blueprint('user', __name__, url_prefix='/system')
 
 @user_bp.route('/users')
 def users_redirect():
@@ -26,6 +26,20 @@ def integration_settings_redirect():
     Redirect from /integration/settings to /system/integration
     """
     return redirect(url_for('system.integration_settings'))
+
+@user_bp.route('/ocr/settings')
+def ocr_settings_redirect():
+    """
+    Redirect from /system/ocr/settings to /ocr/settings
+    """
+    return redirect(url_for('ocr.ocr_settings'))
+
+@user_bp.route('/backup')
+def backup_redirect():
+    """
+    Redirect from /system/backup to /system/backup
+    """
+    return redirect(url_for('system.backup_restore'))
 
 def register_routes(app, database_manager=None):
     """

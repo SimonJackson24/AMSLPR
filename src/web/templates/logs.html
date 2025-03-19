@@ -111,7 +111,7 @@
                         <td>{{ log.source }}</td>
                         <td>
                             <div class="btn-group">
-                                <a href="{{ url_for('main_dashboard.log_details', log_id=log.id) }}" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="View Details">
+                                <a href="{{ url_for('main.log_details', log_id=log.id) }}" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="View Details">
                                     <i class="bi bi-eye"></i>
                                 </a>
                                 <button type="button" class="btn btn-sm btn-danger delete-log" data-log-id="{{ log.id }}" data-bs-toggle="tooltip" title="Delete Log">
