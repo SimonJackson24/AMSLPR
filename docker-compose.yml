@@ -1,4 +1,4 @@
-version: '3'
+version: '2'
 
 services:
   amslpr:
@@ -9,7 +9,6 @@ services:
       - ./data:/app/data
       - ./logs:/app/logs
       - ./config:/app/config
-    restart: unless-stopped
     environment:
       - TZ=UTC
       - PYTHONUNBUFFERED=1
