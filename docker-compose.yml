@@ -4,7 +4,8 @@ services:
   amslpr:
     build: .
     container_name: amslpr
-    network_mode: "host"
+    ports:
+      - "5001:5001"
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
@@ -13,16 +14,10 @@ services:
     environment:
       - TZ=UTC
       - PYTHONUNBUFFERED=1
-      # Add memory limit for Python
       - PYTHONMALLOC=malloc
-      # Limit garbage collector
       - PYTHONGC=1
-      # Add environment variable to indicate Hailo is enabled in config
       - HAILO_ENABLED=true
-      # Use a different port to avoid conflicts
       - PORT=5001
-    # Run as the same user that owns the files
-    user: "1000:1000"
     # Uncomment the devices section when running on hardware with Hailo TPU
     # devices:
     #   - /dev/hailo0:/dev/hailo0  # Map the Hailo TPU device to the container
@@ -32,18 +27,3 @@ services:
           memory: 2G
         reservations:
           memory: 1G
-    healthcheck:
-      test: ["CMD-SHELL", "curl -s http://127.0.0.1:5001/ocr/api/status | grep -q 'available'"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    ulimits:
-      nofile:
-        soft: 32768
-        hard: 32768
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"

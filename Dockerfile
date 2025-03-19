@@ -12,8 +12,9 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDEVMODE=0 \
     HAILO_ENABLED=true
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install system dependencies with retry mechanism
+RUN apt-get update || (sleep 5 && apt-get update) || (sleep 10 && apt-get update) && \
+    apt-get install -y --no-install-recommends \
     # Build essentials
     build-essential \
     python3-dev \
@@ -50,7 +51,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Networking
     curl \
     wget \
-    gnupg \
     # Process management
     tini \
     # Cleanup
