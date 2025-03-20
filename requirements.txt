@@ -54,3 +54,19 @@ typing-extensions==4.3.0
 # Build Dependencies
 setuptools>=50.0.0
 wheel>=0.36.0
+
+# Hailo TPU Support
+# The Hailo SDK packages are now included in the AMSLPR package and will be installed automatically
+# during the installation process. No manual download is required.
+
+#
+# Python Version Requirement:
+# Python 3.11 is REQUIRED for this project. No other Python versions are supported.
+# The Hailo TPU integration specifically requires Python 3.11 with the included
+# hailort-4.20.0-cp311-cp311-linux_aarch64.whl package.
+#
+# Note on Python version compatibility:
+# The included Hailo SDK wheel file is for Python 3.11. If you're using a different Python version,
+# you may need to download the appropriate wheel file from the Hailo Developer Zone.
+#
+# See docs/raspberry_pi_hailo_setup.md for detailed instructions.

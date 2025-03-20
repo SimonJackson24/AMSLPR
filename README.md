@@ -23,6 +23,7 @@ AMSLPR is a production-ready Raspberry Pi-based license plate recognition system
 - System monitoring and error handling
 - Production-ready deployment with Nginx
 - High availability and redundancy options
+- **NEW: Hailo TPU acceleration support for faster recognition**
 
 ## Production-Ready Features
 
@@ -44,6 +45,7 @@ AMSLPR is a production-ready Raspberry Pi-based license plate recognition system
 
 ### Performance
 - Optimized recognition pipeline for Raspberry Pi
+- **Hailo TPU acceleration for up to 10x faster recognition**
 - Database query optimization
 - Asset minification and caching
 - Efficient resource usage monitoring
@@ -60,9 +62,18 @@ AMSLPR is a production-ready Raspberry Pi-based license plate recognition system
 - Comprehensive deployment documentation
 - Installation scripts and utilities
 
+## Requirements
+
+- Raspberry Pi 4 (8GB RAM recommended)
+- Python 3.11 (required for Hailo TPU integration)
+- Camera (USB or IP camera with ONVIF support)
+- Internet connection for initial setup
+- Hailo-8 TPU for hardware acceleration (optional)
+
 ## Hardware Requirements
-- Raspberry Pi 4 (4GB RAM recommended)
+- Raspberry Pi 4 (4GB RAM recommended, 8GB for optimal performance)
 - Camera module, USB camera, or ONVIF-compatible IP cameras
+- **Optional: Hailo-8 TPU for accelerated recognition**
 - Weather-resistant enclosure
 - GPIO connection to barrier system
 - Network connectivity (wired recommended)
@@ -71,6 +82,38 @@ AMSLPR is a production-ready Raspberry Pi-based license plate recognition system
 See [installation guide](docs/installation.md) for detailed setup instructions.
 
 For production deployment, see our [production deployment guide](docs/production_deployment.md).
+
+For Hailo TPU setup, see our [Raspberry Pi Hailo setup guide](docs/raspberry_pi_hailo_setup.md).
+
+### Raspberry Pi with Hailo TPU Installation
+
+For high-performance installations using the Hailo TPU accelerator:
+
+```bash
+git clone https://github.com/yourusername/AMSLPR.git
+cd AMSLPR
+sudo ./scripts/install_on_raspberry_pi.sh
+```
+
+The installation script will automatically:
+1. Install all required dependencies
+2. Set up the Hailo TPU drivers and SDK (if available)
+3. Download and configure the necessary Hailo models
+4. Configure the system for optimal performance
+
+See [Raspberry Pi Hailo TPU Setup Guide](docs/raspberry_pi_hailo_setup.md) for detailed instructions on setting up the Hailo TPU accelerator.
+
+> **Note**: The Hailo SDK requires registration at the [Hailo Developer Zone](https://hailo.ai/developer-zone/). All required Hailo models are now included in the AMSLPR package, so you don't need to download them separately.
+
+#### Pre-packaged Hailo SDK
+
+This repository includes pre-downloaded Hailo SDK packages in the `packages/hailo/` directory:
+
+- Hailo Runtime Package (hailort_4.20.0_arm64.deb)
+- Hailo PCIe Driver Package (hailort-pcie-driver_4.20.0_all.deb)
+- Hailo Python SDK Wheel (hailort-4.20.0-cp311-cp311-linux_aarch64.whl)
+
+These packages will be automatically installed during the Raspberry Pi installation process. You do not need to download them separately.
 
 ## Quick Start
 
@@ -81,6 +124,9 @@ cd AMSLPR
 
 # Run the installation script
 ./install.sh
+
+# For Hailo TPU support (optional)
+sudo ./scripts/hailo_raspberry_pi_setup.sh
 
 # Start the service
 sudo systemctl start amslpr
@@ -96,6 +142,7 @@ Comprehensive documentation is available in the [docs](docs/) directory:
 - [Security Hardening Guide](docs/security_hardening.md)
 - [Performance Tuning Guide](docs/performance_tuning.md)
 - [High Availability Guide](docs/high_availability.md)
+- [Raspberry Pi Hailo Setup Guide](docs/raspberry_pi_hailo_setup.md)
 
 See the [documentation index](docs/index.md) for a complete list of available documentation.
 
@@ -153,3 +200,4 @@ AMSLPR/
 - OpenCV for image processing
 - Bootstrap for the web interface
 - ONVIF for IP camera integration
+- Hailo for TPU acceleration technology
