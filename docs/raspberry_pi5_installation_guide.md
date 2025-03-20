@@ -74,13 +74,13 @@ cd AMSLPR
 First, make the installation script executable:
 
 ```bash
-chmod +x ./scripts/install_on_raspberry_pi.sh
+chmod +x scripts/install_on_raspberry_pi.sh
 ```
 
 Then run the installation script:
 
 ```bash
-sudo ./scripts/install_on_raspberry_pi.sh
+sudo scripts/install_on_raspberry_pi.sh
 ```
 
 This script will:
