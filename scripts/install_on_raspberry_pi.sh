@@ -58,17 +58,29 @@ echo "Step 3: Creating application directory..."
 mkdir -p "$INSTALL_DIR"
 chown -R "$APP_USER:$APP_GROUP" "$INSTALL_DIR"
 
-echo "Step 4: Cloning AMSLPR repository..."
-cd "$INSTALL_DIR"
-if [ -d "$INSTALL_DIR/.git" ]; then
-    echo "Repository already exists, pulling latest changes..."
-    cd "$INSTALL_DIR"
-    git pull
+echo "Step 4: Setting up AMSLPR repository..."
+
+# Check if we're already in the AMSLPR repository
+CURRENT_DIR=$(pwd)
+if [ -d "$CURRENT_DIR/.git" ] && [ -f "$CURRENT_DIR/scripts/install_on_raspberry_pi.sh" ]; then
+    echo "Running from existing AMSLPR repository, using current directory..."
+    INSTALL_DIR="$CURRENT_DIR"
+    echo "Installation directory set to: $INSTALL_DIR"
 else
-    echo "Cloning fresh repository..."
-    # Replace with your actual repository URL
-    git clone https://github.com/yourusername/AMSLPR.git .
-    chown -R "$APP_USER:$APP_GROUP" "$INSTALL_DIR"
+    # Original repository cloning logic
+    echo "Setting up repository in $INSTALL_DIR..."
+    mkdir -p "$INSTALL_DIR"
+    cd "$INSTALL_DIR"
+    if [ -d "$INSTALL_DIR/.git" ]; then
+        echo "Repository already exists, pulling latest changes..."
+        cd "$INSTALL_DIR"
+        git pull
+    else
+        echo "Cloning fresh repository..."
+        # Clone from the official AMSLPR repository
+        git clone https://github.com/SimonJackson24/AMSLPR.git .
+        chown -R "$APP_USER:$APP_GROUP" "$INSTALL_DIR"
+    fi
 fi
 
 echo "Step 5: Setting up Python virtual environment..."
