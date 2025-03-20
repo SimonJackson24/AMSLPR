@@ -192,6 +192,23 @@ If you encounter "command not found" or permission errors when running scripts:
    cd /path/to/AMSLPR
    ```
 
+### TensorFlow Installation Issues
+
+If you encounter errors related to TensorFlow installation:
+
+1. The system now uses TensorFlow 2.15.0 which is compatible with Python 3.11 on ARM64 architecture.
+
+2. If you still encounter issues, you can try installing TensorFlow with specific options:
+   ```bash
+   pip install tensorflow==2.15.0 --extra-index-url https://tf.pypi.io/simple
+   ```
+
+3. For Raspberry Pi, you might need to use the TensorFlow Lite runtime instead:
+   ```bash
+   pip install tflite-runtime
+   ```
+   And then modify the code to use TFLite instead of full TensorFlow.
+
 ## Additional Resources
 
 - [Hailo Developer Zone](https://hailo.ai/developer-zone/) - For additional Hailo TPU documentation
