@@ -14,8 +14,27 @@ fi
 
 # Set up variables
 INSTALL_DIR="/opt/amslpr"
-APP_USER="pi"
-APP_GROUP="pi"
+
+# Get the user who executed sudo (the actual user, not root)
+if [ -n "$SUDO_USER" ]; then
+    APP_USER="$SUDO_USER"
+else
+    # If not run with sudo, try to get the current user
+    APP_USER=$(logname 2>/dev/null || echo "pi")
+    # If logname fails, check for common users on Raspberry Pi
+    if [ "$APP_USER" = "pi" ] && ! id -u pi &>/dev/null; then
+        # Try to find an existing user
+        for user in $(ls /home); do
+            if id -u "$user" &>/dev/null; then
+                APP_USER="$user"
+                break
+            fi
+        done
+    fi
+fi
+APP_GROUP="$(id -gn $APP_USER 2>/dev/null || echo $APP_USER)"
+
+echo "Installing for user: $APP_USER:$APP_GROUP"
 
 echo "Step 1: Updating system packages..."
 apt-get update
