@@ -1,6 +1,7 @@
 # Core Vision - Use precompiled packages
 opencv-python-headless==4.5.5.64
-numpy==1.22.4
+# Updated NumPy version for compatibility with TensorFlow 2.15.0
+numpy>=1.23.5,<2.0.0
 Pillow==9.2.0
 # Updated TensorFlow version for Python 3.11 compatibility on ARM64
 tensorflow==2.15.0

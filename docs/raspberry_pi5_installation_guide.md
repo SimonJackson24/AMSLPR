@@ -198,12 +198,14 @@ If you encounter errors related to TensorFlow installation:
 
 1. The system now uses TensorFlow 2.15.0 which is compatible with Python 3.11 on ARM64 architecture.
 
-2. If you still encounter issues, you can try installing TensorFlow with specific options:
+2. NumPy has been updated to version 1.23.5 or higher to resolve dependency conflicts with TensorFlow 2.15.0.
+
+3. If you still encounter issues, you can try installing TensorFlow with specific options:
    ```bash
    pip install tensorflow==2.15.0 --extra-index-url https://tf.pypi.io/simple
    ```
 
-3. For Raspberry Pi, you might need to use the TensorFlow Lite runtime instead:
+4. For Raspberry Pi, you might need to use the TensorFlow Lite runtime instead:
    ```bash
    pip install tflite-runtime
    ```
