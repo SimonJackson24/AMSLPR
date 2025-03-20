@@ -77,7 +77,7 @@ First, make the installation script executable:
 chmod +x scripts/install_on_raspberry_pi.sh
 ```
 
-Then run the installation script:
+Then run the installation script from the AMSLPR directory:
 
 ```bash
 sudo scripts/install_on_raspberry_pi.sh
@@ -85,11 +85,13 @@ sudo scripts/install_on_raspberry_pi.sh
 
 This script will:
 1. Check for Python 3.11 (and exit if not found)
-2. Create a Python virtual environment
-3. Install required Python packages
-4. Install Hailo TPU drivers and SDK
-5. Set up the AMSLPR service
-6. Configure the system for automatic startup
+2. Automatically detect your current user account (no longer requires the default 'pi' user)
+3. Detect that you're running from an existing repository (no GitHub authentication needed)
+4. Create a Python virtual environment
+5. Install required Python packages
+6. Install Hailo TPU drivers and SDK
+7. Set up the AMSLPR service
+8. Configure the system for automatic startup
 
 ### Step 7: Verify the Installation
 
