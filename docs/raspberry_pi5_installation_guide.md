@@ -211,6 +211,25 @@ If you encounter errors related to TensorFlow installation:
    ```
    And then modify the code to use TFLite instead of full TensorFlow.
 
+### Python Package Build Issues
+
+If you encounter errors building Python packages with C extensions (like aiohttp, uvloop):
+
+1. Make sure you have the Python development packages installed:
+   ```bash
+   sudo apt install -y python3-dev python3.11-dev build-essential
+   ```
+
+2. For specific packages that fail to build, you can try installing them with pre-built wheels:
+   ```bash
+   pip install --only-binary=:all: aiohttp uvloop
+   ```
+
+3. If that doesn't work, you can try installing older versions that have pre-built wheels available:
+   ```bash
+   pip install aiohttp==3.8.1 uvloop==0.16.0
+   ```
+
 ## Additional Resources
 
 - [Hailo Developer Zone](https://hailo.ai/developer-zone/) - For additional Hailo TPU documentation

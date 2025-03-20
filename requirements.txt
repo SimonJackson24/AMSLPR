@@ -18,10 +18,14 @@ Flask-Session==0.4.0
 Flask-SQLAlchemy==2.5.1
 Flask-Limiter==2.5.0
 Werkzeug==2.0.3
+fastapi==0.103.2
+uvicorn==0.23.2
+
+# Use specific versions of packages that have pre-built wheels available for ARM64
+aiohttp==3.8.1
+uvloop==0.16.0
 
 # ASGI Server
-uvicorn==0.17.6
-uvloop==0.16.0
 asgiref==3.5.2
 
 # Security
@@ -41,7 +45,6 @@ yarl>=1.6.0
 multidict>=5.0.0
 async-timeout>=4.0.0
 requests==2.28.1
-aiohttp==3.8.1
 
 # Monitoring
 loguru==0.6.0

@@ -45,6 +45,8 @@ apt-get install -y \
     python3 \
     python3-pip \
     python3-venv \
+    python3-dev \
+    python3.11-dev \
     git \
     tesseract-ocr \
     libtesseract-dev \
@@ -52,7 +54,8 @@ apt-get install -y \
     libxext6 \
     libxrender-dev \
     libgl1-mesa-glx \
-    wget
+    wget \
+    build-essential
 
 echo "Step 3: Creating application directory..."
 mkdir -p "$INSTALL_DIR"
