@@ -27,7 +27,7 @@ bcrypt==3.2.2
 pyOpenSSL==22.0.0
 
 # Database
-SQLAlchemy==1.4.40
+SQLAlchemy==2.0.0
 
 # Reporting and Export
 xlsxwriter==3.0.3

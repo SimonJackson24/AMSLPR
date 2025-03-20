@@ -102,8 +102,8 @@ def create_app(config, db_manager, detector, barrier_controller=None, paxton_int
     # Set up rate limiting if available
     if LIMITER_AVAILABLE:
         limiter = Limiter(
-            get_remote_address,
             app=app,
+            key_func=get_remote_address,
             default_limits=["200 per day", "50 per hour"],
             storage_uri="memory://",
         )

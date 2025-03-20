@@ -1,7 +1,8 @@
 """Database manager for AMSLPR."""
 import os
 from typing import Optional
-from sqlalchemy import create_engine, Engine
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker, scoped_session, Session
 from sqlalchemy.ext.declarative import declarative_base
 from loguru import logger
