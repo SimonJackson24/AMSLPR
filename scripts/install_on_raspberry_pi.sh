@@ -117,7 +117,22 @@ echo "Step 6: Installing Python dependencies..."
 source "$INSTALL_DIR/venv/bin/activate"
 pip install --upgrade pip
 echo "Installing Python packages..."
-pip install -r "$INSTALL_DIR/requirements.txt"
+
+# First try installing all requirements at once
+pip install -r "$INSTALL_DIR/requirements.txt" || {
+    echo "Encountered dependency conflicts. Installing packages one by one..."
+    
+    # Read requirements file and install packages one by one
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        # Skip comments and empty lines
+        if [[ $line =~ ^\s*# ]] || [[ -z $line ]]; then
+            continue
+        fi
+        
+        echo "Installing $line"
+        pip install "$line" || echo "Warning: Failed to install $line"
+    done < "$INSTALL_DIR/requirements.txt"
+}
 
 # Check if TensorFlow was installed successfully
 if ! python -c "import tensorflow" &> /dev/null; then

@@ -192,6 +192,24 @@ If you encounter "command not found" or permission errors when running scripts:
    cd /path/to/AMSLPR
    ```
 
+### Dependency Conflicts
+
+If you encounter dependency conflicts during installation, particularly with `typing-extensions`, the installation script will automatically handle these by:
+
+1. First attempting to install all packages at once
+2. If that fails, installing packages one by one
+3. Updating `typing-extensions` to a version compatible with all dependencies
+
+If you need to manually resolve dependency conflicts:
+
+```bash
+# Install a compatible version of typing-extensions
+pip install typing-extensions>=4.5.0
+
+# Reinstall the conflicting packages
+pip install Flask-Limiter==2.5.0 fastapi==0.103.2
+```
+
 ### TensorFlow Installation
 
 The installation script now handles TensorFlow installation automatically with multiple fallback options:

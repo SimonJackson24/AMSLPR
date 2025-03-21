@@ -31,6 +31,19 @@ source "${VENV_DIR}/bin/activate"
 echo "Upgrading pip..."
 pip install --upgrade pip
 
+# Function to handle dependency conflicts
+handle_dependency_conflicts() {
+    echo "Handling dependency conflicts..."
+    
+    # Update typing-extensions to a compatible version
+    echo "Updating typing-extensions to a compatible version..."
+    pip install "typing-extensions>=4.5.0"
+    
+    # Try installing the problematic packages again
+    echo "Reinstalling Flask-Limiter and FastAPI..."
+    pip install Flask-Limiter==2.5.0 fastapi==0.103.2
+}
+
 # Install packages one by one with detailed error reporting
 echo "Installing packages one by one..."
 
@@ -142,6 +155,9 @@ pip install "uvloop==0.16.0" --only-binary=:all:
 
 echo "Installing asgiref..."
 pip install "asgiref==3.5.2"
+
+# Call the function to handle dependency conflicts
+handle_dependency_conflicts
 
 echo "Testing import of key packages..."
 python -c "import numpy; print('NumPy version:', numpy.__version__)"
