@@ -173,7 +173,8 @@ def ocr_settings():
                 'input_width': 100,
                 'input_height': 32,
                 'tf_ocr_model_path': 'models/ocr_crnn.h5',
-                'hailo_ocr_model_path': 'models/ocr_crnn.hef',
+                'hailo_ocr_model_path': 'models/lprnet_vehicle_license_recognition.hef',
+                'hailo_detector_model_path': 'models/yolov5m_license_plates.hef',
                 'char_map_path': 'models/char_map.json'
             },
             'preprocessing': {
@@ -229,7 +230,9 @@ def ocr_settings():
         config['deep_learning'] = {
             'model_type': 'crnn',
             'input_width': 100,
-            'input_height': 32
+            'input_height': 32,
+            'hailo_ocr_model_path': 'models/lprnet_vehicle_license_recognition.hef',
+            'hailo_detector_model_path': 'models/yolov5m_license_plates.hef'
         }
     
     if 'preprocessing' not in config:
@@ -259,7 +262,39 @@ def ocr_settings():
             'plate_format': '[A-Z0-9]{3,8}'
         }
     
-    return render_template('ocr_settings.html', config=config, mock=MOCK_DETECTOR)
+    # Check for Hailo TPU availability
+    hailo_available = False
+    try:
+        # First check for hailort module
+        import importlib.util
+        if importlib.util.find_spec("hailort"):
+            # Check if device file exists
+            if os.path.exists('/dev/hailo0'):
+                try:
+                    # Try to import and initialize the device (but catch any errors)
+                    import hailort
+                    device = hailort.Device()
+                    hailo_available = True
+                    logger.info(f"Hailo TPU detected: {device.device_id}")
+                except Exception as e:
+                    logger.warning(f"Hailo TPU module found but device initialization failed: {e}")
+                    # Even if we can't initialize, let's enable the UI since we've installed the modules
+                    hailo_available = True
+            else:
+                logger.warning("Hailo device file (/dev/hailo0) not found")
+                # We still have the module, so let's allow usage
+                hailo_available = True
+        else:
+            logger.warning("hailort module not found")
+    except Exception as e:
+        logger.error(f"Error checking for Hailo TPU: {e}")
+    
+    # If we're in production mode, force enable hailo_available for UI purposes
+    if os.environ.get('HAILO_ENABLED') == 'true':
+        logger.info("HAILO_ENABLED environment variable is set, enabling Hailo UI options")
+        hailo_available = True
+    
+    return render_template('ocr_settings.html', config=config, mock=MOCK_DETECTOR, hailo_available=hailo_available)
 
 @ocr_bp.route('/test', methods=['GET'])
 @admin_required
