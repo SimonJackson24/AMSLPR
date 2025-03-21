@@ -36,7 +36,8 @@ INSTALL_DIR="/opt/amslpr"
 CONFIG_DIR="/etc/amslpr"
 LOG_DIR="/var/log/amslpr"
 DATA_DIR="/var/lib/amslpr"
-PACKAGES_DIR="$INSTALL_DIR/packages/offline"
+PACKAGES_DIR="$INSTALL_DIR/packages"
+OFFLINE_PACKAGES_DIR="$PACKAGES_DIR/offline"
 
 # Get the user who executed sudo (the actual user, not root)
 if [ -n "$SUDO_USER" ]; then
@@ -142,7 +143,7 @@ mkdir -p "$DATA_DIR/images"
 mkdir -p "$DATA_DIR/metrics"
 mkdir -p "$DATA_DIR/reports"
 mkdir -p "$INSTALL_DIR/models"
-mkdir -p "$PACKAGES_DIR"
+mkdir -p "$OFFLINE_PACKAGES_DIR"
 chown -R "$APP_USER:$APP_GROUP" "$INSTALL_DIR"
 chown -R "$APP_USER:$APP_GROUP" "$CONFIG_DIR"
 chown -R "$APP_USER:$APP_GROUP" "$LOG_DIR"
@@ -156,9 +157,29 @@ if [ -d "$ROOT_DIR/docs" ]; then cp -r "$ROOT_DIR/docs" "$INSTALL_DIR/"; fi
 if [ -d "$ROOT_DIR/tests" ]; then cp -r "$ROOT_DIR/tests" "$INSTALL_DIR/"; fi
 if [ -f "$ROOT_DIR/run_server.py" ]; then cp "$ROOT_DIR/run_server.py" "$INSTALL_DIR/"; fi
 if [ -f "$ROOT_DIR/run_tests.py" ]; then cp "$ROOT_DIR/run_tests.py" "$INSTALL_DIR/"; fi
-if [ -d "$ROOT_DIR/packages" ]; then cp -r "$ROOT_DIR/packages" "$INSTALL_DIR/"; fi
 if [ -f "$ROOT_DIR/requirements.txt" ]; then cp "$ROOT_DIR/requirements.txt" "$INSTALL_DIR/"; fi
 if [ -f "$ROOT_DIR/requirements_minimal.txt" ]; then cp "$ROOT_DIR/requirements_minimal.txt" "$INSTALL_DIR/"; fi
+
+# Copy package files with special handling for offline wheels
+echo -e "${YELLOW}Copying package files...${NC}"
+if [ -d "$ROOT_DIR/packages" ]; then
+    # Create destination directories
+    mkdir -p "$PACKAGES_DIR"
+    mkdir -p "$OFFLINE_PACKAGES_DIR"
+    
+    # Copy entire packages directory
+    cp -r "$ROOT_DIR/packages"/* "$PACKAGES_DIR/"
+    
+    # Check if we have offline wheel packages
+    if [ -d "$ROOT_DIR/packages/offline" ] && [ "$(ls -A $ROOT_DIR/packages/offline/*.whl 2>/dev/null)" ]; then
+        echo -e "${GREEN}Found pre-packaged offline wheels${NC}"
+        cp -r "$ROOT_DIR/packages/offline"/* "$OFFLINE_PACKAGES_DIR/"
+    else
+        echo -e "${YELLOW}No pre-packaged offline wheels found in source repository${NC}"
+        echo -e "${YELLOW}Installation may fail if internet connection is not available${NC}"
+    fi
+fi
+
 chown -R "$APP_USER:$APP_GROUP" "$INSTALL_DIR"
 
 # Create Python virtual environment
@@ -201,12 +222,33 @@ source /opt/amslpr/venv/bin/activate
 # Use pre-built packages or compatibility alternatives for problematic packages
 echo "Installing pre-built compatibility packages..."
 
-# Core packages with fixed versions known to work on ARM
-pip install aiohttp==3.7.4 requests
-pip install flask==2.0.1 werkzeug==2.0.1
-pip install pillow==8.4.0
-pip install numpy==1.21.0
-pip install opencv-python-headless==4.5.3.56
+# Use pre-packaged wheels from the packages/offline directory
+WHEELS_DIR="$OFFLINE_PACKAGES_DIR"
+
+# Check if the wheels directory exists and contains the required packages
+if [ -d "$WHEELS_DIR" ] && [ "$(ls -A $WHEELS_DIR/*.whl 2>/dev/null)" ]; then
+    echo "Using pre-packaged wheels from $WHEELS_DIR"
+    
+    # Install all wheels from the directory with clear error messages
+    for wheel in "$WHEELS_DIR"/*.whl; do
+        echo "Installing $(basename "$wheel")..."
+        pip install "$wheel" || echo "WARNING: Failed to install $(basename "$wheel")"
+    done
+    
+    # Install requests separately as it's a basic dependency
+    pip install requests
+else
+    echo "ERROR: No pre-packaged wheels found in $WHEELS_DIR"
+    echo "This is an offline installer and requires pre-packaged wheels."
+    echo "Please make sure the following wheel files are present:"
+    echo " - aiohttp wheel for ARM (e.g., aiohttp-3.7.4-cp311-cp311-linux_aarch64.whl)"
+    echo " - Flask wheel for ARM (e.g., Flask-2.0.1-py3-none-any.whl)"
+    echo " - Werkzeug wheel for ARM (e.g., Werkzeug-2.0.1-py3-none-any.whl)"
+    echo " - Pillow wheel for ARM (e.g., Pillow-8.4.0-cp311-cp311-linux_aarch64.whl)"
+    echo " - NumPy wheel for ARM (e.g., numpy-1.21.0-cp311-cp311-linux_aarch64.whl)"
+    echo " - OpenCV wheel for ARM (e.g., opencv_python_headless-4.5.3.56-cp311-cp311-linux_aarch64.whl)"
+    exit 1
+fi
 
 # Skip problematic packages that require compilation
 echo "Skipping problematic packages: uvloop"
@@ -214,30 +256,58 @@ echo "Skipping problematic packages: uvloop"
 # Set environment variable
 export HAILO_ENABLED=true
 
-# Install other packages from requirements.txt, skipping problematic ones
+# Install other packages from requirements.txt, skipping the ones already installed from wheels
 if [ -f "/opt/amslpr/requirements.txt" ]; then
     echo "Installing remaining packages from requirements.txt..."
-    cat /opt/amslpr/requirements.txt | \
-    grep -v "aiohttp" | \
-    grep -v "uvloop" | \
-    grep -v "numpy" | \
-    grep -v "pillow" | \
-    grep -v "opencv" | \
-    while read package; do
-        # Skip comments and empty lines
-        if [[ $package =~ ^\s*# ]] || [[ -z $package ]]; then
-            continue
+    # Get a list of already installed package names from wheels
+    INSTALLED_PKGS=""
+    for wheel in "$WHEELS_DIR"/*.whl 2>/dev/null; do
+        if [ -f "$wheel" ]; then
+            # Extract package name from wheel filename (format: name-version-pyversion-abi-platform.whl)
+            PKG_NAME=$(basename "$wheel" | cut -d'-' -f1)
+            INSTALLED_PKGS="$INSTALLED_PKGS|$PKG_NAME"
         fi
-        
-        echo "Installing $package"
-        pip install $package || echo "Warning: Failed to install $package, continuing anyway"
     done
-fi
-
-# Install minimal requirements if available
-if [ -f "/opt/amslpr/requirements_minimal.txt" ]; then
-    echo "Installing minimal requirements..."
-    pip install -r /opt/amslpr/requirements_minimal.txt || echo "Some minimal requirements could not be installed"
+    INSTALLED_PKGS=${INSTALLED_PKGS#|}  # Remove leading |
+    
+    if [ -n "$INSTALLED_PKGS" ]; then
+        echo "Skipping already installed packages: ${INSTALLED_PKGS//|/, }"
+        
+        cat /opt/amslpr/requirements.txt | \
+        grep -v -E "($INSTALLED_PKGS)" | \
+        grep -v "uvloop" | \
+        while read package; do
+            # Skip comments and empty lines
+            if [[ $package =~ ^\s*# ]] || [[ -z $package ]]; then
+                continue
+            fi
+            
+            echo "Installing $package"
+            # Try with --no-deps first to avoid dependency conflicts
+            pip install --no-deps $package || pip install $package || echo "Warning: Failed to install $package, continuing anyway"
+        done
+    else
+        echo "No packages installed from wheels, proceeding with requirements.txt"
+        # Use requirements_minimal.txt if available, otherwise regular requirements
+        if [ -f "/opt/amslpr/requirements_minimal.txt" ]; then
+            echo "Installing from requirements_minimal.txt..."
+            pip install -r /opt/amslpr/requirements_minimal.txt || echo "Some requirements could not be installed"
+        else
+            echo "Installing from requirements.txt..."
+            # Skip problematic packages that often need compilation
+            cat /opt/amslpr/requirements.txt | \
+            grep -v "uvloop" | \
+            while read package; do
+                # Skip comments and empty lines
+                if [[ $package =~ ^\s*# ]] || [[ -z $package ]]; then
+                    continue
+                fi
+                
+                echo "Installing $package"
+                pip install $package || echo "Warning: Failed to install $package, continuing anyway"
+            done
+        fi
+    fi
 fi
 
 # Create missing modules
