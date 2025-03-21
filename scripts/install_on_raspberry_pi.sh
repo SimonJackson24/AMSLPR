@@ -116,7 +116,25 @@ fi
 echo "Step 6: Installing Python dependencies..."
 source "$INSTALL_DIR/venv/bin/activate"
 pip install --upgrade pip
+echo "Installing Python packages..."
 pip install -r "$INSTALL_DIR/requirements.txt"
+
+# Check if TensorFlow was installed successfully
+if ! python -c "import tensorflow" &> /dev/null; then
+    echo "TensorFlow installation failed. Trying alternative methods..."
+    
+    # Try installing TensorFlow directly from PyPI with specific options
+    echo "Attempting to install TensorFlow directly..."
+    pip install tensorflow==2.15.0 --extra-index-url https://tf.pypi.io/simple
+    
+    # Check if that worked
+    if ! python -c "import tensorflow" &> /dev/null; then
+        echo "Direct TensorFlow installation failed. Trying TensorFlow Lite as a fallback..."
+        pip install tflite-runtime
+        echo "Note: You will need to modify the code to use TensorFlow Lite instead of full TensorFlow."
+        echo "For full TensorFlow, you may need to build from source: https://github.com/tensorflow/tensorflow"
+    fi
+fi
 
 echo "Step 7: Setting up Hailo TPU..."
 echo "Checking for Hailo device..."

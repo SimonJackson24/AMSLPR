@@ -211,6 +211,24 @@ If you encounter errors related to TensorFlow installation:
    ```
    And then modify the code to use TFLite instead of full TensorFlow.
 
+5. As a last resort, you can build TensorFlow from source following the instructions on the official GitHub repository:
+   [TensorFlow GitHub Repository](https://github.com/tensorflow/tensorflow)
+
+   For Raspberry Pi specifically, you might want to follow these steps:
+   ```bash
+   # Clone the TensorFlow repository
+   git clone https://github.com/tensorflow/tensorflow.git
+   cd tensorflow
+   
+   # Configure the build
+   ./configure
+   
+   # Build and install the pip package
+   bazel build --config=opt --config=noaws --config=nogcp --config=nohdfs --config=nonccl //tensorflow/tools/pip_package:build_pip_package
+   ./bazel-bin/tensorflow/tools/pip_package/build_pip_package /tmp/tensorflow_pkg
+   pip install /tmp/tensorflow_pkg/tensorflow-*.whl
+   ```
+
 ### Python Package Build Issues
 
 If you encounter errors building Python packages with C extensions (like aiohttp, uvloop):

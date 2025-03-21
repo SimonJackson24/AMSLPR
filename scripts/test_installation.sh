@@ -43,8 +43,21 @@ pip install "opencv-python-headless==4.5.5.64" --only-binary=:all:
 echo "Installing Pillow..."
 pip install "Pillow>=10.0.0" --only-binary=:all:
 
+# Install TensorFlow
 echo "Installing TensorFlow..."
 pip install "tensorflow==2.15.0" --extra-index-url https://tf.pypi.io/simple
+
+# If TensorFlow installation fails, provide information about alternatives
+if ! python -c "import tensorflow" &> /dev/null; then
+    echo "TensorFlow installation failed. Here are some alternatives:"
+    echo "1. Try installing a different version: pip install tensorflow==2.16.1"
+    echo "2. Use TensorFlow Lite: pip install tflite-runtime"
+    echo "3. Build from source: https://github.com/tensorflow/tensorflow"
+    
+    # Try installing TensorFlow Lite as a fallback
+    echo "Trying TensorFlow Lite as a fallback..."
+    pip install tflite-runtime
+fi
 
 echo "Installing pytesseract..."
 pip install "pytesseract==0.3.9"
