@@ -39,6 +39,20 @@ DATA_DIR="/var/lib/amslpr"
 PACKAGES_DIR="$INSTALL_DIR/packages"
 OFFLINE_PACKAGES_DIR="$PACKAGES_DIR/offline"
 
+# Debug information to help with troubleshooting
+echo -e "${GREEN}=== Debug Information ===${NC}"
+echo -e "${GREEN}Script directory: $SCRIPT_DIR${NC}"
+echo -e "${GREEN}Root directory: $ROOT_DIR${NC}"
+echo -e "${GREEN}Installation directory: $INSTALL_DIR${NC}"
+echo -e "${GREEN}Packages directory: $PACKAGES_DIR${NC}"
+echo -e "${GREEN}Offline packages directory: $OFFLINE_PACKAGES_DIR${NC}"
+if [ -z "$OFFLINE_PACKAGES_DIR" ]; then
+    echo -e "${RED}WARNING: OFFLINE_PACKAGES_DIR is empty!${NC}"
+    OFFLINE_PACKAGES_DIR="/opt/amslpr/packages/offline"
+    echo -e "${YELLOW}Setting default value: $OFFLINE_PACKAGES_DIR${NC}"
+fi
+echo -e "${GREEN}=======================${NC}"
+
 # Get the user who executed sudo (the actual user, not root)
 if [ -n "$SUDO_USER" ]; then
     APP_USER="$SUDO_USER"
@@ -163,11 +177,32 @@ if [ -f "$ROOT_DIR/requirements_minimal.txt" ]; then cp "$ROOT_DIR/requirements_
 # Copy package files with special handling for offline wheels
 echo -e "${YELLOW}Copying package files...${NC}"
 if [ -d "$ROOT_DIR/packages" ]; then
-    # Create destination directories
-    mkdir -p "$PACKAGES_DIR"
-    mkdir -p "$OFFLINE_PACKAGES_DIR"
+    # Create destination directories with explicit path verification
+    echo -e "${YELLOW}Creating package directories: $PACKAGES_DIR and $OFFLINE_PACKAGES_DIR${NC}"
     
-    # Copy entire packages directory
+    # Verify PACKAGES_DIR is not empty
+    if [ -z "$PACKAGES_DIR" ]; then
+        echo -e "${RED}ERROR: PACKAGES_DIR variable is empty!${NC}"
+        PACKAGES_DIR="/opt/amslpr/packages"
+        echo -e "${YELLOW}Setting default value: $PACKAGES_DIR${NC}"
+    fi
+    
+    # Verify OFFLINE_PACKAGES_DIR is not empty
+    if [ -z "$OFFLINE_PACKAGES_DIR" ]; then
+        echo -e "${RED}ERROR: OFFLINE_PACKAGES_DIR variable is empty!${NC}"
+        OFFLINE_PACKAGES_DIR="/opt/amslpr/packages/offline"
+        echo -e "${YELLOW}Setting default value: $OFFLINE_PACKAGES_DIR${NC}"
+    fi
+    
+    # Create directories with error handling
+    mkdir -p "$PACKAGES_DIR" || { echo -e "${RED}ERROR: Could not create $PACKAGES_DIR${NC}"; exit 1; }
+    mkdir -p "$OFFLINE_PACKAGES_DIR" || { echo -e "${RED}ERROR: Could not create $OFFLINE_PACKAGES_DIR${NC}"; exit 1; }
+    
+    # Set directory permissions
+    chmod 775 "$PACKAGES_DIR"
+    chmod 775 "$OFFLINE_PACKAGES_DIR"
+    
+    # Copy entire packages directory with clear status
     echo -e "${YELLOW}Copying all packages from $ROOT_DIR/packages/ to $PACKAGES_DIR/${NC}"
     cp -rv "$ROOT_DIR/packages"/* "$PACKAGES_DIR/" || echo -e "${RED}Error copying packages directory${NC}"
     
@@ -176,15 +211,17 @@ if [ -d "$ROOT_DIR/packages" ]; then
         echo -e "${YELLOW}Checking for offline wheels in $ROOT_DIR/packages/offline/...${NC}"
         ls -la "$ROOT_DIR/packages/offline/"
         
-        if [ "$(ls -A $ROOT_DIR/packages/offline/*.whl 2>/dev/null)" ]; then
+        if ls $ROOT_DIR/packages/offline/*.whl >/dev/null 2>&1; then
             echo -e "${GREEN}Found pre-packaged offline wheels${NC}"
             echo -e "${YELLOW}Copying wheels from $ROOT_DIR/packages/offline/ to $OFFLINE_PACKAGES_DIR/${NC}"
             
-            # Create the directory explicitly
+            # Double-check directory exists and has proper permissions
+            echo -e "${YELLOW}Ensuring offline packages directory exists at $OFFLINE_PACKAGES_DIR${NC}"
             mkdir -p "$OFFLINE_PACKAGES_DIR"
             chmod 775 "$OFFLINE_PACKAGES_DIR"
             
             # Copy with verbose output to see what's happening
+            echo -e "${YELLOW}Copying wheels with verbose output:${NC}"
             cp -v "$ROOT_DIR/packages/offline"/*.whl "$OFFLINE_PACKAGES_DIR/" || 
                 echo -e "${RED}Error copying wheel files${NC}"
             
@@ -196,14 +233,26 @@ if [ -d "$ROOT_DIR/packages" ]; then
             ls -la "$OFFLINE_PACKAGES_DIR/"
         else
             echo -e "${YELLOW}No pre-packaged offline wheels found in source repository${NC}"
+            echo -e "${YELLOW}Creating placeholder in offline directory to ensure it exists${NC}"
+            touch "$OFFLINE_PACKAGES_DIR/.placeholder"
             echo -e "${YELLOW}Installation may fail if internet connection is not available${NC}"
         fi
     else
-        echo -e "${YELLOW}No offline packages directory found${NC}"
+        echo -e "${YELLOW}No offline packages directory found in source${NC}"
+        echo -e "${YELLOW}Creating offline packages directory anyway: $OFFLINE_PACKAGES_DIR${NC}"
+        mkdir -p "$OFFLINE_PACKAGES_DIR"
+        chmod 775 "$OFFLINE_PACKAGES_DIR"
+        touch "$OFFLINE_PACKAGES_DIR/.placeholder"
         echo -e "${YELLOW}Installation may fail if internet connection is not available${NC}"
     fi
 else
     echo -e "${RED}No packages directory found in $ROOT_DIR${NC}"
+    echo -e "${YELLOW}Creating required directories anyway${NC}"
+    mkdir -p "$PACKAGES_DIR"
+    mkdir -p "$OFFLINE_PACKAGES_DIR"
+    chmod 775 "$PACKAGES_DIR"
+    chmod 775 "$OFFLINE_PACKAGES_DIR"
+    touch "$OFFLINE_PACKAGES_DIR/.placeholder"
     echo -e "${RED}This is an incomplete distribution and may not work correctly${NC}"
 fi
 
@@ -235,6 +284,12 @@ pip install --upgrade pip
 
 # Create the offline installation script for Python packages
 echo -e "${YELLOW}Setting up offline package installation...${NC}"
+# Export variables to ensure they're available to the embedded script
+export INSTALL_DIR="$INSTALL_DIR"
+export PACKAGES_DIR="$PACKAGES_DIR"
+export OFFLINE_PACKAGES_DIR="$OFFLINE_PACKAGES_DIR"
+
+# Create the installation script with 'EOF' not in quotes to allow variable substitution
 cat > "$INSTALL_DIR/install_offline_dependencies.sh" << EOF
 #!/bin/bash
 
@@ -244,9 +299,9 @@ cat > "$INSTALL_DIR/install_offline_dependencies.sh" << EOF
 set -e
 
 # Define important directories
-INSTALL_DIR="${INSTALL_DIR}"
-PACKAGES_DIR="${PACKAGES_DIR}"
-OFFLINE_PACKAGES_DIR="${OFFLINE_PACKAGES_DIR}"
+INSTALL_DIR="/opt/amslpr"
+PACKAGES_DIR="/opt/amslpr/packages"
+OFFLINE_PACKAGES_DIR="/opt/amslpr/packages/offline"
 
 # Activate virtual environment
 source /opt/amslpr/venv/bin/activate
@@ -255,12 +310,36 @@ source /opt/amslpr/venv/bin/activate
 echo "Installing pre-built compatibility packages..."
 
 # Use pre-packaged wheels from the packages/offline directory
-WHEELS_DIR="${OFFLINE_PACKAGES_DIR}"
+WHEELS_DIR="/opt/amslpr/packages/offline"
 echo "Looking for wheel packages in: ${WHEELS_DIR}"
+
+# Add fallback directories if primary doesn't have wheels
+FALLBACK_DIRS=(
+    "/opt/amslpr/packages/offline"
+    "/opt/amslpr/packages/wheels"
+    "/tmp/amslpr_wheels"
+    "${INSTALL_DIR}/packages/offline"
+)
 
 # Path debugging for installation troubleshooting
 echo "Current directory: $(pwd)"
-echo "Checking wheel directory: $WHEELS_DIR"
+echo "Primary wheel directory: $WHEELS_DIR"
+mkdir -p "$WHEELS_DIR"  # Ensure directory exists
+
+# Check for wheels in the primary directory
+if ! ls $WHEELS_DIR/*.whl >/dev/null 2>&1; then
+    echo "No wheels found in primary directory, checking fallbacks..."
+    for dir in "${FALLBACK_DIRS[@]}"; do
+        echo "Checking fallback directory: $dir"
+        if [ -d "$dir" ] && ls $dir/*.whl >/dev/null 2>&1; then
+            echo "Found wheels in fallback directory: $dir"
+            WHEELS_DIR="$dir"
+            break
+        fi
+    done
+fi
+
+echo "Final wheel directory: $WHEELS_DIR"
 mkdir -p "$WHEELS_DIR"  # Ensure directory exists
 ls -la "$WHEELS_DIR" || echo "Cannot list directory contents"
 
@@ -272,7 +351,8 @@ if [ -d "$REPO_WHEELS_DIR" ]; then
 fi
 
 # Check if the wheels directory exists and contains the required packages
-if [ -d "$WHEELS_DIR" ] && [ "$(ls -A $WHEELS_DIR/*.whl 2>/dev/null)" ]; then
+# Use a safer check that won't fail if no .whl files exist
+if [ -d "$WHEELS_DIR" ] && ls $WHEELS_DIR/*.whl >/dev/null 2>&1; then
     echo "Using pre-packaged wheels from $WHEELS_DIR"
     
     # Install all wheels from the directory with clear error messages
@@ -283,10 +363,18 @@ if [ -d "$WHEELS_DIR" ] && [ "$(ls -A $WHEELS_DIR/*.whl 2>/dev/null)" ]; then
     
     # Install requests separately as it's a basic dependency
     pip install requests
-elif [ -d "$REPO_WHEELS_DIR" ] && [ "$(ls -A $REPO_WHEELS_DIR/*.whl 2>/dev/null)" ]; then
+elif [ -d "$REPO_WHEELS_DIR" ] && ls $REPO_WHEELS_DIR/*.whl >/dev/null 2>&1; then
     echo "Using wheels from repository directory: $REPO_WHEELS_DIR"
-    # Copy the wheels to the offline packages directory
-    cp "$REPO_WHEELS_DIR"/*.whl "$WHEELS_DIR/"
+    # Create the offline packages directory if it doesn't exist
+    mkdir -p "$WHEELS_DIR"
+    chmod 775 "$WHEELS_DIR"
+    
+    # Copy the wheels to the offline packages directory with verbose output
+    echo "Copying wheels from $REPO_WHEELS_DIR to $WHEELS_DIR"
+    cp -v "$REPO_WHEELS_DIR"/*.whl "$WHEELS_DIR/" || echo "ERROR: Failed to copy wheel files"
+    
+    # Verify the wheels were copied
+    ls -la "$WHEELS_DIR/"
     
     # Install all wheels from the directory
     for wheel in "$WHEELS_DIR"/*.whl; do
