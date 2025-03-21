@@ -311,81 +311,83 @@ echo "Installing pre-built compatibility packages..."
 
 # Use pre-packaged wheels from the packages/offline directory
 WHEELS_DIR="/opt/amslpr/packages/offline"
-echo "Looking for wheel packages in: ${WHEELS_DIR}"
+echo "Looking for wheel packages in: \${WHEELS_DIR}"
 
 # Add fallback directories if primary doesn't have wheels
 FALLBACK_DIRS=(
     "/opt/amslpr/packages/offline"
     "/opt/amslpr/packages/wheels"
     "/tmp/amslpr_wheels"
-    "${INSTALL_DIR}/packages/offline"
+    "\${INSTALL_DIR}/packages/offline"
 )
 
 # Path debugging for installation troubleshooting
-echo "Current directory: $(pwd)"
-echo "Primary wheel directory: $WHEELS_DIR"
-mkdir -p "$WHEELS_DIR"  # Ensure directory exists
+echo "Current directory: \$(pwd)"
+echo "Primary wheel directory: \${WHEELS_DIR}"
+[ -z "\${WHEELS_DIR}" ] && WHEELS_DIR="/opt/amslpr/packages/offline" && echo "Empty WHEELS_DIR detected, using default"
+mkdir -p "\${WHEELS_DIR}"  # Ensure directory exists
 
 # Check for wheels in the primary directory
-if ! ls $WHEELS_DIR/*.whl >/dev/null 2>&1; then
+if ! ls \${WHEELS_DIR}/*.whl >/dev/null 2>&1; then
     echo "No wheels found in primary directory, checking fallbacks..."
-    for dir in "${FALLBACK_DIRS[@]}"; do
-        echo "Checking fallback directory: $dir"
-        if [ -d "$dir" ] && ls $dir/*.whl >/dev/null 2>&1; then
-            echo "Found wheels in fallback directory: $dir"
-            WHEELS_DIR="$dir"
+    for dir in "\${FALLBACK_DIRS[@]}"; do
+        echo "Checking fallback directory: \$dir"
+        if [ -d "\$dir" ] && ls \$dir/*.whl >/dev/null 2>&1; then
+            echo "Found wheels in fallback directory: \$dir"
+            WHEELS_DIR="\$dir"
             break
         fi
     done
 fi
 
-echo "Final wheel directory: $WHEELS_DIR"
-mkdir -p "$WHEELS_DIR"  # Ensure directory exists
-ls -la "$WHEELS_DIR" || echo "Cannot list directory contents"
+echo "Final wheel directory: \${WHEELS_DIR}"
+[ -z "\${WHEELS_DIR}" ] && WHEELS_DIR="/opt/amslpr/packages/offline" && echo "Empty WHEELS_DIR detected, using default"
+mkdir -p "\${WHEELS_DIR}"  # Ensure directory exists
+ls -la "\${WHEELS_DIR}" || echo "Cannot list directory contents"
 
 # Check where the wheels are in the repository
-REPO_WHEELS_DIR="$INSTALL_DIR/packages/offline"
-echo "Checking repository wheels: $REPO_WHEELS_DIR"
-if [ -d "$REPO_WHEELS_DIR" ]; then
-    ls -la "$REPO_WHEELS_DIR" || echo "Cannot list repository wheels"
+REPO_WHEELS_DIR="\${INSTALL_DIR}/packages/offline"
+echo "Checking repository wheels: \${REPO_WHEELS_DIR}"
+if [ -d "\${REPO_WHEELS_DIR}" ]; then
+    ls -la "\${REPO_WHEELS_DIR}" || echo "Cannot list repository wheels"
 fi
 
 # Check if the wheels directory exists and contains the required packages
 # Use a safer check that won't fail if no .whl files exist
-if [ -d "$WHEELS_DIR" ] && ls $WHEELS_DIR/*.whl >/dev/null 2>&1; then
-    echo "Using pre-packaged wheels from $WHEELS_DIR"
+if [ -d "\${WHEELS_DIR}" ] && ls \${WHEELS_DIR}/*.whl >/dev/null 2>&1; then
+    echo "Using pre-packaged wheels from \${WHEELS_DIR}"
     
     # Install all wheels from the directory with clear error messages
-    for wheel in "$WHEELS_DIR"/*.whl; do
-        echo "Installing $(basename "$wheel")..."
-        pip install "$wheel" || echo "WARNING: Failed to install $(basename "$wheel")"
+    for wheel in "\${WHEELS_DIR}"/*.whl; do
+        echo "Installing \$(basename "\$wheel")..."
+        pip install "\$wheel" || echo "WARNING: Failed to install \$(basename "\$wheel")"
     done
     
     # Install requests separately as it's a basic dependency
     pip install requests
-elif [ -d "$REPO_WHEELS_DIR" ] && ls $REPO_WHEELS_DIR/*.whl >/dev/null 2>&1; then
-    echo "Using wheels from repository directory: $REPO_WHEELS_DIR"
+elif [ -d "\${REPO_WHEELS_DIR}" ] && ls \${REPO_WHEELS_DIR}/*.whl >/dev/null 2>&1; then
+    echo "Using wheels from repository directory: \${REPO_WHEELS_DIR}"
     # Create the offline packages directory if it doesn't exist
-    mkdir -p "$WHEELS_DIR"
-    chmod 775 "$WHEELS_DIR"
+    mkdir -p "\${WHEELS_DIR}"
+    chmod 775 "\${WHEELS_DIR}"
     
     # Copy the wheels to the offline packages directory with verbose output
-    echo "Copying wheels from $REPO_WHEELS_DIR to $WHEELS_DIR"
-    cp -v "$REPO_WHEELS_DIR"/*.whl "$WHEELS_DIR/" || echo "ERROR: Failed to copy wheel files"
+    echo "Copying wheels from \${REPO_WHEELS_DIR} to \${WHEELS_DIR}"
+    cp -v "\${REPO_WHEELS_DIR}"/*.whl "\${WHEELS_DIR}/" || echo "ERROR: Failed to copy wheel files"
     
     # Verify the wheels were copied
-    ls -la "$WHEELS_DIR/"
+    ls -la "\${WHEELS_DIR}/"
     
     # Install all wheels from the directory
-    for wheel in "$WHEELS_DIR"/*.whl; do
-        echo "Installing $(basename "$wheel")..."
-        pip install "$wheel" || echo "WARNING: Failed to install $(basename "$wheel")"
+    for wheel in "\${WHEELS_DIR}"/*.whl; do
+        echo "Installing \$(basename "\$wheel")..."
+        pip install "\$wheel" || echo "WARNING: Failed to install \$(basename "\$wheel")"
     done
     
     # Install requests separately as it's a basic dependency
     pip install requests
 else
-    echo "ERROR: No pre-packaged wheels found in $WHEELS_DIR or $REPO_WHEELS_DIR"
+    echo "ERROR: No pre-packaged wheels found in \${WHEELS_DIR} or \${REPO_WHEELS_DIR}"
     echo "This is an offline installer and requires pre-packaged wheels."
     echo "Please make sure the following wheel files are present:"
     echo " - aiohttp wheel for ARM (e.g., aiohttp-3.7.4-cp311-cp311-linux_aarch64.whl)"
