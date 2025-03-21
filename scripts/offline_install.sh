@@ -953,6 +953,12 @@ if [ -f "$INSTALL_DIR/scripts/fix_hailo_imports.py" ]; then
     cd "$INSTALL_DIR" && source venv/bin/activate && python scripts/fix_hailo_imports.py || echo -e "${YELLOW}Warning: Fix script ran with errors${NC}"
 fi
 
+# Configure Hailo modules with our script if it exists
+if [ -f "$INSTALL_DIR/scripts/configure_hailo_modules.py" ]; then
+    echo -e "${YELLOW}Configuring Hailo modules...${NC}"
+    cd "$INSTALL_DIR" && source venv/bin/activate && python scripts/configure_hailo_modules.py || echo -e "${YELLOW}Warning: Hailo module configuration failed${NC}"
+fi
+
 # Copy Hailo models if available
 echo -e "${YELLOW}Setting up Hailo models...${NC}"
 if [ -d "$ROOT_DIR/packages/models" ] && [ "$(ls -A "$ROOT_DIR/packages/models/"*.hef 2>/dev/null)" ]; then
