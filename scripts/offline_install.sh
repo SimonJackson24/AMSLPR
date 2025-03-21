@@ -168,16 +168,43 @@ if [ -d "$ROOT_DIR/packages" ]; then
     mkdir -p "$OFFLINE_PACKAGES_DIR"
     
     # Copy entire packages directory
-    cp -r "$ROOT_DIR/packages"/* "$PACKAGES_DIR/"
+    echo -e "${YELLOW}Copying all packages from $ROOT_DIR/packages/ to $PACKAGES_DIR/${NC}"
+    cp -rv "$ROOT_DIR/packages"/* "$PACKAGES_DIR/" || echo -e "${RED}Error copying packages directory${NC}"
     
-    # Check if we have offline wheel packages
-    if [ -d "$ROOT_DIR/packages/offline" ] && [ "$(ls -A $ROOT_DIR/packages/offline/*.whl 2>/dev/null)" ]; then
-        echo -e "${GREEN}Found pre-packaged offline wheels${NC}"
-        cp -r "$ROOT_DIR/packages/offline"/* "$OFFLINE_PACKAGES_DIR/"
+    # Check if we have offline wheel packages and ensure they're properly copied
+    if [ -d "$ROOT_DIR/packages/offline" ]; then
+        echo -e "${YELLOW}Checking for offline wheels in $ROOT_DIR/packages/offline/...${NC}"
+        ls -la "$ROOT_DIR/packages/offline/"
+        
+        if [ "$(ls -A $ROOT_DIR/packages/offline/*.whl 2>/dev/null)" ]; then
+            echo -e "${GREEN}Found pre-packaged offline wheels${NC}"
+            echo -e "${YELLOW}Copying wheels from $ROOT_DIR/packages/offline/ to $OFFLINE_PACKAGES_DIR/${NC}"
+            
+            # Create the directory explicitly
+            mkdir -p "$OFFLINE_PACKAGES_DIR"
+            chmod 775 "$OFFLINE_PACKAGES_DIR"
+            
+            # Copy with verbose output to see what's happening
+            cp -v "$ROOT_DIR/packages/offline"/*.whl "$OFFLINE_PACKAGES_DIR/" || 
+                echo -e "${RED}Error copying wheel files${NC}"
+            
+            # Make sure files are owned by the right user
+            chown -R "$APP_USER:$APP_GROUP" "$OFFLINE_PACKAGES_DIR"
+            
+            # Verify the wheels were copied
+            echo -e "${YELLOW}Verifying copied wheels:${NC}"
+            ls -la "$OFFLINE_PACKAGES_DIR/"
+        else
+            echo -e "${YELLOW}No pre-packaged offline wheels found in source repository${NC}"
+            echo -e "${YELLOW}Installation may fail if internet connection is not available${NC}"
+        fi
     else
-        echo -e "${YELLOW}No pre-packaged offline wheels found in source repository${NC}"
+        echo -e "${YELLOW}No offline packages directory found${NC}"
         echo -e "${YELLOW}Installation may fail if internet connection is not available${NC}"
     fi
+else
+    echo -e "${RED}No packages directory found in $ROOT_DIR${NC}"
+    echo -e "${RED}This is an incomplete distribution and may not work correctly${NC}"
 fi
 
 chown -R "$APP_USER:$APP_GROUP" "$INSTALL_DIR"
@@ -208,13 +235,18 @@ pip install --upgrade pip
 
 # Create the offline installation script for Python packages
 echo -e "${YELLOW}Setting up offline package installation...${NC}"
-cat > "$INSTALL_DIR/install_offline_dependencies.sh" << 'EOF'
+cat > "$INSTALL_DIR/install_offline_dependencies.sh" << EOF
 #!/bin/bash
 
 # AMSLPR Offline Package Installation
 # This script installs Python packages with compatibility fallbacks
 
 set -e
+
+# Define important directories
+INSTALL_DIR="${INSTALL_DIR}"
+PACKAGES_DIR="${PACKAGES_DIR}"
+OFFLINE_PACKAGES_DIR="${OFFLINE_PACKAGES_DIR}"
 
 # Activate virtual environment
 source /opt/amslpr/venv/bin/activate
@@ -223,7 +255,21 @@ source /opt/amslpr/venv/bin/activate
 echo "Installing pre-built compatibility packages..."
 
 # Use pre-packaged wheels from the packages/offline directory
-WHEELS_DIR="$OFFLINE_PACKAGES_DIR"
+WHEELS_DIR="${OFFLINE_PACKAGES_DIR}"
+echo "Looking for wheel packages in: ${WHEELS_DIR}"
+
+# Path debugging for installation troubleshooting
+echo "Current directory: $(pwd)"
+echo "Checking wheel directory: $WHEELS_DIR"
+mkdir -p "$WHEELS_DIR"  # Ensure directory exists
+ls -la "$WHEELS_DIR" || echo "Cannot list directory contents"
+
+# Check where the wheels are in the repository
+REPO_WHEELS_DIR="$INSTALL_DIR/packages/offline"
+echo "Checking repository wheels: $REPO_WHEELS_DIR"
+if [ -d "$REPO_WHEELS_DIR" ]; then
+    ls -la "$REPO_WHEELS_DIR" || echo "Cannot list repository wheels"
+fi
 
 # Check if the wheels directory exists and contains the required packages
 if [ -d "$WHEELS_DIR" ] && [ "$(ls -A $WHEELS_DIR/*.whl 2>/dev/null)" ]; then
@@ -237,8 +283,21 @@ if [ -d "$WHEELS_DIR" ] && [ "$(ls -A $WHEELS_DIR/*.whl 2>/dev/null)" ]; then
     
     # Install requests separately as it's a basic dependency
     pip install requests
+elif [ -d "$REPO_WHEELS_DIR" ] && [ "$(ls -A $REPO_WHEELS_DIR/*.whl 2>/dev/null)" ]; then
+    echo "Using wheels from repository directory: $REPO_WHEELS_DIR"
+    # Copy the wheels to the offline packages directory
+    cp "$REPO_WHEELS_DIR"/*.whl "$WHEELS_DIR/"
+    
+    # Install all wheels from the directory
+    for wheel in "$WHEELS_DIR"/*.whl; do
+        echo "Installing $(basename "$wheel")..."
+        pip install "$wheel" || echo "WARNING: Failed to install $(basename "$wheel")"
+    done
+    
+    # Install requests separately as it's a basic dependency
+    pip install requests
 else
-    echo "ERROR: No pre-packaged wheels found in $WHEELS_DIR"
+    echo "ERROR: No pre-packaged wheels found in $WHEELS_DIR or $REPO_WHEELS_DIR"
     echo "This is an offline installer and requires pre-packaged wheels."
     echo "Please make sure the following wheel files are present:"
     echo " - aiohttp wheel for ARM (e.g., aiohttp-3.7.4-cp311-cp311-linux_aarch64.whl)"
