@@ -658,9 +658,9 @@ fi
 echo "Creating fallback modules for missing packages..."
 
 # Create mock for uvloop
-SITE_PACKAGES_DIR=$(python -c "import site; print(site.getsitepackages()[0])")
-mkdir -p "$SITE_PACKAGES_DIR/uvloop"
-cat > "$SITE_PACKAGES_DIR/uvloop/__init__.py" << 'EOL'
+SITE_PACKAGES_DIR=\$(python -c "import site; print(site.getsitepackages()[0])")
+mkdir -p "\$SITE_PACKAGES_DIR/uvloop"
+cat > "\$SITE_PACKAGES_DIR/uvloop/__init__.py" << 'EOL'
 # Mock uvloop module
 import asyncio
 import warnings
