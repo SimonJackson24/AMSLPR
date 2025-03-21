@@ -1,4 +1,3 @@
-
 # AMSLPR - Automate Systems License Plate Recognition
 # Copyright (c) 2025 Automate Systems. All rights reserved.
 #
@@ -152,9 +151,14 @@ def check_hailo_availability():
                 from hailo_platform import HailoDevice
                 device = HailoDevice()
             except (ImportError, AttributeError):
-                # Older SDK version
-                from hailo_platform import pyhailort
-                device = pyhailort.Device()
+                try:
+                    # Older SDK version with pyhailort
+                    from hailo_platform import pyhailort
+                    device = pyhailort.Device()
+                except (ImportError, AttributeError):
+                    # Even older SDK version - direct import
+                    import hailort
+                    device = hailort.Device()
                 
             logger.info(f"Hailo TPU is available and working. Device ID: {device.device_id if hasattr(device, 'device_id') else 'Unknown'}")
             return True

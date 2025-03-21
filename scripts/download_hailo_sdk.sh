@@ -36,13 +36,31 @@ if [[ "$ARCH" == "aarch64" || "$ARCH" == "armv7l" ]]; then
         echo "Please download it manually from the Hailo Developer Zone"
     }
     
-    # Hailo Python SDK
-    echo "Downloading Hailo Python SDK wheel..."
-    wget -O "$PACKAGES_DIR/hailo_platform-4.16.0-cp311-cp311-linux_aarch64.whl" \
-        "https://github.com/hailo-ai/hailort/releases/download/4.16.0/hailo_platform-4.16.0-cp311-cp311-linux_aarch64.whl" || {
-        echo "Failed to download Hailo Python SDK wheel"
-        echo "Please download it manually from the Hailo Developer Zone"
-    }
+    # Hailo Python SDK - Try different versions for compatibility
+    echo "Downloading Hailo Python SDK wheels..."
+    
+    # Try multiple Python versions to ensure compatibility
+    for pyver in cp310 cp311 cp39; do
+        echo "Trying Python version: $pyver"
+        wget -O "$PACKAGES_DIR/hailo_platform-4.16.0-${pyver}-${pyver}-linux_aarch64.whl" \
+            "https://github.com/hailo-ai/hailort/releases/download/4.16.0/hailo_platform-4.16.0-${pyver}-${pyver}-linux_aarch64.whl" || {
+            echo "Failed to download Hailo Python SDK wheel for $pyver"
+            continue
+        }
+        echo "Successfully downloaded SDK for Python $pyver"
+    done
+    
+    # Try older SDK versions if the latest doesn't work
+    if [ ! -f "$PACKAGES_DIR/hailo_platform-"*".whl" ]; then
+        echo "Trying older SDK versions..."
+        for version in 4.15.0 4.14.0 4.13.0; do
+            echo "Trying version $version"
+            wget -O "$PACKAGES_DIR/hailo_platform-${version}-cp310-cp310-linux_aarch64.whl" \
+                "https://github.com/hailo-ai/hailort/releases/download/${version}/hailo_platform-${version}-cp310-cp310-linux_aarch64.whl" || continue
+            echo "Successfully downloaded SDK version $version"
+            break
+        done
+    fi
     
     echo "Downloading Hailo Python API wheel..."
     wget -O "$PACKAGES_DIR/hailo_api-4.16.0-py3-none-any.whl" \
@@ -71,13 +89,31 @@ else
         echo "Please download it manually from the Hailo Developer Zone"
     }
     
-    # Hailo Python SDK
-    echo "Downloading Hailo Python SDK wheel..."
-    wget -O "$PACKAGES_DIR/hailo_platform-4.16.0-cp311-cp311-linux_x86_64.whl" \
-        "https://github.com/hailo-ai/hailort/releases/download/4.16.0/hailo_platform-4.16.0-cp311-cp311-linux_x86_64.whl" || {
-        echo "Failed to download Hailo Python SDK wheel"
-        echo "Please download it manually from the Hailo Developer Zone"
-    }
+    # Hailo Python SDK - Try different versions for compatibility
+    echo "Downloading Hailo Python SDK wheels..."
+    
+    # Try multiple Python versions to ensure compatibility
+    for pyver in cp310 cp311 cp39; do
+        echo "Trying Python version: $pyver"
+        wget -O "$PACKAGES_DIR/hailo_platform-4.16.0-${pyver}-${pyver}-linux_x86_64.whl" \
+            "https://github.com/hailo-ai/hailort/releases/download/4.16.0/hailo_platform-4.16.0-${pyver}-${pyver}-linux_x86_64.whl" || {
+            echo "Failed to download Hailo Python SDK wheel for $pyver"
+            continue
+        }
+        echo "Successfully downloaded SDK for Python $pyver"
+    done
+    
+    # Try older SDK versions if the latest doesn't work
+    if [ ! -f "$PACKAGES_DIR/hailo_platform-"*".whl" ]; then
+        echo "Trying older SDK versions..."
+        for version in 4.15.0 4.14.0 4.13.0; do
+            echo "Trying version $version"
+            wget -O "$PACKAGES_DIR/hailo_platform-${version}-cp310-cp310-linux_x86_64.whl" \
+                "https://github.com/hailo-ai/hailort/releases/download/${version}/hailo_platform-${version}-cp310-cp310-linux_x86_64.whl" || continue
+            echo "Successfully downloaded SDK version $version"
+            break
+        done
+    fi
     
     echo "Downloading Hailo Python API wheel..."
     wget -O "$PACKAGES_DIR/hailo_api-4.16.0-py3-none-any.whl" \

@@ -59,9 +59,14 @@ def check_hailo_device():
                 from hailo_platform import HailoDevice
                 device = HailoDevice()
             except (ImportError, AttributeError):
-                # Older SDK version
-                from hailo_platform import pyhailort
-                device = pyhailort.Device()
+                try:
+                    # Older SDK version with pyhailort
+                    from hailo_platform import pyhailort
+                    device = pyhailort.Device()
+                except (ImportError, AttributeError):
+                    # Even older SDK version - direct import
+                    import hailort
+                    device = hailort.Device()
             
             logger.info(f"✅ Hailo device is accessible")
             logger.info(f"   Device ID: {device.device_id if hasattr(device, 'device_id') else 'Unknown'}")
