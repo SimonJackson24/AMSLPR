@@ -610,7 +610,7 @@ if [ -f "/opt/amslpr/requirements.txt" ]; then
         grep -v "uvloop" | \
         while read package; do
             # Skip comments and empty lines
-            if [[ \$package =~ ^[[:space:]]*# ]] || [[ -z \$package ]]; then
+            if [[ \$package == \#* ]] || [[ -z \$package ]]; then
                 continue
             fi
             
@@ -631,7 +631,7 @@ if [ -f "/opt/amslpr/requirements.txt" ]; then
             grep -v "uvloop" | \
             while read package; do
                 # Skip comments and empty lines
-                if [[ \$package =~ ^[[:space:]]*# ]] || [[ -z \$package ]]; then
+                if [[ \$package == \#* ]] || [[ -z \$package ]]; then
                     continue
                 fi
                 
