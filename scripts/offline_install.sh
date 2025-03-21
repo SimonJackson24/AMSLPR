@@ -367,6 +367,12 @@ if [ -f "\${INSTALL_DIR}/scripts/fix_wheel_files.py" ]; then
     fi
 fi
 
+# Try to convert platform-specific wheels to universal wheels if the script exists
+if [ -f "\${INSTALL_DIR}/scripts/convert_wheels_to_universal.py" ]; then
+    echo "Converting platform-specific wheels to universal format..."
+    python "\${INSTALL_DIR}/scripts/convert_wheels_to_universal.py" "\${WHEELS_DIR}" || echo "Warning: Wheel conversion script failed"
+fi
+
 # Check if the wheels directory exists and contains the required packages
 # Use a safer check that won't fail if no .whl files exist
 if [ -d "\${WHEELS_DIR}" ] && ls \${WHEELS_DIR}/*.whl >/dev/null 2>&1; then
@@ -482,6 +488,12 @@ elif [ -d "\${REPO_WHEELS_DIR}" ] && ls \${REPO_WHEELS_DIR}/*.whl >/dev/null 2>&
                 mv "\$fixed_wheel" "\${WHEELS_DIR}/\$orig_name" || echo "Warning: Failed to replace original wheel"
             done
         fi
+    fi
+    
+    # Try to convert platform-specific wheels to universal wheels if the script exists
+    if [ -f "\${INSTALL_DIR}/scripts/convert_wheels_to_universal.py" ]; then
+        echo "Converting platform-specific wheels to universal format..."
+        python "\${INSTALL_DIR}/scripts/convert_wheels_to_universal.py" "\${WHEELS_DIR}" || echo "Warning: Wheel conversion script failed"
     fi
     
     # Use the same robust installation process as above
