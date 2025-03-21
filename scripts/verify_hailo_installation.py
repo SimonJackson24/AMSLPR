@@ -9,6 +9,8 @@
 import os
 import sys
 import logging
+import platform
+import subprocess
 from pathlib import Path
 
 # Setup logging
@@ -26,6 +28,78 @@ project_root = Path(__file__).parent.parent
 
 def check_hailo_sdk_installation():
     """Check if Hailo SDK is installed."""
+    def check_hailo_sdk():
+        """Check if Hailo SDK is installed."""
+        # Check if we have a virtual environment
+        venv_path = project_root / "hailo_venv"
+        wrapper_script = project_root / "run_with_hailo.sh"
+        
+        if venv_path.exists() and wrapper_script.exists():
+            logger.info("✅ Hailo virtual environment found")
+            logger.info(f"   Path: {venv_path}")
+            logger.info("   To use the Hailo SDK, run commands with: ./run_with_hailo.sh python3 your_script.py")
+            
+            # Try to check the installed packages in the virtual environment
+            try:
+                # Get the python path in the virtual environment
+                if platform.system() == "Windows":
+                    python_path = venv_path / "Scripts" / "python.exe"
+                else:
+                    python_path = venv_path / "bin" / "python"
+                
+                # Check for hailo_platform in the virtual environment
+                cmd = [str(python_path), "-c", "import hailo_platform; print(f'Version: {hailo_platform.__version__}')"]
+                result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+                logger.info(f"✅ hailo_platform is installed in virtual environment: {result.stdout.strip()}")
+                return True
+            except subprocess.CalledProcessError as e:
+                logger.warning(f"❌ Failed to import hailo_platform in virtual environment: {e}")
+        
+        # Fall back to checking system installation
+        try:
+            import hailo_platform
+            logger.info("✅ Hailo SDK is installed")
+            logger.info(f"   Version: {hailo_platform.__version__ if hasattr(hailo_platform, '__version__') else 'Unknown'}")
+            
+            # Check for specific modules
+            logger.info("Checking available Hailo modules:")
+            try:
+                import hailort
+                logger.info("   ✅ hailort module is available")
+            except ImportError as e:
+                logger.info(f"   ❌ hailort module is not available: {e}")
+            
+            try:
+                from hailo_platform import pyhailort
+                logger.info("   ✅ hailo_platform.pyhailort module is available")
+            except ImportError as e:
+                logger.info(f"   ❌ hailo_platform.pyhailort module is not available: {e}")
+                
+            try:
+                from hailo_platform import HailoDevice
+                logger.info("   ✅ hailo_platform.HailoDevice class is available")
+            except (ImportError, AttributeError) as e:
+                logger.info(f"   ❌ hailo_platform.HailoDevice class is not available: {e}")
+                
+            return True
+        except ImportError as e:
+            logger.error(f"❌ Hailo SDK is not installed: {e}")
+            logger.error("   Please install the Hailo SDK from the Hailo Developer Zone (https://hailo.ai/developer-zone/)")
+            logger.error("   Follow the instructions in docs/raspberry_pi_hailo_setup.md")
+            
+            # Check if we have packages available but not installed
+            packages_dir = project_root / 'packages' / 'hailo'
+            if packages_dir.exists():
+                hailo_packages = list(packages_dir.glob("*.whl")) + list(packages_dir.glob("*.deb"))
+                if hailo_packages:
+                    logger.info("✅ Found Hailo packages in project directory:")
+                    for package in hailo_packages:
+                        logger.info(f"   - {package.name}")
+                    logger.info("   These packages will be automatically installed during the Raspberry Pi installation.")
+                    logger.info("   Run 'sudo python3 scripts/install_hailo_sdk.py' to install them.")
+            
+            return False
+
     try:
         import hailo_platform
         logger.info("✅ Hailo SDK is installed")

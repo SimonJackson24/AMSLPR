@@ -118,12 +118,69 @@ def install_hailo_python_packages(python_packages):
     logger.info(f"Installing Hailo Python packages: {[p.name for p in python_packages]}")
     success = True
     
+    # Check if we're in a virtual environment
+    in_venv = sys.prefix != sys.base_prefix
+    
+    if not in_venv:
+        logger.info("Not in a virtual environment, creating one for Hailo SDK installation...")
+        venv_path = project_root / "hailo_venv"
+        
+        try:
+            # Create virtual environment if it doesn't exist
+            if not venv_path.exists():
+                logger.info(f"Creating virtual environment at {venv_path}")
+                import venv
+                venv.create(venv_path, with_pip=True)
+            
+            # Get the pip path in the virtual environment
+            if platform.system() == "Windows":
+                pip_path = venv_path / "Scripts" / "pip.exe"
+            else:
+                pip_path = venv_path / "bin" / "pip"
+            
+            # Install packages in the virtual environment
+            for package in python_packages:
+                try:
+                    logger.info(f"Installing {package.name} in virtual environment")
+                    result = subprocess.run([str(pip_path), "install", "--force-reinstall", str(package)], 
+                                          check=True, capture_output=True, text=True)
+                    logger.info(f"Successfully installed {package.name}")
+                except subprocess.CalledProcessError as e:
+                    logger.error(f"Failed to install {package.name} in virtual environment: {e}")
+                    logger.error(f"stdout: {e.stdout}")
+                    logger.error(f"stderr: {e.stderr}")
+                    success = False
+            
+            # Create a wrapper script to run with the virtual environment
+            wrapper_script = project_root / "run_with_hailo.sh"
+            with open(wrapper_script, "w") as f:
+                f.write(f"#!/bin/bash\n")
+                f.write(f"# This script runs commands with the Hailo virtual environment\n")
+                f.write(f"source {venv_path}/bin/activate\n")
+                f.write(f"exec \"$@\"\n")
+            
+            # Make the wrapper script executable
+            os.chmod(wrapper_script, 0o755)
+            
+            logger.info(f"Created wrapper script at {wrapper_script}")
+            logger.info("To run commands with Hailo SDK, use: ./run_with_hailo.sh python3 your_script.py")
+            
+            return success
+        except Exception as e:
+            logger.error(f"Failed to set up virtual environment: {e}")
+            logger.info("Falling back to system installation with --break-system-packages")
+    
+    # If we're already in a virtual environment or failed to create one, install directly
     for package in python_packages:
         try:
             logger.info(f"Installing {package.name}")
-            # Use pip install with --force-reinstall to ensure it's installed properly
-            result = subprocess.run([sys.executable, "-m", "pip", "install", "--force-reinstall", str(package)], 
-                                   check=True, capture_output=True, text=True)
+            # Use pip install with --force-reinstall and --break-system-packages
+            cmd = [sys.executable, "-m", "pip", "install", "--force-reinstall"]
+            if not in_venv:
+                cmd.append("--break-system-packages")
+            cmd.append(str(package))
+            
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
             logger.info(f"Successfully installed {package.name}")
         except subprocess.CalledProcessError as e:
             logger.error(f"Failed to install {package.name}: {e}")
