@@ -230,6 +230,25 @@ If you encounter errors building Python packages with C extensions (like aiohttp
    pip install aiohttp==3.8.1 uvloop==0.16.0
    ```
 
+### Pillow Installation Issues
+
+If you encounter errors building Pillow from source:
+
+1. Install the required system dependencies:
+   ```bash
+   sudo apt install -y libjpeg-dev zlib1g-dev libfreetype6-dev liblcms2-dev libopenjp2-7-dev libtiff5-dev libwebp-dev
+   ```
+
+2. Try installing Pillow with a pre-built wheel:
+   ```bash
+   pip install --only-binary=:all: Pillow
+   ```
+
+3. If that doesn't work, you can try installing an older version of Pillow that has pre-built wheels available:
+   ```bash
+   pip install Pillow==9.5.0
+   ```
+
 ## Additional Resources
 
 - [Hailo Developer Zone](https://hailo.ai/developer-zone/) - For additional Hailo TPU documentation

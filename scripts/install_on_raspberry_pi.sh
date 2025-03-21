@@ -55,7 +55,14 @@ apt-get install -y \
     libxrender-dev \
     libgl1-mesa-glx \
     wget \
-    build-essential
+    build-essential \
+    libjpeg-dev \
+    zlib1g-dev \
+    libfreetype6-dev \
+    liblcms2-dev \
+    libopenjp2-7-dev \
+    libtiff5-dev \
+    libwebp-dev
 
 echo "Step 3: Creating application directory..."
 mkdir -p "$INSTALL_DIR"
@@ -89,17 +96,18 @@ fi
 echo "Step 5: Setting up Python virtual environment..."
 if [ ! -d "$INSTALL_DIR/venv" ]; then
     # Check Python version
-    PYTHON_VERSION=$(python3 --version | cut -d" " -f2 | cut -d"." -f1,2)
-    echo "Detected Python version: $PYTHON_VERSION"
-    
-    # Verify Python 3.11 is available
-    if [ "$PYTHON_VERSION" != "3.11" ]; then
-        echo "Error: Python 3.11 is required for AMSLPR with Hailo TPU integration."
-        echo "Your current Python version is $PYTHON_VERSION"
-        echo "Please install Python 3.11 and try again."
+    PYTHON_VERSION=$(python3 --version | awk '{print $2}')
+    PYTHON_MAJOR=$(echo $PYTHON_VERSION | cut -d. -f1)
+    PYTHON_MINOR=$(echo $PYTHON_VERSION | cut -d. -f2)
+
+    if [ "$PYTHON_MAJOR" -lt 3 ] || [ "$PYTHON_MAJOR" -eq 3 -a "$PYTHON_MINOR" -lt 10 ]; then
+        echo "Error: Python 3.10 or higher is required. Found Python $PYTHON_VERSION"
+        echo "Please install Python 3.10 or higher before continuing."
         exit 1
     fi
-    
+
+    echo "Using Python $PYTHON_VERSION"
+
     # Create virtual environment
     python3 -m venv "$INSTALL_DIR/venv"
     chown -R "$APP_USER:$APP_GROUP" "$INSTALL_DIR/venv"
@@ -137,22 +145,25 @@ if [ -e "/dev/hailo0" ]; then
         
         echo "Installing Hailo Python packages..."
         # Check Python version to ensure compatibility with Hailo SDK
-        PYTHON_VERSION=$(python3 --version | cut -d" " -f2 | cut -d"." -f1,2)
+        PYTHON_VERSION=$(python3 --version | awk '{print $2}')
+        PYTHON_MAJOR=$(echo $PYTHON_VERSION | cut -d. -f1)
+        PYTHON_MINOR=$(echo $PYTHON_VERSION | cut -d. -f2)
+
+        if [ "$PYTHON_MAJOR" -lt 3 ] || [ "$PYTHON_MAJOR" -eq 3 -a "$PYTHON_MINOR" -lt 10 ]; then
+            echo "Error: Python 3.10 or higher is required. Found Python $PYTHON_VERSION"
+            echo "Please install Python 3.10 or higher before continuing."
+            exit 1
+        fi
+
+        echo "Using Python $PYTHON_VERSION"
+
         HAILO_WHEEL=$(ls /opt/hailo/packages/hailo*.whl | head -1)
         HAILO_WHEEL_PYTHON_VERSION=$(basename "$HAILO_WHEEL" | grep -oP "cp\K\d+" | head -1)
         
         echo "Python version: $PYTHON_VERSION"
         echo "Hailo wheel Python version: $HAILO_WHEEL_PYTHON_VERSION"
         
-        # Verify Python 3.11 is available
-        if [ "$PYTHON_VERSION" != "3.11" ]; then
-            echo "Error: Python 3.11 is required for AMSLPR with Hailo TPU integration."
-            echo "Your current Python version is $PYTHON_VERSION"
-            echo "Please install Python 3.11 and try again."
-            exit 1
-        fi
-        
-        echo "Installing Hailo wheel for Python 3.11..."
+        echo "Installing Hailo wheel for Python $PYTHON_VERSION..."
         pip install /opt/hailo/packages/hailo*.whl
     else
         echo "Hailo packages not found in /opt/hailo/packages/"
