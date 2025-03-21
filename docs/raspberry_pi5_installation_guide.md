@@ -244,7 +244,12 @@ If you encounter errors building Pillow from source:
    pip install --only-binary=:all: Pillow
    ```
 
-3. If that doesn't work, you can try installing an older version of Pillow that has pre-built wheels available:
+3. For Python 3.12, you need to use Pillow 10.0.0 or higher:
+   ```bash
+   pip install Pillow>=10.0.0
+   ```
+
+4. For Python 3.11, you can use Pillow 9.5.0:
    ```bash
    pip install Pillow==9.5.0
    ```

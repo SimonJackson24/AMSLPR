@@ -41,7 +41,7 @@ echo "Installing OpenCV..."
 pip install "opencv-python-headless==4.5.5.64" --only-binary=:all:
 
 echo "Installing Pillow..."
-pip install "Pillow==9.5.0" --only-binary=:all:
+pip install "Pillow>=10.0.0" --only-binary=:all:
 
 echo "Installing TensorFlow..."
 pip install "tensorflow==2.15.0" --extra-index-url https://tf.pypi.io/simple
