@@ -357,11 +357,87 @@ fi
 if [ -d "\${WHEELS_DIR}" ] && ls \${WHEELS_DIR}/*.whl >/dev/null 2>&1; then
     echo "Using pre-packaged wheels from \${WHEELS_DIR}"
     
-    # Install all wheels from the directory with clear error messages
+    # Initialize counters for installation stats
+    INSTALLED_COUNT=0
+    FAILED_COUNT=0
+    
+    # Process wheels in a specific order to respect dependencies
+    echo "Creating a priority list for package installation..."
+    PRIORITY_WHEELS=()
+    ALL_WHEELS=()
+    
+    # Collect all wheels first
     for wheel in "\${WHEELS_DIR}"/*.whl; do
-        echo "Installing \$(basename "\$wheel")..."
-        pip install "\$wheel" || echo "WARNING: Failed to install \$(basename "\$wheel")"
+        ALL_WHEELS+=("\$wheel")
     done
+    
+    # Add high-priority wheels first (dependencies)
+    for wheel in "\${WHEELS_DIR}"/*.whl; do
+        base_name=\$(basename "\$wheel" | tr '[:upper:]' '[:lower:]')
+        # Process base dependencies first (core packages)
+        if [[ "\$base_name" == *"numpy"* || 
+              "\$base_name" == *"pillow"* || 
+              "\$base_name" == *"requests"* || 
+              "\$base_name" == *"six"* || 
+              "\$base_name" == *"setuptools"* ]]; then
+            PRIORITY_WHEELS+=("\$wheel")
+        fi
+    done
+    
+    # Add the remaining wheels
+    for wheel in "\${ALL_WHEELS[@]}"; do
+        # Check if wheel is not already in priority list
+        is_in_priority=false
+        for pw in "\${PRIORITY_WHEELS[@]}"; do
+            if [[ "\$pw" == "\$wheel" ]]; then
+                is_in_priority=true
+                break
+            fi
+        done
+        
+        if [[ "\$is_in_priority" == "false" ]]; then
+            PRIORITY_WHEELS+=("\$wheel")
+        fi
+    done
+    
+    # Install wheels with priority order and better error handling
+    echo "Installing wheels in priority order..."
+    for wheel in "\${PRIORITY_WHEELS[@]}"; do
+        wheel_name=\$(basename "\$wheel")
+        echo "Installing \$wheel_name..."
+        
+        # Check if wheel file actually exists
+        if [ ! -f "\$wheel" ]; then
+            echo "WARNING: Wheel file \$wheel_name not found, skipping"
+            FAILED_COUNT=\$((FAILED_COUNT + 1))
+            continue
+        fi
+        
+        # Try installing with different options for better compatibility
+        if pip install --no-deps "\$wheel" 2>/dev/null; then
+            echo "Successfully installed \$wheel_name (no dependencies)"
+            INSTALLED_COUNT=\$((INSTALLED_COUNT + 1))
+        elif pip install "\$wheel" 2>/dev/null; then
+            echo "Successfully installed \$wheel_name (with dependencies)"
+            INSTALLED_COUNT=\$((INSTALLED_COUNT + 1))
+        else
+            # Try to get more detailed error information
+            error_output=\$(pip install "\$wheel" 2>&1 || true)
+            
+            # Check for specific error patterns
+            if [[ "\$error_output" == *"not a supported wheel on this platform"* ]]; then
+                echo "WARNING: \$wheel_name is not compatible with this platform, skipping"
+            elif [[ "\$error_output" == *"has an invalid wheel"* ]]; then
+                echo "WARNING: \$wheel_name is an invalid wheel package, skipping"
+            else
+                echo "WARNING: Failed to install \$wheel_name (unknown error)"
+                echo "Error details: \$error_output"
+            fi
+            FAILED_COUNT=\$((FAILED_COUNT + 1))
+        fi
+    done
+    
+    echo "Wheel installation complete: \$INSTALLED_COUNT installed, \$FAILED_COUNT failed"
     
     # Install requests separately as it's a basic dependency
     pip install requests
@@ -378,11 +454,88 @@ elif [ -d "\${REPO_WHEELS_DIR}" ] && ls \${REPO_WHEELS_DIR}/*.whl >/dev/null 2>&
     # Verify the wheels were copied
     ls -la "\${WHEELS_DIR}/"
     
-    # Install all wheels from the directory
+    # Use the same robust installation process as above
+    # Initialize counters for installation stats
+    INSTALLED_COUNT=0
+    FAILED_COUNT=0
+    
+    # Process wheels in a specific order to respect dependencies
+    echo "Creating a priority list for package installation..."
+    PRIORITY_WHEELS=()
+    ALL_WHEELS=()
+    
+    # Collect all wheels first
     for wheel in "\${WHEELS_DIR}"/*.whl; do
-        echo "Installing \$(basename "\$wheel")..."
-        pip install "\$wheel" || echo "WARNING: Failed to install \$(basename "\$wheel")"
+        ALL_WHEELS+=("\$wheel")
     done
+    
+    # Add high-priority wheels first (dependencies)
+    for wheel in "\${WHEELS_DIR}"/*.whl; do
+        base_name=\$(basename "\$wheel" | tr '[:upper:]' '[:lower:]')
+        # Process base dependencies first (core packages)
+        if [[ "\$base_name" == *"numpy"* || 
+              "\$base_name" == *"pillow"* || 
+              "\$base_name" == *"requests"* || 
+              "\$base_name" == *"six"* || 
+              "\$base_name" == *"setuptools"* ]]; then
+            PRIORITY_WHEELS+=("\$wheel")
+        fi
+    done
+    
+    # Add the remaining wheels
+    for wheel in "\${ALL_WHEELS[@]}"; do
+        # Check if wheel is not already in priority list
+        is_in_priority=false
+        for pw in "\${PRIORITY_WHEELS[@]}"; do
+            if [[ "\$pw" == "\$wheel" ]]; then
+                is_in_priority=true
+                break
+            fi
+        done
+        
+        if [[ "\$is_in_priority" == "false" ]]; then
+            PRIORITY_WHEELS+=("\$wheel")
+        fi
+    done
+    
+    # Install wheels with priority order and better error handling
+    echo "Installing wheels in priority order..."
+    for wheel in "\${PRIORITY_WHEELS[@]}"; do
+        wheel_name=\$(basename "\$wheel")
+        echo "Installing \$wheel_name..."
+        
+        # Check if wheel file actually exists
+        if [ ! -f "\$wheel" ]; then
+            echo "WARNING: Wheel file \$wheel_name not found, skipping"
+            FAILED_COUNT=\$((FAILED_COUNT + 1))
+            continue
+        fi
+        
+        # Try installing with different options for better compatibility
+        if pip install --no-deps "\$wheel" 2>/dev/null; then
+            echo "Successfully installed \$wheel_name (no dependencies)"
+            INSTALLED_COUNT=\$((INSTALLED_COUNT + 1))
+        elif pip install "\$wheel" 2>/dev/null; then
+            echo "Successfully installed \$wheel_name (with dependencies)"
+            INSTALLED_COUNT=\$((INSTALLED_COUNT + 1))
+        else
+            # Try to get more detailed error information
+            error_output=\$(pip install "\$wheel" 2>&1 || true)
+            
+            # Check for specific error patterns
+            if [[ "\$error_output" == *"not a supported wheel on this platform"* ]]; then
+                echo "WARNING: \$wheel_name is not compatible with this platform, skipping"
+            elif [[ "\$error_output" == *"has an invalid wheel"* ]]; then
+                echo "WARNING: \$wheel_name is an invalid wheel package, skipping"
+            else
+                echo "WARNING: Failed to install \$wheel_name (unknown error)"
+                echo "Error details: \$error_output"
+            fi
+            FAILED_COUNT=\$((FAILED_COUNT + 1))
+        fi
+    done
+    
+    echo "Wheel installation complete: \$INSTALLED_COUNT installed, \$FAILED_COUNT failed"
     
     # Install requests separately as it's a basic dependency
     pip install requests
@@ -410,30 +563,30 @@ if [ -f "/opt/amslpr/requirements.txt" ]; then
     echo "Installing remaining packages from requirements.txt..."
     # Get a list of already installed package names from wheels
     INSTALLED_PKGS=""
-    for wheel in "$WHEELS_DIR"/*.whl 2>/dev/null; do
-        if [ -f "$wheel" ]; then
+    for wheel in "\${WHEELS_DIR}"/*.whl 2>/dev/null; do
+        if [ -f "\$wheel" ]; then
             # Extract package name from wheel filename (format: name-version-pyversion-abi-platform.whl)
-            PKG_NAME=$(basename "$wheel" | cut -d'-' -f1)
-            INSTALLED_PKGS="$INSTALLED_PKGS|$PKG_NAME"
+            PKG_NAME=\$(basename "\$wheel" | cut -d'-' -f1)
+            INSTALLED_PKGS="\$INSTALLED_PKGS|\$PKG_NAME"
         fi
     done
-    INSTALLED_PKGS=${INSTALLED_PKGS#|}  # Remove leading |
+    INSTALLED_PKGS=\${INSTALLED_PKGS#|}  # Remove leading |
     
-    if [ -n "$INSTALLED_PKGS" ]; then
-        echo "Skipping already installed packages: ${INSTALLED_PKGS//|/, }"
+    if [ -n "\$INSTALLED_PKGS" ]; then
+        echo "Skipping already installed packages: \${INSTALLED_PKGS//|/, }"
         
         cat /opt/amslpr/requirements.txt | \
-        grep -v -E "($INSTALLED_PKGS)" | \
+        grep -v -E "(\$INSTALLED_PKGS)" | \
         grep -v "uvloop" | \
         while read package; do
             # Skip comments and empty lines
-            if [[ $package =~ ^\s*# ]] || [[ -z $package ]]; then
+            if [[ \$package =~ ^[[:space:]]*# ]] || [[ -z \$package ]]; then
                 continue
             fi
             
-            echo "Installing $package"
+            echo "Installing \$package"
             # Try with --no-deps first to avoid dependency conflicts
-            pip install --no-deps $package || pip install $package || echo "Warning: Failed to install $package, continuing anyway"
+            pip install --no-deps \$package || pip install \$package || echo "Warning: Failed to install \$package, continuing anyway"
         done
     else
         echo "No packages installed from wheels, proceeding with requirements.txt"
@@ -448,12 +601,12 @@ if [ -f "/opt/amslpr/requirements.txt" ]; then
             grep -v "uvloop" | \
             while read package; do
                 # Skip comments and empty lines
-                if [[ $package =~ ^\s*# ]] || [[ -z $package ]]; then
+                if [[ \$package =~ ^[[:space:]]*# ]] || [[ -z \$package ]]; then
                     continue
                 fi
                 
-                echo "Installing $package"
-                pip install $package || echo "Warning: Failed to install $package, continuing anyway"
+                echo "Installing \$package"
+                pip install \$package || echo "Warning: Failed to install \$package, continuing anyway"
             done
         fi
     fi
