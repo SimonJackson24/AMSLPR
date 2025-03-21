@@ -11,6 +11,13 @@ Mock Hailo TPU Module for AMSLPR
 This module provides a mock implementation of the Hailo TPU SDK for
 development and testing without requiring actual Hailo hardware.
 It can be installed as hailort to satisfy import dependencies.
+
+IMPORTANT: This mock implementation is ONLY used:
+1. On x86_64 development environments
+2. When the real Hailo SDK is unavailable
+
+On Raspberry Pi 5 with real Hailo hardware, the actual Hailo SDK will
+be used instead of this mock module.
 """
 
 import os
