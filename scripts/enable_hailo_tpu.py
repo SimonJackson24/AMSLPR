@@ -146,9 +146,17 @@ def check_hailo_availability():
         import hailo_platform
         
         try:
-            # Try to initialize Hailo device
-            device = hailo_platform.HailoDevice()
-            logger.info(f"Hailo TPU is available and working. Device ID: {device.device_id}")
+            # Try to initialize Hailo device - handle different SDK versions
+            try:
+                # Newer SDK version
+                from hailo_platform import HailoDevice
+                device = HailoDevice()
+            except (ImportError, AttributeError):
+                # Older SDK version
+                from hailo_platform import pyhailort
+                device = pyhailort.Device()
+                
+            logger.info(f"Hailo TPU is available and working. Device ID: {device.device_id if hasattr(device, 'device_id') else 'Unknown'}")
             return True
         except Exception as e:
             logger.error(f"Hailo TPU is installed but not working: {e}")

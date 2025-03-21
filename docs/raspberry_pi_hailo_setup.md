@@ -24,12 +24,25 @@ The installation script will:
 1. Install system dependencies
 2. Set up a Python virtual environment
 3. Install Python dependencies
-4. Check for Hailo packages and install them if available
-5. Install the pre-packaged Hailo models (all required models are included)
+4. **Automatically download and install Hailo SDK packages**
+5. Install the pre-packaged Hailo models or download them automatically
 6. Configure the application to use Hailo TPU
 7. Set up a systemd service for automatic startup
 
-**No manual downloads are required!** All necessary Hailo models (YOLOv5m, Tiny YOLOv4, and LPRNet) are included in the AMSLPR package.
+**No manual downloads are required!** The installation script will automatically download all necessary Hailo SDK packages and models, or use pre-packaged ones if available.
+
+## Verification
+
+After installation, the script will automatically verify the Hailo TPU setup. If everything is working correctly, you should see a success message. If there are any issues, the script will provide detailed information about what went wrong and how to fix it.
+
+You can manually verify the Hailo TPU installation at any time by running:
+
+```bash
+sudo systemctl stop amslpr  # Stop the service if it's running
+cd /opt/amslpr
+source venv/bin/activate
+python scripts/verify_hailo_installation.py
+```
 
 ## Manual Installation Steps
 
@@ -52,7 +65,7 @@ If you prefer to perform the installation manually or need to troubleshoot speci
 
 ### Step 2: Install Hailo Driver and SDK
 
-> **Important Note**: The Hailo SDK requires registration at the [Hailo Developer Zone](https://hailo.ai/developer-zone/). You will need to download the appropriate Hailo SDK package for ARM64/Raspberry Pi from the Hailo Developer Zone.
+> **Note**: While manual installation requires registration at the [Hailo Developer Zone](https://hailo.ai/developer-zone/), the automated installation script will download the necessary packages for you.
 
 1. Register and download the following packages from the Hailo Developer Zone (https://hailo.ai/developer-zone/):
    - Hailo Runtime Package (hailort*.deb) for ARM64/Raspberry Pi
@@ -100,88 +113,83 @@ EOL'
    pip install /opt/hailo/packages/hailo*.whl
    ```
 
-2. Verify the installation by importing the Hailo SDK in Python:
+### Step 4: Download Hailo Models
+
+1. Create a models directory:
    ```bash
-   python3 -c "import hailo_platform; print('Hailo SDK version:', hailo_platform.__version__)"
+   mkdir -p /opt/amslpr/models
    ```
 
-### Step 4: Install AMSLPR
-
-1. Clone the AMSLPR repository or copy it to the Raspberry Pi:
+2. Download the LPRNet model (for license plate recognition):
    ```bash
-   git clone https://github.com/yourusername/AMSLPR.git
-   cd AMSLPR
+   wget -O /opt/amslpr/models/lprnet_vehicle_license_recognition.hef \
+       https://hailo-model-zoo.s3.eu-west-2.amazonaws.com/HailoNets/LPR/ocr/lprnet/2022-03-09/lprnet.hef
    ```
 
-2. Run the installation script:
+3. Download the YOLOv5m and Tiny YOLOv4 models from the Hailo Developer Zone and place them in the models directory:
    ```bash
-   sudo chmod +x scripts/install_on_raspberry_pi.sh
-   sudo ./scripts/install_on_raspberry_pi.sh
+   # After downloading from Hailo Developer Zone
+   mv /path/to/downloaded/yolov5m.hef /opt/amslpr/models/yolov5m_license_plates.hef
+   mv /path/to/downloaded/tiny_yolov4.hef /opt/amslpr/models/tiny_yolov4_license_plate_detection.hef
    ```
 
-## Python Version Requirement
+4. Create the character map for OCR:
+   ```bash
+   cat > /opt/amslpr/models/char_map.json << EOL
+{
+    "0": 0,
+    "1": 1,
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 5,
+    "6": 6,
+    "7": 7,
+    "8": 8,
+    "9": 9,
+    "A": 10,
+    "B": 11,
+    "C": 12,
+    "D": 13,
+    "E": 14,
+    "F": 15,
+    "G": 16,
+    "H": 17,
+    "I": 18,
+    "J": 19,
+    "K": 20,
+    "L": 21,
+    "M": 22,
+    "N": 23,
+    "O": 24,
+    "P": 25,
+    "Q": 26,
+    "R": 27,
+    "S": 28,
+    "T": 29,
+    "U": 30,
+    "V": 31,
+    "W": 32,
+    "X": 33,
+    "Y": 34,
+    "Z": 35
+}
+EOL
+   ```
 
-**IMPORTANT**: Python 3.11 is **REQUIRED** for AMSLPR with Hailo TPU integration. No other Python versions are supported.
+### Step 5: Enable Hailo TPU in AMSLPR
 
-The Hailo SDK wheel file included in this repository is specifically compiled for Python 3.11 on ARM64 architecture. The installation script will check for Python 3.11 and will exit with an error if it's not available.
-
-To install Python 3.11 on Raspberry Pi OS:
-
-```bash
-sudo apt update
-sudo apt install -y python3.11 python3.11-venv python3.11-dev
-```
-
-If Python 3.11 is not available in your repositories, you may need to use a more recent version of Raspberry Pi OS or add a third-party repository that provides Python 3.11.
-
-## Step 5: Download Hailo Models
-
-**No manual downloads are required!** All necessary Hailo models (YOLOv5m, Tiny YOLOv4, and LPRNet) are included in the AMSLPR package.
-
-## Step 6: Configure AMSLPR to Use Hailo TPU
-
-After installing AMSLPR and the Hailo SDK, you need to configure the system to use the Hailo TPU for inference:
-
-```bash
-sudo python scripts/enable_hailo_tpu.py
-```
+1. Run the Hailo TPU setup script:
+   ```bash
+   cd /opt/amslpr
+   source venv/bin/activate
+   sudo python scripts/enable_hailo_tpu.py --auto-approve
+   ```
 
 This script will:
 - Check if the Hailo device is accessible
-- Look for available Hailo models in the models directory
-- Update the OCR configuration to use the Hailo TPU and models
-
-## Step 7: Verify Hailo TPU Integration
-
-You can verify that the Hailo TPU is properly integrated with AMSLPR by running:
-
-```bash
-python scripts/verify_hailo_installation.py
-```
-
-This script will check:
-- If the Hailo SDK is installed
-- If the Hailo device is accessible
-- If the required models are available
-- If the OCR configuration is set up to use Hailo TPU
-
-## Step 8: Access the Application
-
-1. Start the AMSLPR service if it's not already running:
-   ```bash
-   sudo systemctl start amslpr
-   ```
-
-2. Access the web interface at:
-   ```
-   http://<raspberry-pi-ip>:5001
-   ```
-
-3. Log in with the default credentials:
-   - Username: admin
-   - Password: admin
-
-4. Change the default password immediately after logging in
+- Configure the OCR system to use Hailo TPU
+- Update the configuration files
 
 ## Troubleshooting
 
@@ -189,50 +197,54 @@ This script will check:
 
 If the Hailo device is not detected (`/dev/hailo0` does not exist):
 
-1. Check if the device is properly connected
-2. Verify that the driver is installed:
-   ```bash
-   dpkg -l | grep hailo
-   ```
-3. Check dmesg for any USB or Hailo-related errors:
-   ```bash
-   dmesg | grep -E 'hailo|usb'
-   ```
-4. Try rebooting the Raspberry Pi:
-   ```bash
-   sudo reboot
-   ```
+1. Check if the device is properly connected to the USB port
+2. Try a different USB port (preferably USB 3.0)
+3. Check if the udev rules are properly set up
+4. Restart the system and try again
 
 ### Hailo SDK Import Error
 
-If you get an import error when trying to import the Hailo SDK:
+If you encounter an error importing the Hailo SDK:
 
-1. Verify that the Hailo Python packages are installed:
+1. Check if the Hailo Python packages are installed correctly:
    ```bash
    pip list | grep hailo
    ```
-2. Make sure you're using the correct Python environment
-3. Try reinstalling the packages:
+
+2. Make sure you're using the correct Python version (3.10 or higher):
+   ```bash
+   python --version
+   ```
+
+3. Try reinstalling the Hailo Python packages:
    ```bash
    pip install --force-reinstall /opt/hailo/packages/hailo*.whl
    ```
 
-### Model Not Found
+### Model Not Found Error
 
-If the models are not found or the OCR configuration is not working:
+If you encounter an error about missing models:
 
-1. Check if the models are downloaded:
+1. Check if the models are in the correct location:
    ```bash
    ls -l /opt/amslpr/models/*.hef
    ```
-2. If the models are missing, run the model download script:
-   ```bash
-   sudo ./scripts/hailo_raspberry_pi_setup.sh
-   ```
-3. Reconfigure the OCR system to use the Hailo TPU:
-   ```bash
-   sudo python scripts/enable_hailo_tpu.py
-   ```
+
+2. Make sure the models have the correct names:
+   - `lprnet_vehicle_license_recognition.hef`
+   - `yolov5m_license_plates.hef`
+   - `tiny_yolov4_license_plate_detection.hef`
+
+3. If any models are missing, download them as described in Step 4 of the manual installation.
+
+## Performance Considerations
+
+When using the Hailo TPU with a Raspberry Pi:
+
+1. Ensure adequate cooling for both the Raspberry Pi and the Hailo TPU
+2. Use a high-quality power supply (5V/3A minimum)
+3. For optimal performance, use a USB 3.0 port for the Hailo TPU
+4. Monitor the system temperature during operation
 
 ## Additional Resources
 

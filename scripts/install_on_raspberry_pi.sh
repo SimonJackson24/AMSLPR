@@ -257,6 +257,15 @@ EOF
 fi
 
 echo "Step 7: Setting up Hailo TPU..."
+# Create Hailo driver udev rules to ensure device is accessible
+echo "Creating Hailo udev rules..."
+bash -c 'cat > /etc/udev/rules.d/99-hailo.rules << EOL
+SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"
+SUBSYSTEM=="hailo", MODE="0666"
+EOL'
+udevadm control --reload-rules
+udevadm trigger
+
 echo "Checking for Hailo device..."
 if [ -e "/dev/hailo0" ]; then
     echo "Hailo device found at /dev/hailo0"
@@ -305,18 +314,34 @@ if [ -e "/dev/hailo0" ]; then
         pip install /opt/hailo/packages/hailo*.whl
     else
         echo "Hailo packages not found in /opt/hailo/packages/"
-        echo "Please download the Hailo SDK packages from the Hailo Developer Zone (https://hailo.ai/developer-zone/)"
-        echo "and place them in /opt/hailo/packages/ directory."
-        echo "Then run this script again."
-        echo ""
-        echo "Required packages:"
-        echo "1. Hailo Runtime Package (hailort*.deb)"
-        echo "2. Hailo Python SDK Wheel Files (hailo*.whl)"
-        echo ""
-        echo "See docs/raspberry_pi_hailo_setup.md for detailed instructions."
+        echo "Downloading Hailo SDK packages automatically..."
+        
+        # Run the download script
+        bash "$INSTALL_DIR/scripts/download_hailo_sdk.sh"
+        
+        # Check if download was successful
+        if [ -d "$INSTALL_DIR/packages/hailo" ] && [ "$(ls -A "$INSTALL_DIR/packages/hailo/" 2>/dev/null)" ]; then
+            echo "Hailo packages downloaded successfully"
+            echo "Installing Hailo driver..."
+            
+            # Install Hailo driver
+            if [ -f "$INSTALL_DIR/packages/hailo/hailort"*"_arm64.deb" ]; then
+                dpkg -i "$INSTALL_DIR/packages/hailo/hailort"*"_arm64.deb" || echo "Failed to install Hailo driver"
+            elif [ -f "$INSTALL_DIR/packages/hailo/hailort"*"_amd64.deb" ]; then
+                dpkg -i "$INSTALL_DIR/packages/hailo/hailort"*"_amd64.deb" || echo "Failed to install Hailo driver"
+            else
+                echo "No Hailo driver package found"
+            fi
+            
+            # Install Hailo Python packages
+            echo "Installing Hailo Python packages..."
+            pip install "$INSTALL_DIR/packages/hailo/"*.whl || echo "Failed to install Hailo Python packages"
+        else
+            echo "Failed to download Hailo SDK packages"
+            echo "The system will still work but without Hailo TPU acceleration"
+        fi
     fi
-    
-    # Create Hailo models directory
+    echo "Creating Hailo models directory..."
     mkdir -p "$INSTALL_DIR/models"
     chown -R "$APP_USER:$APP_GROUP" "$INSTALL_DIR/models"
     
