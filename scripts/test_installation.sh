@@ -44,17 +44,53 @@ handle_dependency_conflicts() {
     pip install Flask-Limiter==2.5.0 fastapi==0.103.2
 }
 
+# Function to handle package installation with fallback
+install_package() {
+    package=$1
+    echo "Installing $package..."
+    
+    # Skip uvloop as it fails to build on ARM architecture
+    if [[ $package == *"uvloop"* ]]; then
+        echo "Skipping uvloop as it may fail to build on ARM architecture"
+        return 0
+    fi
+    
+    # Try installing with specified version
+    pip install "$package" || {
+        echo "Failed to install $package"
+        
+        # Try installing without version constraint
+        if [[ $package == *"=="* ]]; then
+            package_name=${package%%==*}
+            echo "Trying to install $package_name without version constraint"
+            pip install "$package_name" || {
+                echo "Warning: Failed to install $package_name"
+                return 1
+            }
+        else
+            return 1
+        fi
+    }
+    return 0
+}
+
 # Install packages one by one with detailed error reporting
 echo "Installing packages one by one..."
 
-echo "Installing NumPy..."
-pip install "numpy>=1.23.5,<2.0.0"
-
-echo "Installing OpenCV..."
-pip install "opencv-python-headless==4.5.5.64" --only-binary=:all:
-
-echo "Installing Pillow..."
-pip install "Pillow>=10.0.0" --only-binary=:all:
+install_package "numpy>=1.23.5,<2.0.0"
+install_package "opencv-python-headless==4.5.5.64" 
+install_package "Pillow>=10.0.0" 
+install_package "pytesseract==0.3.9"
+install_package "imutils==0.5.4"
+install_package "Flask==2.0.3"
+install_package "Flask-SQLAlchemy==2.5.1"
+install_package "Flask-Limiter==2.5.0"
+install_package "Werkzeug==2.0.3"
+install_package "fastapi==0.103.2"
+install_package "uvicorn==0.23.2"
+install_package "aiohttp==3.8.1" 
+install_package "uvloop==0.16.0" 
+install_package "asgiref==3.5.2"
 
 # Install TensorFlow
 echo "Installing TensorFlow..."
@@ -122,39 +158,6 @@ elif python -c "import tflite_runtime" &> /dev/null; then
 else
     echo "WARNING: Neither TensorFlow nor TensorFlow Lite could be installed."
 fi
-
-echo "Installing pytesseract..."
-pip install "pytesseract==0.3.9"
-
-echo "Installing imutils..."
-pip install "imutils==0.5.4"
-
-echo "Installing Flask..."
-pip install "Flask==2.0.3"
-
-echo "Installing Flask-SQLAlchemy..."
-pip install "Flask-SQLAlchemy==2.5.1"
-
-echo "Installing Flask-Limiter..."
-pip install "Flask-Limiter==2.5.0"
-
-echo "Installing Werkzeug..."
-pip install "Werkzeug==2.0.3"
-
-echo "Installing FastAPI..."
-pip install "fastapi==0.103.2"
-
-echo "Installing Uvicorn..."
-pip install "uvicorn==0.23.2"
-
-echo "Installing aiohttp..."
-pip install "aiohttp==3.8.1" --only-binary=:all:
-
-echo "Installing uvloop..."
-pip install "uvloop==0.16.0" --only-binary=:all:
-
-echo "Installing asgiref..."
-pip install "asgiref==3.5.2"
 
 # Call the function to handle dependency conflicts
 handle_dependency_conflicts

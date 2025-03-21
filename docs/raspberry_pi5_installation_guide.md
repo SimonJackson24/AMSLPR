@@ -279,6 +279,28 @@ If you encounter errors building Pillow from source:
    pip install Pillow==9.5.0
    ```
 
+### Package Installation Issues
+
+If you encounter issues with specific packages during installation:
+
+#### uvloop
+
+The `uvloop` package may fail to build on ARM architecture. The installation script will automatically skip this package. The system will fall back to the standard asyncio event loop, which is slightly slower but fully compatible.
+
+```bash
+# If you need to manually skip uvloop
+pip install -r requirements.txt --no-deps && pip install --no-deps $(grep -v uvloop requirements.txt)
+```
+
+#### Invalid Requirement Format
+
+If you see errors about invalid requirement format (such as with comments in requirements.txt), the installation script will handle this automatically. If you need to manually fix this:
+
+```bash
+# Remove comments from requirements.txt
+sed -i 's/#.*$//' requirements.txt
+```
+
 ## Additional Resources
 
 - [Hailo Developer Zone](https://hailo.ai/developer-zone/) - For additional Hailo TPU documentation

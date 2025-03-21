@@ -24,7 +24,8 @@ uvicorn==0.23.2
 
 # Use specific versions of packages that have pre-built wheels available for ARM64
 aiohttp==3.8.1
-uvloop==0.16.0
+# Remove uvloop as it fails to build on ARM architecture
+# uvloop==0.16.0
 
 # ASGI Server
 asgiref==3.5.2
@@ -40,7 +41,7 @@ SQLAlchemy==2.0.0
 xlsxwriter==3.0.3
 
 # Camera Integration
-onvif-zeep>=0.2.12  # Latest stable version
+onvif-zeep>=0.2.12
 zeep>=4.0.0
 yarl>=1.6.0
 multidict>=5.0.0

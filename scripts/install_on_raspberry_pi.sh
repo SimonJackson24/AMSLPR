@@ -130,7 +130,20 @@ pip install -r "$INSTALL_DIR/requirements.txt" || {
         fi
         
         echo "Installing $line"
-        pip install "$line" || echo "Warning: Failed to install $line"
+        if [[ $line == *"uvloop"* ]]; then
+            echo "Skipping uvloop as it may fail to build on ARM architecture"
+            continue
+        fi
+        
+        pip install "$line" || {
+            echo "Warning: Failed to install $line"
+            # Try to install without version constraint if it fails
+            if [[ $line == *"=="* ]]; then
+                package_name=${line%%==*}
+                echo "Trying to install $package_name without version constraint"
+                pip install "$package_name" || echo "Warning: Failed to install $package_name"
+            fi
+        }
     done < "$INSTALL_DIR/requirements.txt"
 }
 
