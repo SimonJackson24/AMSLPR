@@ -45,18 +45,69 @@ pip install "Pillow>=10.0.0" --only-binary=:all:
 
 # Install TensorFlow
 echo "Installing TensorFlow..."
-pip install "tensorflow==2.15.0" --extra-index-url https://tf.pypi.io/simple
 
-# If TensorFlow installation fails, provide information about alternatives
-if ! python -c "import tensorflow" &> /dev/null; then
-    echo "TensorFlow installation failed. Here are some alternatives:"
-    echo "1. Try installing a different version: pip install tensorflow==2.16.1"
-    echo "2. Use TensorFlow Lite: pip install tflite-runtime"
-    echo "3. Build from source: https://github.com/tensorflow/tensorflow"
+# Try installing from PyPI first
+pip install tensorflow==2.15.0 &> /dev/null || {
+    echo "Standard TensorFlow installation failed, trying alternative methods..."
     
-    # Try installing TensorFlow Lite as a fallback
-    echo "Trying TensorFlow Lite as a fallback..."
-    pip install tflite-runtime
+    # Try a newer version
+    pip install tensorflow==2.16.1 &> /dev/null || {
+        echo "Newer TensorFlow version installation failed, trying to build from source..."
+        
+        # Create a temporary directory for building
+        BUILD_DIR=$(mktemp -d)
+        
+        # Clone the TensorFlow repository
+        git clone --depth=1 --branch=v2.15.0 https://github.com/tensorflow/tensorflow.git "$BUILD_DIR/tensorflow" &> /dev/null
+        
+        # Check if clone was successful
+        if [ -d "$BUILD_DIR/tensorflow" ]; then
+            cd "$BUILD_DIR/tensorflow"
+            
+            # Create a simple yes-to-all configuration script
+            cat > configure_script.sh << 'EOF'
+#!/bin/bash
+echo -e "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+EOF
+            chmod +x configure_script.sh
+            
+            # Run configure with automatic responses
+            ./configure_script.sh | ./configure &> /dev/null
+            
+            # Build TensorFlow
+            echo "Building TensorFlow from source (this may take a while)..."
+            bazel build --config=opt --config=noaws --config=nogcp --config=nohdfs --config=nonccl //tensorflow/tools/pip_package:build_pip_package &> /dev/null
+            
+            # Check if build was successful
+            if [ -f "./bazel-bin/tensorflow/tools/pip_package/build_pip_package" ]; then
+                # Build the pip package
+                ./bazel-bin/tensorflow/tools/pip_package/build_pip_package "$BUILD_DIR/tensorflow_pkg" &> /dev/null
+                
+                # Install the pip package
+                pip install "$BUILD_DIR"/tensorflow_pkg/tensorflow-*.whl &> /dev/null
+            fi
+            
+            cd - &> /dev/null
+        fi
+        
+        # Clean up
+        rm -rf "$BUILD_DIR"
+        
+        # If TensorFlow is still not installed, try TensorFlow Lite
+        if ! python -c "import tensorflow" &> /dev/null; then
+            echo "Building from source failed, installing TensorFlow Lite as fallback..."
+            pip install tflite-runtime &> /dev/null
+        fi
+    }
+}
+
+# Check if any TensorFlow variant is installed
+if python -c "import tensorflow" &> /dev/null; then
+    echo "TensorFlow installed successfully."
+elif python -c "import tflite_runtime" &> /dev/null; then
+    echo "TensorFlow Lite installed as fallback."
+else
+    echo "WARNING: Neither TensorFlow nor TensorFlow Lite could be installed."
 fi
 
 echo "Installing pytesseract..."

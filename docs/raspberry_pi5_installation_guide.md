@@ -192,42 +192,29 @@ If you encounter "command not found" or permission errors when running scripts:
    cd /path/to/AMSLPR
    ```
 
-### TensorFlow Installation Issues
+### TensorFlow Installation
 
-If you encounter errors related to TensorFlow installation:
+The installation script now handles TensorFlow installation automatically with multiple fallback options:
 
-1. The system now uses TensorFlow 2.15.0 which is compatible with Python 3.11 on ARM64 architecture.
+1. First attempts to install TensorFlow 2.15.0 from PyPI
+2. If that fails, tries a newer version (2.16.1)
+3. If that fails, automatically builds TensorFlow from source using the official GitHub repository
+4. As a last resort, installs TensorFlow Lite as a fallback
 
-2. NumPy has been updated to version 1.23.5 or higher to resolve dependency conflicts with TensorFlow 2.15.0.
+This process requires no user interaction and will select the best available option for your system.
 
-3. If you still encounter issues, you can try installing TensorFlow with specific options:
-   ```bash
-   pip install tensorflow==2.15.0 --extra-index-url https://tf.pypi.io/simple
-   ```
+If you need to manually install TensorFlow, here are the options:
 
-4. For Raspberry Pi, you might need to use the TensorFlow Lite runtime instead:
-   ```bash
-   pip install tflite-runtime
-   ```
-   And then modify the code to use TFLite instead of full TensorFlow.
+```bash
+# Option 1: Install from PyPI
+pip install tensorflow==2.15.0
 
-5. As a last resort, you can build TensorFlow from source following the instructions on the official GitHub repository:
-   [TensorFlow GitHub Repository](https://github.com/tensorflow/tensorflow)
+# Option 2: Try a newer version
+pip install tensorflow==2.16.1
 
-   For Raspberry Pi specifically, you might want to follow these steps:
-   ```bash
-   # Clone the TensorFlow repository
-   git clone https://github.com/tensorflow/tensorflow.git
-   cd tensorflow
-   
-   # Configure the build
-   ./configure
-   
-   # Build and install the pip package
-   bazel build --config=opt --config=noaws --config=nogcp --config=nohdfs --config=nonccl //tensorflow/tools/pip_package:build_pip_package
-   ./bazel-bin/tensorflow/tools/pip_package/build_pip_package /tmp/tensorflow_pkg
-   pip install /tmp/tensorflow_pkg/tensorflow-*.whl
-   ```
+# Option 3: Install TensorFlow Lite as a lightweight alternative
+pip install tflite-runtime
+```
 
 ### Python Package Build Issues
 

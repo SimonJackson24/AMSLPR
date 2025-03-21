@@ -121,18 +121,89 @@ pip install -r "$INSTALL_DIR/requirements.txt"
 
 # Check if TensorFlow was installed successfully
 if ! python -c "import tensorflow" &> /dev/null; then
-    echo "TensorFlow installation failed. Trying alternative methods..."
+    echo "TensorFlow installation failed. Trying alternative methods automatically..."
     
-    # Try installing TensorFlow directly from PyPI with specific options
-    echo "Attempting to install TensorFlow directly..."
-    pip install tensorflow==2.15.0 --extra-index-url https://tf.pypi.io/simple
+    # Try installing a newer version
+    echo "Attempting to install newer TensorFlow version..."
+    pip install tensorflow==2.16.1 &> /dev/null
     
     # Check if that worked
     if ! python -c "import tensorflow" &> /dev/null; then
-        echo "Direct TensorFlow installation failed. Trying TensorFlow Lite as a fallback..."
-        pip install tflite-runtime
-        echo "Note: You will need to modify the code to use TensorFlow Lite instead of full TensorFlow."
-        echo "For full TensorFlow, you may need to build from source: https://github.com/tensorflow/tensorflow"
+        echo "Newer version installation failed. Attempting to build from source..."
+        
+        # Install build dependencies silently
+        apt-get update -qq &> /dev/null
+        apt-get install -y -qq build-essential git python3-dev python3-pip &> /dev/null
+        
+        # Install Bazel if not already installed
+        if ! command -v bazel &> /dev/null; then
+            echo "Installing Bazel (this may take a while)..."
+            apt-get install -y -qq apt-transport-https curl gnupg &> /dev/null
+            curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg &> /dev/null
+            mv bazel-archive-keyring.gpg /usr/share/keyrings/bazel-archive-keyring.gpg &> /dev/null
+            echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list &> /dev/null
+            apt-get update -qq &> /dev/null && apt-get install -y -qq bazel &> /dev/null
+        fi
+        
+        # Create a temporary directory for building
+        BUILD_DIR=$(mktemp -d)
+        
+        # Clone TensorFlow repository
+        echo "Cloning TensorFlow repository..."
+        git clone --depth=1 --branch=v2.15.0 https://github.com/tensorflow/tensorflow.git "$BUILD_DIR/tensorflow" &> /dev/null
+        
+        # Check if clone was successful
+        if [ -d "$BUILD_DIR/tensorflow" ]; then
+            cd "$BUILD_DIR/tensorflow"
+            
+            # Create a simple yes-to-all configuration script
+            cat > configure_script.sh << 'EOF'
+#!/bin/bash
+echo -e "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+EOF
+            chmod +x configure_script.sh
+            
+            # Run configure with automatic responses
+            echo "Configuring TensorFlow build..."
+            ./configure_script.sh | ./configure &> /dev/null
+            
+            # Build TensorFlow
+            echo "Building TensorFlow from source (this may take a long time)..."
+            bazel build --config=opt --config=noaws --config=nogcp --config=nohdfs --config=nonccl //tensorflow/tools/pip_package:build_pip_package &> /dev/null
+            
+            # Check if build was successful
+            if [ -f "./bazel-bin/tensorflow/tools/pip_package/build_pip_package" ]; then
+                # Build the pip package
+                echo "Creating TensorFlow package..."
+                ./bazel-bin/tensorflow/tools/pip_package/build_pip_package "$BUILD_DIR/tensorflow_pkg" &> /dev/null
+                
+                # Install the pip package
+                echo "Installing TensorFlow from built package..."
+                pip install "$BUILD_DIR"/tensorflow_pkg/tensorflow-*.whl &> /dev/null
+            fi
+            
+            cd - &> /dev/null
+        fi
+        
+        # Clean up
+        rm -rf "$BUILD_DIR"
+        
+        # If TensorFlow is still not installed, try TensorFlow Lite
+        if ! python -c "import tensorflow" &> /dev/null; then
+            echo "Building from source failed. Installing TensorFlow Lite as fallback..."
+            pip install tflite-runtime &> /dev/null
+            
+            if python -c "import tflite_runtime" &> /dev/null; then
+                echo "TensorFlow Lite installed successfully as fallback."
+            else
+                echo "WARNING: Neither TensorFlow nor TensorFlow Lite could be installed."
+                echo "The system will continue with installation, but some functionality may be limited."
+            fi
+        else
+            echo "TensorFlow built and installed successfully from source."
+        fi
+    else
+        echo "Newer TensorFlow version installed successfully."
     fi
 fi
 
