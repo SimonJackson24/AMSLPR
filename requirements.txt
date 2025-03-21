@@ -23,7 +23,8 @@ fastapi==0.103.2
 uvicorn==0.23.2
 
 # Use specific versions of packages that have pre-built wheels available for ARM64
-aiohttp==3.8.1
+# aiohttp may fail to build on some platforms, so we use a platform-specific conditional
+aiohttp==3.7.4  # Using a version that has pre-built wheels for ARM platforms
 # uvloop is optional but recommended for performance (may fail to build on some ARM platforms)
 uvloop==0.16.0; platform_machine != 'aarch64' and platform_machine != 'armv7l'
 

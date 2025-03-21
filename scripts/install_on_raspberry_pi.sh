@@ -130,13 +130,21 @@ pip install -r "$INSTALL_DIR/requirements.txt" || {
         fi
         
         echo "Installing $line"
+        # Handle packages that may fail to build on ARM architecture
         if [[ $line == *"uvloop"* ]]; then
-            echo "uvloop is optional but recommended for performance"
-            echo "Attempting to install uvloop (may fail on ARM platforms)..."
-            pip install uvloop || {
-                echo "uvloop installation failed, continuing without it"
-                echo "The application will use the standard asyncio event loop instead"
+            package_name=${line%%==*}
+            echo "$package_name is optional but recommended for performance"
+            echo "Attempting to install $package_name (may fail on ARM platforms)..."
+            pip install $package_name || {
+                echo "$package_name installation failed, continuing without it"
+                echo "The application will use alternative implementations instead"
             }
+            continue
+        fi
+        
+        # Skip aiohttp as we'll install it separately with special handling
+        if [[ $line == *"aiohttp"* ]]; then
+            echo "Skipping aiohttp here - will be installed separately with special handling"
             continue
         fi
         
@@ -150,6 +158,14 @@ pip install -r "$INSTALL_DIR/requirements.txt" || {
             fi
         }
     done < "$INSTALL_DIR/requirements.txt"
+}
+
+# Install aiohttp separately with special handling
+echo "Installing aiohttp separately..."
+pip install "aiohttp==3.7.4" || {
+    echo "Failed to install aiohttp. Some functionality may be limited."
+    echo "Installing requests as a fallback..."
+    pip install requests
 }
 
 # Check if TensorFlow was installed successfully

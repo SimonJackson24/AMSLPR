@@ -49,14 +49,21 @@ install_package() {
     package=$1
     echo "Installing $package..."
     
-    # Handle uvloop specially as it's optional but beneficial
+    # Handle packages that may fail to build on ARM architecture
     if [[ $package == *"uvloop"* ]]; then
-        echo "uvloop is optional but recommended for performance"
-        echo "Attempting to install uvloop (may fail on ARM platforms)..."
-        pip install uvloop || {
-            echo "uvloop installation failed, continuing without it"
-            echo "The application will use the standard asyncio event loop instead"
+        package_name=${package%%==*}
+        echo "$package_name is optional but recommended for performance"
+        echo "Attempting to install $package_name (may fail on ARM platforms)..."
+        pip install $package_name || {
+            echo "$package_name installation failed, continuing without it"
+            echo "The application will use alternative implementations instead"
         }
+        return 0
+    fi
+    
+    # Skip aiohttp as we'll install it separately with special handling
+    if [[ $package == *"aiohttp"* ]]; then
+        echo "Skipping aiohttp here - will be installed separately with special handling"
         return 0
     fi
     
@@ -93,9 +100,16 @@ install_package "Flask-Limiter==2.5.0"
 install_package "Werkzeug==2.0.3"
 install_package "fastapi==0.103.2"
 install_package "uvicorn==0.23.2"
-install_package "aiohttp==3.8.1" 
 install_package "uvloop==0.16.0" 
 install_package "asgiref==3.5.2"
+
+# Install aiohttp separately with special handling
+echo "Installing aiohttp separately with special handling..."
+pip install "aiohttp<3.8.0" || {
+    echo "Failed to install aiohttp. Some functionality may be limited."
+    echo "Installing requests as a fallback..."
+    pip install requests
+}
 
 # Install TensorFlow
 echo "Installing TensorFlow..."

@@ -281,35 +281,19 @@ If you encounter errors building Pillow from source:
 
 ### Package Installation Issues
 
-If you encounter issues with specific packages during installation:
+The installation script has been designed to handle common issues automatically:
 
-#### uvloop
+#### Build Failures on ARM Platforms
 
-The `uvloop` package is optional but provides better performance for async operations. It may fail to build on ARM architecture. The installation script will handle this gracefully:
+Some packages may have issues on ARM architecture (like Raspberry Pi):
 
-1. On non-ARM platforms, uvloop will be installed automatically
-2. On ARM platforms (like Raspberry Pi), the system will fall back to the standard asyncio event loop
-3. The application is designed to work correctly with or without uvloop
+1. **aiohttp**: The script automatically installs a compatible version (3.7.4) that has pre-built wheels for ARM platforms. This ensures no compilation is needed.
 
-If you want to manually install uvloop on ARM (which may require additional build dependencies):
+2. **uvloop**: This package is optional but provides better performance for async operations.
+   - The script will attempt to install it but will continue if it fails
+   - The application will fall back to the standard asyncio event loop if uvloop is not available
 
-```bash
-# Install build dependencies
-sudo apt-get update
-sudo apt-get install -y python3-dev build-essential
-
-# Try installing uvloop
-pip install uvloop
-```
-
-#### Invalid Requirement Format
-
-If you see errors about invalid requirement format (such as with comments in requirements.txt), the installation script will handle this automatically. If you need to manually fix this:
-
-```bash
-# Remove comments from requirements.txt
-sed -i 's/#.*$//' requirements.txt
-```
+No user intervention is required as the installation script handles these issues automatically.
 
 ## Additional Resources
 
