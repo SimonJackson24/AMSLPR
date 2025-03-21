@@ -135,11 +135,24 @@ def install_hailo_python_packages(python_packages):
             # Get the pip path in the virtual environment
             if platform.system() == "Windows":
                 pip_path = venv_path / "Scripts" / "pip.exe"
+                python_path = venv_path / "Scripts" / "python.exe"
             else:
                 pip_path = venv_path / "bin" / "pip"
+                python_path = venv_path / "bin" / "python"
             
-            # Install packages in the virtual environment
-            for package in python_packages:
+            # Upgrade pip in the virtual environment
+            try:
+                logger.info("Upgrading pip in virtual environment")
+                subprocess.run([str(python_path), "-m", "pip", "install", "--upgrade", "pip"], 
+                              check=True, capture_output=True, text=True)
+            except subprocess.CalledProcessError as e:
+                logger.warning(f"Failed to upgrade pip in virtual environment: {e}")
+            
+            # Install packages in the virtual environment - sort them to install dependencies first
+            # We want to install hailort before hailo_platform if both are present
+            sorted_packages = sorted(python_packages, key=lambda p: 0 if "hailort-" in p.name and "hailo_platform" not in p.name else 1)
+            
+            for package in sorted_packages:
                 try:
                     logger.info(f"Installing {package.name} in virtual environment")
                     result = subprocess.run([str(pip_path), "install", "--force-reinstall", str(package)], 
@@ -150,6 +163,30 @@ def install_hailo_python_packages(python_packages):
                     logger.error(f"stdout: {e.stdout}")
                     logger.error(f"stderr: {e.stderr}")
                     success = False
+            
+            # Verify the installation in the virtual environment
+            try:
+                logger.info("Verifying Hailo SDK installation in virtual environment...")
+                verification_result = subprocess.run(
+                    [str(python_path), "-c", 
+                     """try:\n    import hailo_platform\n    print(f'hailo_platform version: {getattr(hailo_platform, "__version__", "unknown")}')\n    try:\n        import hailort\n        print(f'hailort version: {getattr(hailort, "__version__", "unknown")}')\n    except ImportError as e:\n        print(f'hailort import error: {e}')\nexcept ImportError as e:\n    print(f'hailo_platform import error: {e}')"""],
+                    check=False, capture_output=True, text=True
+                )
+                logger.info(f"Verification result:\n{verification_result.stdout}")
+                if "import error" in verification_result.stdout:
+                    logger.warning("Some Hailo modules could not be imported")
+                    
+                    # Try installing hailort directly if it's missing
+                    if "hailort import error" in verification_result.stdout:
+                        logger.info("Attempting to install hailort directly...")
+                        try:
+                            subprocess.run([str(pip_path), "install", "hailort"], 
+                                          check=True, capture_output=True, text=True)
+                            logger.info("Successfully installed hailort directly")
+                        except subprocess.CalledProcessError as e:
+                            logger.error(f"Failed to install hailort directly: {e}")
+            except Exception as e:
+                logger.error(f"Failed to verify installation: {e}")
             
             # Create a wrapper script to run with the virtual environment
             wrapper_script = project_root / "run_with_hailo.sh"
@@ -171,7 +208,10 @@ def install_hailo_python_packages(python_packages):
             logger.info("Falling back to system installation with --break-system-packages")
     
     # If we're already in a virtual environment or failed to create one, install directly
-    for package in python_packages:
+    # Sort packages to install dependencies first
+    sorted_packages = sorted(python_packages, key=lambda p: 0 if "hailort-" in p.name and "hailo_platform" not in p.name else 1)
+    
+    for package in sorted_packages:
         try:
             logger.info(f"Installing {package.name}")
             # Use pip install with --force-reinstall and --break-system-packages
@@ -187,6 +227,25 @@ def install_hailo_python_packages(python_packages):
             logger.error(f"stdout: {e.stdout}")
             logger.error(f"stderr: {e.stderr}")
             success = False
+    
+    # Try installing hailort directly if needed
+    try:
+        import hailo_platform
+        try:
+            import hailort
+            logger.info("hailort module is available")
+        except ImportError:
+            logger.warning("hailort module is not available, attempting to install directly...")
+            cmd = [sys.executable, "-m", "pip", "install", "hailort"]
+            if not in_venv:
+                cmd.append("--break-system-packages")
+            try:
+                subprocess.run(cmd, check=True, capture_output=True, text=True)
+                logger.info("Successfully installed hailort directly")
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Failed to install hailort directly: {e}")
+    except ImportError:
+        logger.warning("hailo_platform module is not available, cannot check for hailort")
     
     return success
 
