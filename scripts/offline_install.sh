@@ -352,6 +352,21 @@ if [ -d "\${REPO_WHEELS_DIR}" ]; then
     ls -la "\${REPO_WHEELS_DIR}" || echo "Cannot list repository wheels"
 fi
 
+# Try to fix any invalid wheel files if the script exists
+if [ -f "\${INSTALL_DIR}/scripts/fix_wheel_files.py" ]; then
+    echo "Running wheel metadata fix script..."
+    python "\${INSTALL_DIR}/scripts/fix_wheel_files.py" "\${WHEELS_DIR}" || echo "Warning: Wheel fix script failed"
+    
+    # If fixed wheels were created, move them
+    if ls \${WHEELS_DIR}/fixed_*.whl >/dev/null 2>&1; then
+        echo "Found fixed wheel files, using them instead of originals"
+        for fixed_wheel in \${WHEELS_DIR}/fixed_*.whl; do
+            orig_name=\$(basename "\$fixed_wheel" | sed 's/^fixed_//')
+            mv "\$fixed_wheel" "\${WHEELS_DIR}/\$orig_name" || echo "Warning: Failed to replace original wheel"
+        done
+    fi
+fi
+
 # Check if the wheels directory exists and contains the required packages
 # Use a safer check that won't fail if no .whl files exist
 if [ -d "\${WHEELS_DIR}" ] && ls \${WHEELS_DIR}/*.whl >/dev/null 2>&1; then
@@ -453,6 +468,21 @@ elif [ -d "\${REPO_WHEELS_DIR}" ] && ls \${REPO_WHEELS_DIR}/*.whl >/dev/null 2>&
     
     # Verify the wheels were copied
     ls -la "\${WHEELS_DIR}/"
+    
+    # Try to fix any invalid wheel files if the script exists
+    if [ -f "\${INSTALL_DIR}/scripts/fix_wheel_files.py" ]; then
+        echo "Running wheel metadata fix script on copied wheels..."
+        python "\${INSTALL_DIR}/scripts/fix_wheel_files.py" "\${WHEELS_DIR}" || echo "Warning: Wheel fix script failed"
+        
+        # If fixed wheels were created, move them
+        if ls \${WHEELS_DIR}/fixed_*.whl >/dev/null 2>&1; then
+            echo "Found fixed wheel files, using them instead of originals"
+            for fixed_wheel in \${WHEELS_DIR}/fixed_*.whl; do
+                orig_name=\$(basename "\$fixed_wheel" | sed 's/^fixed_//')
+                mv "\$fixed_wheel" "\${WHEELS_DIR}/\$orig_name" || echo "Warning: Failed to replace original wheel"
+            done
+        fi
+    fi
     
     # Use the same robust installation process as above
     # Initialize counters for installation stats
