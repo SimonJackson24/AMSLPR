@@ -45,13 +45,33 @@ def create_hailo_modules():
     
     logger.info(f"Found site-packages at {site_packages}")
     
-    # Create hailort module
-    hailort_path = site_packages / 'hailort'
-    os.makedirs(hailort_path, exist_ok=True)
-    
-    # Create hailo_platform module
-    hailo_platform_path = site_packages / 'hailo_platform'
-    os.makedirs(hailo_platform_path, exist_ok=True)
+    # Check if we have write permissions
+    if not os.access(str(site_packages), os.W_OK):
+        logger.error(f"No write permission for {site_packages}")
+        logger.info("Creating temporary directory for modules instead")
+        
+        # Create in a user-writable location
+        temp_dir = project_root / 'temp_modules'
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        # Create module directories
+        hailort_path = temp_dir / 'hailort'
+        hailo_platform_path = temp_dir / 'hailo_platform'
+        
+        os.makedirs(hailort_path, exist_ok=True)
+        os.makedirs(hailo_platform_path, exist_ok=True)
+        
+        logger.info(f"Created module directories in {temp_dir}")
+        logger.info("NOTE: This is a temporary solution. Run with sudo to install system-wide.")
+    else:
+        # Create in site-packages since we have permission
+        # Create hailort module
+        hailort_path = site_packages / 'hailort'
+        os.makedirs(hailort_path, exist_ok=True)
+        
+        # Create hailo_platform module
+        hailo_platform_path = site_packages / 'hailo_platform'
+        os.makedirs(hailo_platform_path, exist_ok=True)
     
     # Create mock_hailo module or copy from project
     mock_hailo_path = project_root / 'src' / 'recognition' / 'mock_hailo.py'

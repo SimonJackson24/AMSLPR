@@ -442,8 +442,8 @@ su - "$APP_USER" -c "cd $INSTALL_DIR && source venv/bin/activate && python scrip
 
 # Verify Hailo installation
 echo "Step 11: Fixing Hailo imports if needed..."
-# Try to run our fix script first
-su - "$APP_USER" -c "cd $INSTALL_DIR && source venv/bin/activate && python scripts/fix_hailo_imports.py"
+# Run the fix script with sudo to ensure we have proper permissions
+cd "$INSTALL_DIR" && source venv/bin/activate && python scripts/fix_hailo_imports.py
 
 echo "Step 12: Verifying Hailo TPU installation..."
 su - "$APP_USER" -c "cd $INSTALL_DIR && source venv/bin/activate && python scripts/verify_hailo_installation.py"
