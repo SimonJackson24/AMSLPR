@@ -413,21 +413,28 @@ touch "$INSTALL_DIR/config/users.json"
 chmod 666 "$INSTALL_DIR/config/users.json"
 
 echo "Step 9: Setting up systemd service..."
+# Detect the Python version
+python_version=$(cd "$INSTALL_DIR" && . venv/bin/activate && python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+site_packages_dir="$INSTALL_DIR/venv/lib/python$python_version/site-packages"
+
 cat > /etc/systemd/system/amslpr.service << EOL
 [Unit]
 Description=AMSLPR License Plate Recognition Service
-After=network.target
+After=network.target multi-user.target
 
 [Service]
 User=$APP_USER
 Group=$APP_GROUP
 WorkingDirectory=$INSTALL_DIR
 Environment="PATH=$INSTALL_DIR/venv/bin:/usr/local/bin:/usr/bin:/bin"
-Environment="PYTHONPATH=$INSTALL_DIR"
+Environment="PYTHONPATH=$INSTALL_DIR:$site_packages_dir"
 Environment="HAILO_ENABLED=true"
+Environment="PYTHONDONTWRITEBYTECODE=1"
 ExecStart=$INSTALL_DIR/venv/bin/python $INSTALL_DIR/run_server.py --port 5001
 Restart=always
 RestartSec=10
+TimeoutStartSec=60
+TimeoutStopSec=30
 
 [Install]
 WantedBy=multi-user.target
@@ -435,6 +442,7 @@ EOL
 
 systemctl daemon-reload
 systemctl enable amslpr.service
+echo "✅ Enabled AMSLPR service to start automatically at boot"
 
 echo "Step 10: Running Hailo TPU setup script..."
 # Run the Hailo setup script to configure OCR
@@ -655,18 +663,22 @@ echo "IMPORTANT: A reboot is REQUIRED to complete the installation"
 echo "Run 'sudo reboot' now"
 echo "======================================================================="
 echo ""
-echo "After rebooting, you can start the service with: sudo systemctl start amslpr"
-echo "Check status with: sudo systemctl status amslpr"
+echo "The AMSLPR service is set to start automatically after reboot"
+echo "You can check its status with: sudo systemctl status amslpr"
 echo "View logs with: sudo journalctl -u amslpr -f"
+echo "If needed, you can manually control the service with:"
+echo "  - Start:   sudo systemctl start amslpr"
+echo "  - Stop:    sudo systemctl stop amslpr"
+echo "  - Restart: sudo systemctl restart amslpr"
 echo ""
 echo "The application will be available at: http://$(hostname -I | awk '{print $1}'):5001"
 echo ""
 
-# Ask if user wants to start the service now
-read -p "Do you want to start the AMSLPR service now? (y/n): " START_SERVICE
-if [[ $START_SERVICE == "y" || $START_SERVICE == "Y" ]]; then
-    systemctl start amslpr
-    echo "Service started. Check status with: sudo systemctl status amslpr"
+# Ask if user wants to reboot now
+read -p "Do you want to reboot the system now to complete installation? (y/n): " REBOOT_NOW
+if [[ $REBOOT_NOW == "y" || $REBOOT_NOW == "Y" ]]; then
+    echo "Rebooting system now..."
+    reboot
 else
-    echo "You can start the service later with: sudo systemctl start amslpr"
+    echo "Remember to reboot your system with 'sudo reboot' before using AMSLPR"
 fi
