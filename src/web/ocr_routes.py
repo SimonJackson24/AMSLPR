@@ -1,3 +1,10 @@
+
+# AMSLPR - Automate Systems License Plate Recognition
+# Copyright (c) 2025 Automate Systems. All rights reserved.
+#
+# This software is proprietary and confidential.
+# Unauthorized use, reproduction, or distribution is prohibited.
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, session
 import os
 import json

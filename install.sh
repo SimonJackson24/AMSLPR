@@ -49,11 +49,12 @@ command_exists() {
 
 # Function to install a package
 install_package() {
-    if ! dpkg -l "$1" | grep -q ^ii; then
-        echo -e "${YELLOW}Installing $1...${NC}"
-        apt-get install -y "$1"
+    local package=$1
+    if ! dpkg -l | grep -q "$package"; then
+        echo -e "${YELLOW}Installing $package...${NC}"
+        apt-get install -y "$package"
     else
-        echo -e "${GREEN}$1 is already installed.${NC}"
+        echo -e "${GREEN}$package is already installed.${NC}"
     fi
 }
 
@@ -71,6 +72,19 @@ required_packages=("python3" "python3-pip" "python3-venv" "libopencv-dev" "pytho
 for package in "${required_packages[@]}"; do
     install_package "$package"
 done
+
+# Install Hailo TPU support (optional)
+echo -e "${YELLOW}Checking for Hailo TPU device...${NC}"
+if [ -e "/dev/hailo0" ]; then
+    echo -e "${GREEN}Hailo TPU device found. Installing Hailo support...${NC}"
+    chmod +x "$(dirname "$0")/scripts/hailo_raspberry_pi_setup.sh"
+    "$(dirname "$0")/scripts/hailo_raspberry_pi_setup.sh"
+    echo -e "${GREEN}Hailo TPU support installed.${NC}"
+else
+    echo -e "${YELLOW}Hailo TPU device not found. Skipping Hailo support installation.${NC}"
+    echo -e "${YELLOW}If you want to install Hailo support later, run:${NC}"
+    echo -e "${YELLOW}  sudo $(dirname "$0")/scripts/hailo_raspberry_pi_setup.sh${NC}"
+fi
 
 # Create installation directories
 echo -e "${YELLOW}Creating installation directories...${NC}"

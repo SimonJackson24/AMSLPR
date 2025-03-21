@@ -11,8 +11,12 @@ WORKDIR /app
 # Copy requirements first for better caching
 COPY requirements.txt .
 
-# Install Python dependencies only
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Note: Hailo SDK installation is commented out as it requires specific host setup
+# Uncomment the following line when deploying to a system with Hailo TPU
+# RUN pip install -U --extra-index-url https://hailo-hailort.s3.eu-west-2.amazonaws.com/hailort/latest/ hailo-platform hailo-model-zoo
 
 # Copy application code
 COPY . .

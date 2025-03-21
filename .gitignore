@@ -39,8 +39,10 @@ data/images/*
 !data/images/.gitkeep
 data/logs/*
 !data/logs/.gitkeep
-data/models/*
-!data/models/.gitkeep
+
+# Keep model files
+!packages/models/*.hef
+!models/*.hef
 
 # Flask session
 instance/flask_session/

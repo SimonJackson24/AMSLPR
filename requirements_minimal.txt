@@ -1,0 +1,26 @@
+# Core Vision - Use precompiled packages
+opencv-python-headless==4.5.5.64
+# Updated NumPy version for compatibility with TensorFlow 2.15.0
+numpy>=1.23.5,<2.0.0
+Pillow==9.2.0
+# Updated TensorFlow version for Python 3.11 compatibility on ARM64
+tensorflow==2.15.0
+
+# OCR - Use alternatives that don't require system dependencies
+pytesseract==0.3.9
+imutils==0.5.4
+
+# Web Framework
+Flask==2.0.3
+Flask-SQLAlchemy==2.5.1
+Flask-Limiter==2.5.0
+Werkzeug==2.0.3
+fastapi==0.103.2
+uvicorn==0.23.2
+
+# Use specific versions of packages that have pre-built wheels available for ARM64
+aiohttp==3.8.1
+uvloop==0.16.0
+
+# ASGI Server
+asgiref==3.5.2

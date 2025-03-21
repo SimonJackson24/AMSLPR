@@ -12,8 +12,10 @@
         "input_width": 100,
         "input_height": 32,
         "tf_ocr_model_path": "models/ocr_crnn.h5",
-        "hailo_ocr_model_path": "models/ocr_crnn.hef",
-        "char_map_path": "models/char_map.json"
+        "hailo_ocr_model_path": "models/lprnet_vehicle_license_recognition.hef",
+        "char_map_path": "models/char_map.json",
+        "hailo_detector_model_path": "models/yolov5m_license_plates.hef",
+        "use_hailo_detector": true
     },
     "preprocessing": {
         "resize_factor": 2.0,

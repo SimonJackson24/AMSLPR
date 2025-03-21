@@ -1,3 +1,10 @@
+
+# AMSLPR - Automate Systems License Plate Recognition
+# Copyright (c) 2025 Automate Systems. All rights reserved.
+#
+# This software is proprietary and confidential.
+# Unauthorized use, reproduction, or distribution is prohibited.
+
 import unittest
 import os
 from src.web.app import create_app

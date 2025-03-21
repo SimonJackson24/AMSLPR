@@ -1,9 +1,17 @@
+
+# AMSLPR - Automate Systems License Plate Recognition
+# Copyright (c) 2025 Automate Systems. All rights reserved.
+#
+# This software is proprietary and confidential.
+# Unauthorized use, reproduction, or distribution is prohibited.
+
 #!/usr/bin/env python3
 
 import os
 import json
 import logging
 import sys
+import argparse
 from pathlib import Path
 
 # Setup logging
@@ -42,6 +50,37 @@ def enable_hailo_tpu():
         logger.info("Creating new OCR configuration")
         config = {}
     
+    # Check for available Hailo models
+    models_dir = project_root / 'models'
+    models_dir.mkdir(exist_ok=True)
+    
+    # Look for specific Hailo models
+    lpr_model_path = None
+    detector_model_path = None
+    
+    # Check for LPRNet model
+    lprnet_candidates = list(models_dir.glob("*lprnet*.hef"))
+    if lprnet_candidates:
+        lpr_model_path = f"models/{lprnet_candidates[0].name}"
+        logger.info(f"Found LPRNet model: {lpr_model_path}")
+    else:
+        logger.warning("No LPRNet model found. OCR may not work correctly.")
+        lpr_model_path = "models/lprnet_vehicle_license_recognition.hef"  # Default path
+    
+    # Check for license plate detector models
+    yolo_candidates = list(models_dir.glob("*yolov5m*.hef"))
+    tiny_yolo_candidates = list(models_dir.glob("*tiny_yolov4*.hef"))
+    
+    # Prioritize YOLOv5m over Tiny YOLOv4 if both are available
+    if yolo_candidates:
+        detector_model_path = f"models/{yolo_candidates[0].name}"
+        logger.info(f"Found YOLOv5m detector model: {detector_model_path}")
+    elif tiny_yolo_candidates:
+        detector_model_path = f"models/{tiny_yolo_candidates[0].name}"
+        logger.info(f"Found Tiny YOLOv4 detector model: {detector_model_path}")
+    else:
+        logger.warning("No detector model found. License plate detection may not work correctly.")
+    
     # Update configuration for Hailo TPU
     config.update({
         "ocr_method": "hybrid",  # Use both Tesseract and deep learning
@@ -57,7 +96,7 @@ def enable_hailo_tpu():
             "input_width": 100,
             "input_height": 32,
             "tf_ocr_model_path": "models/ocr_crnn.h5",
-            "hailo_ocr_model_path": "models/ocr_crnn.hef",
+            "hailo_ocr_model_path": lpr_model_path,
             "char_map_path": "models/char_map.json"
         },
         "preprocessing": {
@@ -83,6 +122,12 @@ def enable_hailo_tpu():
         }
     })
     
+    # Add detector model if found
+    if detector_model_path:
+        config["deep_learning"]["hailo_detector_model_path"] = detector_model_path
+        config["deep_learning"]["use_hailo_detector"] = True
+        logger.info(f"Enabled Hailo detector with model: {detector_model_path}")
+    
     # Save configuration
     try:
         with open(config_path, 'w') as f:
@@ -103,28 +148,40 @@ def check_hailo_availability():
         try:
             # Try to initialize Hailo device
             device = hailo_platform.HailoDevice()
-            logger.info("Hailo TPU is available and working")
+            logger.info(f"Hailo TPU is available and working. Device ID: {device.device_id}")
             return True
         except Exception as e:
             logger.error(f"Hailo TPU is installed but not working: {e}")
+            logger.error("Check if the device is properly connected and the driver is installed.")
+            logger.error("You may need to run 'sudo ls -l /dev/hailo*' to check if the device is detected.")
             return False
     except ImportError:
         logger.error("Hailo TPU SDK is not installed")
+        logger.error("Please install the Hailo SDK from the Hailo Developer Zone (https://hailo.ai/developer-zone/)")
+        logger.error("Follow the instructions in docs/raspberry_pi_hailo_setup.md")
         return False
 
 def main():
     """
     Main function.
     """
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="Enable Hailo TPU in the OCR configuration")
+    parser.add_argument("--auto-approve", action="store_true", help="Automatically approve configuration without prompting")
+    args = parser.parse_args()
+    
     # Check if Hailo TPU is available
     hailo_available = check_hailo_availability()
     
     if not hailo_available:
         logger.warning("Hailo TPU is not available. Configuration will be updated but may not work.")
-        response = input("Continue anyway? (y/n): ")
-        if response.lower() != 'y':
-            logger.info("Aborted")
-            return
+        if not args.auto_approve:
+            response = input("Continue anyway? (y/n): ")
+            if response.lower() != 'y':
+                logger.info("Aborted")
+                return
+        else:
+            logger.info("Auto-approve enabled, continuing with configuration...")
     
     # Enable Hailo TPU in OCR configuration
     success = enable_hailo_tpu()
@@ -132,6 +189,7 @@ def main():
     if success:
         logger.info("Hailo TPU has been enabled in the OCR configuration")
         logger.info("Restart the AMSLPR service for changes to take effect")
+        logger.info("Run 'sudo systemctl restart amslpr' to restart the service")
     else:
         logger.error("Failed to enable Hailo TPU")
 

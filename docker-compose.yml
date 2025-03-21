@@ -9,6 +9,10 @@ services:
       - ./data:/app/data
       - ./logs:/app/logs
       - ./config:/app/config
+      - ./models:/app/models
+    devices:
+      # This will be ignored if the device doesn't exist
+      - /dev/hailo0:/dev/hailo0
     environment:
       - TZ=UTC
       - PYTHONUNBUFFERED=1

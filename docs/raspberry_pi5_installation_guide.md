@@ -1,5 +1,7 @@
 # AMSLPR Installation Guide for Raspberry Pi 5
 
+> **IMPORTANT LICENSE NOTICE**: This software is proprietary and confidential. Unauthorized use, reproduction, or distribution is prohibited. All rights reserved by Automate Systems.
+
 This guide provides step-by-step instructions for installing the AMSLPR (Automated Machine Learning-based System for License Plate Recognition) on a Raspberry Pi 5 with Hailo TPU acceleration.
 
 ## Prerequisites

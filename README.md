@@ -2,7 +2,7 @@
 
 ![Production Ready](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)
 ![Version](https://img.shields.io/badge/Version-1.0.0-blue)
-![License](https://img.shields.io/badge/License-MIT-green)
+![License](https://img.shields.io/badge/License-Proprietary-red)
 
 ## Overview
 AMSLPR is a production-ready Raspberry Pi-based license plate recognition system designed for barrier control and parking management. The system automatically detects and recognizes license plates, controls entry/exit barriers, and manages authorized vehicles with enterprise-grade security, reliability, and performance features.
@@ -64,8 +64,8 @@ AMSLPR is a production-ready Raspberry Pi-based license plate recognition system
 
 ## Requirements
 
-- Raspberry Pi 4 (8GB RAM recommended)
-- Python 3.11 (required for Hailo TPU integration)
+- Raspberry Pi 4 or 5 (8GB RAM recommended)
+- Python 3.10 or higher (Python 3.11 recommended for Hailo TPU integration)
 - Camera (USB or IP camera with ONVIF support)
 - Internet connection for initial setup
 - Hailo-8 TPU for hardware acceleration (optional)
@@ -84,6 +84,8 @@ See [installation guide](docs/installation.md) for detailed setup instructions.
 For production deployment, see our [production deployment guide](docs/production_deployment.md).
 
 For Hailo TPU setup, see our [Raspberry Pi Hailo setup guide](docs/raspberry_pi_hailo_setup.md).
+
+For Raspberry Pi 5 specific installation, see our [Raspberry Pi 5 installation guide](docs/raspberry_pi5_installation_guide.md).
 
 ### Raspberry Pi with Hailo TPU Installation
 
@@ -162,7 +164,7 @@ AMSLPR has undergone a comprehensive [production readiness assessment](docs/prod
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Proprietary License - see the [LICENSE](LICENSE) file for details.
 
 ## Support
 
