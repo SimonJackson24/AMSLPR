@@ -29,10 +29,41 @@ def check_hailo_sdk_installation():
     try:
         import hailo_platform
         logger.info("✅ Hailo SDK is installed")
-        logger.info(f"   Version: {hailo_platform.__version__}")
+        logger.info(f"   Version: {hailo_platform.__version__ if hasattr(hailo_platform, '__version__') else 'Unknown'}")
+        
+        # Check for specific modules
+        logger.info("Checking available Hailo modules:")
+        try:
+            import hailort
+            logger.info("   ✅ hailort module is available")
+        except ImportError as e:
+            logger.info(f"   ❌ hailort module is not available: {e}")
+        
+        try:
+            from hailo_platform import pyhailort
+            logger.info("   ✅ hailo_platform.pyhailort module is available")
+        except ImportError as e:
+            logger.info(f"   ❌ hailo_platform.pyhailort module is not available: {e}")
+            
+        try:
+            from hailo_platform import HailoDevice
+            logger.info("   ✅ hailo_platform.HailoDevice class is available")
+        except (ImportError, AttributeError) as e:
+            logger.info(f"   ❌ hailo_platform.HailoDevice class is not available: {e}")
+            
+        # Check if Hailo packages are available in the project directory
+        packages_dir = project_root / 'packages' / 'hailo'
+        if packages_dir.exists():
+            hailo_packages = list(packages_dir.glob("*.whl")) + list(packages_dir.glob("*.deb"))
+            if hailo_packages:
+                logger.info("✅ Found Hailo packages in project directory:")
+                for package in hailo_packages:
+                    logger.info(f"   - {package.name}")
+                logger.info("   These packages will be automatically installed during the Raspberry Pi installation.")
+                logger.info("   Run 'sudo ./scripts/install_on_raspberry_pi.sh' to install them.")
         return True
-    except ImportError:
-        logger.error("❌ Hailo SDK is not installed")
+    except ImportError as e:
+        logger.error("❌ Hailo SDK is not installed: {e}")
         logger.error("   Please install the Hailo SDK from the Hailo Developer Zone (https://hailo.ai/developer-zone/)")
         logger.error("   Follow the instructions in docs/raspberry_pi_hailo_setup.md")
         
@@ -51,6 +82,24 @@ def check_hailo_sdk_installation():
 def check_hailo_device():
     """Check if Hailo device is accessible."""
     try:
+        # First check if the device file exists
+        if not os.path.exists('/dev/hailo0'):
+            logger.error(f"❌ Hailo device file /dev/hailo0 does not exist")
+            logger.error("   This could mean:")
+            logger.error("   1. The Hailo device is not physically connected")
+            logger.error("   2. The Hailo driver is not installed or loaded")
+            logger.error("   3. The device is connected but not recognized")
+            logger.error("\n   Try running: sudo bash scripts/diagnose_hailo.sh")
+            return False
+            
+        # Check permissions
+        if not os.access('/dev/hailo0', os.R_OK | os.W_OK):
+            logger.error(f"❌ Hailo device file /dev/hailo0 exists but is not readable/writable")
+            logger.error("   This is likely a permissions issue.")
+            logger.error("   Try running: sudo chmod 666 /dev/hailo0")
+            logger.error("\n   Or run: sudo bash scripts/diagnose_hailo.sh")
+            return False
+            
         import hailo_platform
         try:
             # Try to initialize Hailo device - handle different SDK versions
@@ -58,26 +107,36 @@ def check_hailo_device():
                 # Newer SDK version
                 from hailo_platform import HailoDevice
                 device = HailoDevice()
+                logger.info(f"✅ Successfully initialized HailoDevice")
             except (ImportError, AttributeError):
                 try:
                     # Older SDK version with pyhailort
                     from hailo_platform import pyhailort
                     device = pyhailort.Device()
+                    logger.info(f"✅ Successfully initialized pyhailort.Device")
                 except (ImportError, AttributeError):
                     # Even older SDK version - direct import
                     import hailort
                     device = hailort.Device()
+                    logger.info(f"✅ Successfully initialized hailort.Device")
             
             logger.info(f"✅ Hailo device is accessible")
             logger.info(f"   Device ID: {device.device_id if hasattr(device, 'device_id') else 'Unknown'}")
             return True
         except Exception as e:
             logger.error(f"❌ Hailo device is not accessible: {e}")
-            logger.error("   Check if the device is properly connected and the driver is installed.")
-            logger.error("   Run 'sudo ls -l /dev/hailo*' to check if the device is detected.")
+            logger.error("   The device file exists but the SDK cannot communicate with the device.")
+            logger.error("   This could mean:")
+            logger.error("   1. The device is in a bad state")
+            logger.error("   2. The installed SDK version is incompatible with the device")
+            logger.error("   3. There's a power issue with the device")
+            logger.error("\n   Try running: sudo bash scripts/diagnose_hailo.sh")
             return False
-    except ImportError:
-        logger.error("❌ Hailo SDK is not installed, cannot check device")
+    except ImportError as e:
+        logger.error(f"❌ Hailo SDK is not installed properly: {e}")
+        logger.error("   The Hailo Python SDK is not installed or not in the Python path.")
+        logger.error("   Try running: sudo python3 scripts/install_hailo_sdk.py")
+        logger.error("\n   Or run: sudo bash scripts/diagnose_hailo.sh")
         return False
 
 def check_hailo_models():
