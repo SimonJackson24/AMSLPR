@@ -285,11 +285,21 @@ If you encounter issues with specific packages during installation:
 
 #### uvloop
 
-The `uvloop` package may fail to build on ARM architecture. The installation script will automatically skip this package. The system will fall back to the standard asyncio event loop, which is slightly slower but fully compatible.
+The `uvloop` package is optional but provides better performance for async operations. It may fail to build on ARM architecture. The installation script will handle this gracefully:
+
+1. On non-ARM platforms, uvloop will be installed automatically
+2. On ARM platforms (like Raspberry Pi), the system will fall back to the standard asyncio event loop
+3. The application is designed to work correctly with or without uvloop
+
+If you want to manually install uvloop on ARM (which may require additional build dependencies):
 
 ```bash
-# If you need to manually skip uvloop
-pip install -r requirements.txt --no-deps && pip install --no-deps $(grep -v uvloop requirements.txt)
+# Install build dependencies
+sudo apt-get update
+sudo apt-get install -y python3-dev build-essential
+
+# Try installing uvloop
+pip install uvloop
 ```
 
 #### Invalid Requirement Format

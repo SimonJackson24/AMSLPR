@@ -49,9 +49,14 @@ install_package() {
     package=$1
     echo "Installing $package..."
     
-    # Skip uvloop as it fails to build on ARM architecture
+    # Handle uvloop specially as it's optional but beneficial
     if [[ $package == *"uvloop"* ]]; then
-        echo "Skipping uvloop as it may fail to build on ARM architecture"
+        echo "uvloop is optional but recommended for performance"
+        echo "Attempting to install uvloop (may fail on ARM platforms)..."
+        pip install uvloop || {
+            echo "uvloop installation failed, continuing without it"
+            echo "The application will use the standard asyncio event loop instead"
+        }
         return 0
     fi
     

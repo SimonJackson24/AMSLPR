@@ -24,8 +24,8 @@ uvicorn==0.23.2
 
 # Use specific versions of packages that have pre-built wheels available for ARM64
 aiohttp==3.8.1
-# Remove uvloop as it fails to build on ARM architecture
-# uvloop==0.16.0
+# uvloop is optional but recommended for performance (may fail to build on some ARM platforms)
+uvloop==0.16.0; platform_machine != 'aarch64' and platform_machine != 'armv7l'
 
 # ASGI Server
 asgiref==3.5.2

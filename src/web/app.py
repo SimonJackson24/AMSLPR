@@ -1,4 +1,3 @@
-
 # AMSLPR - Automate Systems License Plate Recognition
 # Copyright (c) 2025 Automate Systems. All rights reserved.
 #
@@ -279,12 +278,18 @@ except Exception as e:
 
 if __name__ == '__main__':
     import uvicorn
+    import logging
     
     # Set event loop policy for container environment
     import platform
     if platform.system() == 'Linux':
-        import uvloop
-        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+        try:
+            import uvloop
+            asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+            logging.info("Using uvloop for improved async performance")
+        except ImportError:
+            logging.warning("uvloop not available, using standard asyncio event loop")
+            # Continue with the default event loop policy
     
     # Run with uvicorn for better async support
     if config['web']['ssl']['enabled']:
