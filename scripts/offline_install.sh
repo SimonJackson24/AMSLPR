@@ -448,24 +448,24 @@ if [ -d "\${WHEELS_DIR}" ] && ls \${WHEELS_DIR}/*.whl >/dev/null 2>&1; then
             # Fall back to standard installation if script is not available
             echo "Using standard pip installation for \$wheel_name (robust installer not found)"
             # Try installing with different options for better compatibility
-        if pip install --no-deps "\$wheel" 2>/dev/null; then
+            if pip install --no-deps "\$wheel" 2>/dev/null; then
             echo "Successfully installed \$wheel_name (no dependencies)"
-            INSTALLED_COUNT=\$((INSTALLED_COUNT + 1))
-        elif pip install "\$wheel" 2>/dev/null; then
-            echo "Successfully installed \$wheel_name (with dependencies)"
-            INSTALLED_COUNT=\$((INSTALLED_COUNT + 1))
-        else
-            # Try to get more detailed error information
-            error_output=\$(pip install "\$wheel" 2>&1 || true)
-            
-            # Check for specific error patterns
-            if [[ "\$error_output" == *"not a supported wheel on this platform"* ]]; then
-                echo "WARNING: \$wheel_name is not compatible with this platform, skipping"
-            elif [[ "\$error_output" == *"has an invalid wheel"* ]]; then
-                echo "WARNING: \$wheel_name is an invalid wheel package, skipping"
+                INSTALLED_COUNT=\$((INSTALLED_COUNT + 1))
+            elif pip install "\$wheel" 2>/dev/null; then
+                echo "Successfully installed \$wheel_name (with dependencies)"
+                INSTALLED_COUNT=\$((INSTALLED_COUNT + 1))
             else
-                echo "WARNING: Failed to install \$wheel_name (unknown error)"
-                echo "Error details: \$error_output"
+            # Try to get more detailed error information
+                error_output=\$(pip install "\$wheel" 2>&1 || true)
+                
+                # Check for specific error patterns
+                if [[ "\$error_output" == *"not a supported wheel on this platform"* ]]; then
+                    echo "WARNING: \$wheel_name is not compatible with this platform, skipping"
+                elif [[ "\$error_output" == *"has an invalid wheel"* ]]; then
+                    echo "WARNING: \$wheel_name is an invalid wheel package, skipping"
+                else
+                    echo "WARNING: Failed to install \$wheel_name (unknown error)"
+                    echo "Error details: \$error_output"
             fi
             FAILED_COUNT=\$((FAILED_COUNT + 1))
         fi
@@ -567,23 +567,23 @@ elif [ -d "\${REPO_WHEELS_DIR}" ] && ls \${REPO_WHEELS_DIR}/*.whl >/dev/null 2>&
         fi
         
         # Use the robust wheel installer script if available
-        if [ -f "\${INSTALL_DIR}/scripts/install_wheel.py" ]; then
+            if [ -f "\${INSTALL_DIR}/scripts/install_wheel.py" ]; then
             echo "Using robust wheel installer for \$wheel_name"
-            if python "\${INSTALL_DIR}/scripts/install_wheel.py" "\$wheel" --force; then
-                echo "Successfully installed \$wheel_name with robust installer"
-                INSTALLED_COUNT=\$((INSTALLED_COUNT + 1))
-            else
-                echo "WARNING: Failed to install \$wheel_name with robust installer"
+                if python "\${INSTALL_DIR}/scripts/install_wheel.py" "\$wheel" --force; then
+                    echo "Successfully installed \$wheel_name with robust installer"
+                    INSTALLED_COUNT=\$((INSTALLED_COUNT + 1))
+                else
+                    echo "WARNING: Failed to install \$wheel_name with robust installer"
                 FAILED_COUNT=\$((FAILED_COUNT + 1))
-            fi
+                fi
         fi
         else
-            # Fall back to standard installation if script is not available
-            echo "Using standard pip installation for \$wheel_name (robust installer not found)"
-            # Try installing with different options for better compatibility
+                # Fall back to standard installation if script is not available
+                echo "Using standard pip installation for \$wheel_name (robust installer not found)"
+                # Try installing with different options for better compatibility
         if pip install --no-deps "\$wheel" 2>/dev/null; then
-            echo "Successfully installed \$wheel_name (no dependencies)"
-            INSTALLED_COUNT=\$((INSTALLED_COUNT + 1))
+                echo "Successfully installed \$wheel_name (no dependencies)"
+                INSTALLED_COUNT=\$((INSTALLED_COUNT + 1))
         elif pip install "\$wheel" 2>/dev/null; then
             echo "Successfully installed \$wheel_name (with dependencies)"
             INSTALLED_COUNT=\$((INSTALLED_COUNT + 1))
