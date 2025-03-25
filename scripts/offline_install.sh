@@ -682,14 +682,21 @@ if [ -f "/opt/amslpr/requirements.txt" ]; then
     fi
 fi
 
+# Make the script executable
+chmod +x "$INSTALL_DIR/install_offline_dependencies.sh"
+
+# Run the offline installation script
+echo -e "${YELLOW}Running offline package installation...${NC}"
+bash "$INSTALL_DIR/install_offline_dependencies.sh"
+
 # Create missing modules
 echo "Creating fallback modules for missing packages..."
 
 # Create mock for uvloop
 # Use a simpler approach to get site-packages directory
 SITE_PACKAGES_DIR=/opt/amslpr/venv/lib/python3.11/site-packages
-mkdir -p "\$SITE_PACKAGES_DIR/uvloop"
-cat > "\$SITE_PACKAGES_DIR/uvloop/__init__.py" << 'EOL'
+mkdir -p "$SITE_PACKAGES_DIR/uvloop"
+cat > "$SITE_PACKAGES_DIR/uvloop/__init__.py" << 'EOL'
 # Mock uvloop module
 import asyncio
 import warnings
@@ -1039,5 +1046,3 @@ if [[ $REBOOT_NOW == "y" || $REBOOT_NOW == "Y" ]]; then
 else
     echo -e "${YELLOW}Remember to reboot your system with 'sudo reboot' before using AMSLPR${NC}"
 fi
-
-EOF
