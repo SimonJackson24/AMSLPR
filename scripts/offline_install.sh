@@ -795,6 +795,13 @@ systemctl daemon-reload
 systemctl enable amslpr.service
 echo -e "${GREEN}✅ AMSLPR service enabled to start automatically at boot${NC}"
 
+# Enable and start the AMSLPR service
+echo -e "${YELLOW}Enabling and starting AMSLPR service...${NC}"
+systemctl daemon-reload
+systemctl enable amslpr.service
+systemctl start amslpr.service
+systemctl status amslpr.service
+
 # Configure Nginx
 echo -e "${YELLOW}Configuring Nginx...${NC}"
 cat > /etc/nginx/sites-available/amslpr << EOL
