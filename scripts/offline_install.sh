@@ -764,7 +764,7 @@ if is_arm:
         def get_event_loop():
             logger.info("Getting fallback event loop")
             return Loop()
-else:
+else
     # On development platform, use mock implementation
     logger.info("Running on development platform, using mock implementation")
     class Loop:
@@ -1039,3 +1039,5 @@ if [[ $REBOOT_NOW == "y" || $REBOOT_NOW == "Y" ]]; then
 else
     echo -e "${YELLOW}Remember to reboot your system with 'sudo reboot' before using AMSLPR${NC}"
 fi
+
+EOF
