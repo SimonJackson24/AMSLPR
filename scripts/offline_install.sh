@@ -786,7 +786,7 @@ Environment="PATH=$INSTALL_DIR/venv/bin:/usr/local/bin:/usr/bin:/bin"
 Environment="PYTHONPATH=$INSTALL_DIR:$SITE_PACKAGES_DIR"
 Environment="HAILO_ENABLED=true"
 Environment="PYTHONDONTWRITEBYTECODE=1"
-ExecStart=$INSTALL_DIR/venv/bin/python $INSTALL_DIR/run_server.py --port 5001
+ExecStart=$INSTALL_DIR/venv/bin/python3 $INSTALL_DIR/run_server.py --port 5001
 Restart=always
 RestartSec=10
 TimeoutStartSec=60
