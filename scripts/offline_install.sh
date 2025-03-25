@@ -588,6 +588,11 @@ if ! pip list | grep -q "Pillow"; then
     pip install Pillow
 fi
 
+if ! pip list | grep -q "flask-session"; then
+    echo "WARNING: flask-session is not installed. Attempting to install from PyPI..."
+    pip install flask-session
+fi
+
 if ! pip list | grep -q "hailort"; then
     echo "WARNING: hailort is not installed. Attempting to install from local package..."
     pip install "$INSTALL_DIR/packages/hailo/hailort-4.20.0-cp311-cp311-linux_aarch64.whl"
