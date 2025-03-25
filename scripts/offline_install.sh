@@ -571,6 +571,28 @@ bash "$INSTALL_DIR/install_offline_dependencies.sh"
 # Create missing modules
 echo "Creating fallback modules for missing packages..."
 
+# Check if key packages are installed
+echo "Verifying critical packages..."
+if ! pip list | grep -q "numpy"; then
+    echo "WARNING: numpy is not installed. Attempting to install from PyPI..."
+    pip install numpy
+fi
+
+if ! pip list | grep -q "opencv-python-headless"; then
+    echo "WARNING: opencv-python-headless is not installed. Attempting to install from PyPI..."
+    pip install opencv-python-headless
+fi
+
+if ! pip list | grep -q "Pillow"; then
+    echo "WARNING: Pillow is not installed. Attempting to install from PyPI..."
+    pip install Pillow
+fi
+
+if ! pip list | grep -q "hailort"; then
+    echo "WARNING: hailort is not installed. Attempting to install from local package..."
+    pip install "$INSTALL_DIR/packages/hailo/hailort-4.20.0-cp311-cp311-linux_aarch64.whl"
+fi
+
 # Create mock for uvloop
 # Use a simpler approach to get site-packages directory
 SITE_PACKAGES_DIR=/opt/amslpr/venv/lib/python3.11/site-packages
@@ -620,10 +642,10 @@ if is_arm:
                         
                     def close(self):
                         logger.info("Closed mock uvloop")
-                
-                def get_event_loop():
-                    logger.info("Getting mock event loop")
-                    return Loop()
+            
+            def get_event_loop():
+                logger.info("Getting mock event loop")
+                return Loop()
         else:
             logger.warning("Hailo device file not found, using mock implementation")
             # Use mock implementation
