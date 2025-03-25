@@ -1046,3 +1046,5 @@ if [[ $REBOOT_NOW == "y" || $REBOOT_NOW == "Y" ]]; then
 else
     echo -e "${YELLOW}Remember to reboot your system with 'sudo reboot' before using AMSLPR${NC}"
 fi
+
+EOF
