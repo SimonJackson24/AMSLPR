@@ -449,13 +449,13 @@ if [ -d "\${WHEELS_DIR}" ] && ls \${WHEELS_DIR}/*.whl >/dev/null 2>&1; then
             echo "Using standard pip installation for \$wheel_name (robust installer not found)"
             # Try installing with different options for better compatibility
             if pip install --no-deps "\$wheel" 2>/dev/null; then
-            echo "Successfully installed \$wheel_name (no dependencies)"
+                echo "Successfully installed \$wheel_name (no dependencies)"
                 INSTALLED_COUNT=\$((INSTALLED_COUNT + 1))
             elif pip install "\$wheel" 2>/dev/null; then
                 echo "Successfully installed \$wheel_name (with dependencies)"
                 INSTALLED_COUNT=\$((INSTALLED_COUNT + 1))
             else
-            # Try to get more detailed error information
+                # Try to get more detailed error information
                 error_output=\$(pip install "\$wheel" 2>&1 || true)
                 
                 # Check for specific error patterns
@@ -466,8 +466,9 @@ if [ -d "\${WHEELS_DIR}" ] && ls \${WHEELS_DIR}/*.whl >/dev/null 2>&1; then
                 else
                     echo "WARNING: Failed to install \$wheel_name (unknown error)"
                     echo "Error details: \$error_output"
+                fi
+                FAILED_COUNT=\$((FAILED_COUNT + 1))
             fi
-            FAILED_COUNT=\$((FAILED_COUNT + 1))
         fi
     done
     
@@ -567,40 +568,40 @@ elif [ -d "\${REPO_WHEELS_DIR}" ] && ls \${REPO_WHEELS_DIR}/*.whl >/dev/null 2>&
         fi
         
         # Use the robust wheel installer script if available
-            if [ -f "\${INSTALL_DIR}/scripts/install_wheel.py" ]; then
+        if [ -f "\${INSTALL_DIR}/scripts/install_wheel.py" ]; then
             echo "Using robust wheel installer for \$wheel_name"
-                if python "\${INSTALL_DIR}/scripts/install_wheel.py" "\$wheel" --force; then
-                    echo "Successfully installed \$wheel_name with robust installer"
-                    INSTALLED_COUNT=\$((INSTALLED_COUNT + 1))
-                else
-                    echo "WARNING: Failed to install \$wheel_name with robust installer"
+            if python "\${INSTALL_DIR}/scripts/install_wheel.py" "\$wheel" --force; then
+                echo "Successfully installed \$wheel_name with robust installer"
+                INSTALLED_COUNT=\$((INSTALLED_COUNT + 1))
+            else
+                echo "WARNING: Failed to install \$wheel_name with robust installer"
                 FAILED_COUNT=\$((FAILED_COUNT + 1))
-                fi
-        fi
+            fi
         else
-                # Fall back to standard installation if script is not available
-                echo "Using standard pip installation for \$wheel_name (robust installer not found)"
-                # Try installing with different options for better compatibility
-        if pip install --no-deps "\$wheel" 2>/dev/null; then
+            # Fall back to standard installation if script is not available
+            echo "Using standard pip installation for \$wheel_name (robust installer not found)"
+            # Try installing with different options for better compatibility
+            if pip install --no-deps "\$wheel" 2>/dev/null; then
                 echo "Successfully installed \$wheel_name (no dependencies)"
                 INSTALLED_COUNT=\$((INSTALLED_COUNT + 1))
-        elif pip install "\$wheel" 2>/dev/null; then
-            echo "Successfully installed \$wheel_name (with dependencies)"
-            INSTALLED_COUNT=\$((INSTALLED_COUNT + 1))
-        else
-            # Try to get more detailed error information
-            error_output=\$(pip install "\$wheel" 2>&1 || true)
-            
-            # Check for specific error patterns
-            if [[ "\$error_output" == *"not a supported wheel on this platform"* ]]; then
-                echo "WARNING: \$wheel_name is not compatible with this platform, skipping"
-            elif [[ "\$error_output" == *"has an invalid wheel"* ]]; then
-                echo "WARNING: \$wheel_name is an invalid wheel package, skipping"
+            elif pip install "\$wheel" 2>/dev/null; then
+                echo "Successfully installed \$wheel_name (with dependencies)"
+                INSTALLED_COUNT=\$((INSTALLED_COUNT + 1))
             else
-                echo "WARNING: Failed to install \$wheel_name (unknown error)"
-                echo "Error details: \$error_output"
+                # Try to get more detailed error information
+                error_output=\$(pip install "\$wheel" 2>&1 || true)
+                
+                # Check for specific error patterns
+                if [[ "\$error_output" == *"not a supported wheel on this platform"* ]]; then
+                    echo "WARNING: \$wheel_name is not compatible with this platform, skipping"
+                elif [[ "\$error_output" == *"has an invalid wheel"* ]]; then
+                    echo "WARNING: \$wheel_name is an invalid wheel package, skipping"
+                else
+                    echo "WARNING: Failed to install \$wheel_name (unknown error)"
+                    echo "Error details: \$error_output"
+                fi
+                FAILED_COUNT=\$((FAILED_COUNT + 1))
             fi
-            FAILED_COUNT=\$((FAILED_COUNT + 1))
         fi
     done
     
@@ -695,234 +696,87 @@ import warnings
 
 __version__ = "0.0.0"
 
-warnings.warn("uvloop is not available on this platform, using asyncio event loop instead", ImportWarning)
-
-# Create a mock event loop policy
-class EventLoopPolicy(asyncio.DefaultEventLoopPolicy):
-    def new_event_loop(self):
-        return asyncio.new_event_loop()
-
-# Create installation function
-def install():
-    """Mock installation of uvloop"""
-    pass
-EOL
-
-echo "Offline package installation completed"
-EOF
-
-chmod +x "$INSTALL_DIR/install_offline_dependencies.sh"
-
-# Run the offline installation script
-echo -e "${YELLOW}Running offline package installation...${NC}"
-bash "$INSTALL_DIR/install_offline_dependencies.sh"
-
-# Create configuration file
-echo -e "${YELLOW}Setting up configuration files...${NC}"
-if [ ! -f "$CONFIG_DIR/config.json" ]; then
-    if [ -f "$ROOT_DIR/config/config.json.example" ]; then
-        cp "$ROOT_DIR/config/config.json.example" "$CONFIG_DIR/config.json"
-    elif [ -f "$ROOT_DIR/config/config.json" ]; then
-        cp "$ROOT_DIR/config/config.json" "$CONFIG_DIR/config.json"
-    else
-        echo -e "${RED}Warning: No configuration template found!${NC}"
-        echo -e "${YELLOW}Creating minimal configuration...${NC}"
-        cat > "$CONFIG_DIR/config.json" << EOF
-{
-    "server": {
-        "host": "0.0.0.0",
-        "port": 5001,
-        "debug": false,
-        "ssl": {
-            "enabled": true,
-            "cert_file": "$CONFIG_DIR/ssl/cert.pem",
-            "key_file": "$CONFIG_DIR/ssl/key.pem"
-        }
-    },
-    "database": {
-        "type": "sqlite",
-        "path": "$DATA_DIR/amslpr.db"
-    },
-    "recognition": {
-        "image_path": "$DATA_DIR/images",
-        "ocr_config_path": "$CONFIG_DIR/ocr_config.json"
-    },
-    "logging": {
-        "level": "INFO",
-        "file": "$LOG_DIR/amslpr.log",
-        "max_size_mb": 10,
-        "backup_count": 5
-    }
-}
-EOF
-    fi
-    echo -e "${GREEN}Configuration file created.${NC}"
-else
-    echo -e "${GREEN}Configuration file already exists.${NC}"
-fi
-
-# Generate SSL certificate if it doesn't exist
-if [ ! -f "$CONFIG_DIR/ssl/cert.pem" ] || [ ! -f "$CONFIG_DIR/ssl/key.pem" ]; then
-    echo -e "${YELLOW}Generating SSL certificate...${NC}"
-    openssl req -x509 -newkey rsa:2048 -keyout "$CONFIG_DIR/ssl/key.pem" -out "$CONFIG_DIR/ssl/cert.pem" \
-        -days 365 -nodes -subj "/CN=amslpr.local"
-    echo -e "${GREEN}SSL certificate generated.${NC}"
-else
-    echo -e "${GREEN}SSL certificate already exists.${NC}"
-fi
-
-# Update configuration file with correct paths
-echo -e "${YELLOW}Updating configuration file paths...${NC}"
-sed -i "s|\"path\": \"data/amslpr.db\"|\"path\": \"$DATA_DIR/amslpr.db\"|g" "$CONFIG_DIR/config.json"
-sed -i "s|\"image_path\": \"data/images\"|\"image_path\": \"$DATA_DIR/images\"|g" "$CONFIG_DIR/config.json"
-sed -i "s|\"cert_file\": \"/etc/amslpr/ssl/cert.pem\"|\"cert_file\": \"$CONFIG_DIR/ssl/cert.pem\"|g" "$CONFIG_DIR/config.json"
-sed -i "s|\"key_file\": \"/etc/amslpr/ssl/key.pem\"|\"key_file\": \"$CONFIG_DIR/ssl/key.pem\"|g" "$CONFIG_DIR/config.json"
-sed -i "s|\"file\": \"data/logs/amslpr.log\"|\"file\": \"$LOG_DIR/amslpr.log\"|g" "$CONFIG_DIR/config.json"
-
-# Enable SSL in configuration if not already enabled
-sed -i 's/"enabled": false/"enabled": true/g' "$CONFIG_DIR/config.json"
-
-# Setup Hailo TPU Integration
-echo -e "${YELLOW}Setting up Hailo TPU integration...${NC}"
-
-# Create udev rules for Hailo device
-echo -e "${YELLOW}Creating Hailo udev rules...${NC}"
-cat > /etc/udev/rules.d/99-hailo.rules << 'EOL'
-# Hailo udev rules
-SUBSYSTEM=="pci", ATTR{vendor}=="0x1e60", MODE="0666"
-SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"
-SUBSYSTEM=="hailo", MODE="0666"
-EOL
-
-# Reload udev rules
-udevadm control --reload-rules
-udevadm trigger
-
-# Check for Hailo device
-echo -e "${YELLOW}Checking for Hailo device...${NC}"
-if [ -e "/dev/hailo0" ]; then
-    echo -e "${GREEN}Hailo device found at /dev/hailo0${NC}"
-    HAILO_DEVICE_FOUND=true
-    # Ensure device has proper permissions
-    chmod 666 /dev/hailo0
-else
-    echo -e "${YELLOW}Hailo device not found at /dev/hailo0${NC}"
-    echo -e "${YELLOW}Creating a mock device for development/testing...${NC}"
-    HAILO_DEVICE_FOUND=false
-    # Create a mock device for testing
-    touch /dev/hailo0
-    chmod 666 /dev/hailo0
-fi
-
-# Setup Hailo mocks
-echo -e "${YELLOW}Setting up Hailo module compatibility...${NC}"
-
-# Determine Python site-packages directory
-PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}' | cut -d. -f1-2)
-SITE_PACKAGES_DIR="$INSTALL_DIR/venv/lib/python$PYTHON_VERSION/site-packages"
-echo -e "${GREEN}Using Python site-packages at: $SITE_PACKAGES_DIR${NC}"
-
-# Always create Hailo mock modules to ensure compatibility
-echo -e "${YELLOW}Creating Hailo module structure...${NC}"
-
-# Create direct module files
-mkdir -p "$SITE_PACKAGES_DIR/hailort"
-cat > "$SITE_PACKAGES_DIR/hailort/__init__.py" << 'EOL'
-# Direct hailort module implementation
-import logging
-import os
-import sys
-import platform
-
-__version__ = "4.20.0"
-
 # Configure logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger('hailort')
+logger = logging.getLogger('uvloop')
 
 # Check if we're on ARM (Raspberry Pi) or x86_64 (development)
 is_arm = platform.machine() in ('aarch64', 'armv7l', 'armv6l')
 
-# On ARM, try to use the real hailort if found, otherwise use mock
+# On ARM, try to use the real uvloop if found, otherwise use mock
 if is_arm:
     try:
         # Check if the device file exists
         if os.path.exists('/dev/hailo0'):
             logger.info("Hailo device found at /dev/hailo0")
             
-            # Check if we can access the real hailort libraries
+            # Check if we can access the real uvloop libraries
             try:
-                from _pyhailort import Device as RealDevice
-                from _pyhailort import infer
+                from _pyuvloop import Loop as RealLoop
+                from _pyuvloop import get_event_loop as get_real_event_loop
                 
-                logger.info("Using real Hailo SDK")
+                logger.info("Using real uvloop")
                 
-                class Device(RealDevice):
+                class Loop(RealLoop):
                     def __init__(self):
                         super().__init__()
-                        self.device_id = "HAILO-DEVICE-REAL"
-                        logger.info(f"Initialized real Hailo device: {self.device_id}")
+                        logger.info("Initialized real uvloop")
                 
-                def load_and_run(model_path):
-                    logger.info(f"Loading real model: {model_path}")
-                    return infer(model_path)
+                def get_event_loop():
+                    return get_real_event_loop()
                 
             except ImportError:
-                logger.warning("Real Hailo SDK libraries not found, using mock implementation")
+                logger.warning("Real uvloop libraries not found, using mock implementation")
                 # Fall back to mock implementation
-                class Device:
+                class Loop:
                     def __init__(self):
-                        self.device_id = "HAILO-DEVICE-ARM-MOCK"
-                        logger.info(f"Initialized mock Hailo device: {self.device_id}")
+                        logger.info("Initialized mock uvloop")
                         
                     def close(self):
-                        logger.info("Closed mock Hailo device")
+                        logger.info("Closed mock uvloop")
                 
-                def load_and_run(model_path):
-                    logger.info(f"Loading mock model: {model_path}")
-                    return None
+                def get_event_loop():
+                    logger.info("Getting mock event loop")
+                    return Loop()
         else:
             logger.warning("Hailo device file not found, using mock implementation")
             # Use mock implementation
-            class Device:
+            class Loop:
                 def __init__(self):
-                    self.device_id = "HAILO-DEVICE-ARM-MOCK"
-                    logger.info(f"Initialized mock Hailo device: {self.device_id}")
+                    logger.info("Initialized mock uvloop")
                     
                 def close(self):
-                    logger.info("Closed mock Hailo device")
+                    logger.info("Closed mock uvloop")
             
-            def load_and_run(model_path):
-                logger.info(f"Loading mock model: {model_path}")
-                return None
+            def get_event_loop():
+                logger.info("Getting mock event loop")
+                return Loop()
     except Exception as e:
-        logger.error(f"Error initializing Hailo SDK: {e}")
+        logger.error(f"Error initializing uvloop: {e}")
         # Fall back to mock implementation
-        class Device:
+        class Loop:
             def __init__(self):
-                self.device_id = "HAILO-DEVICE-ARM-FALLBACK"
-                logger.info(f"Initialized fallback Hailo device: {self.device_id}")
+                logger.info("Initialized fallback uvloop")
                 
             def close(self):
-                logger.info("Closed fallback Hailo device")
+                logger.info("Closed fallback uvloop")
         
-        def load_and_run(model_path):
-            logger.info(f"Loading fallback model: {model_path}")
-            return None
+        def get_event_loop():
+            logger.info("Getting fallback event loop")
+            return Loop()
 else:
     # On development platform, use mock implementation
     logger.info("Running on development platform, using mock implementation")
-    class Device:
+    class Loop:
         def __init__(self):
-            self.device_id = "HAILO-DEVICE-DEV"
-            logger.info(f"Initialized dev Hailo device: {self.device_id}")
+            logger.info("Initialized dev uvloop")
             
         def close(self):
-            logger.info("Closed dev Hailo device")
+            logger.info("Closed dev uvloop")
     
-    def load_and_run(model_path):
-        logger.info(f"Loading dev model: {model_path}")
-        return None
+    def get_event_loop():
+        logger.info("Getting dev event loop")
+        return Loop()
 EOL
 
 # Create hailo_platform module
