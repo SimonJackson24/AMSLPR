@@ -282,98 +282,12 @@ source "$INSTALL_DIR/venv/bin/activate"
 echo -e "${YELLOW}Installing Python dependencies...${NC}"
 pip install --upgrade pip
 
-# Create the offline installation script for Python packages
-echo -e "${YELLOW}Setting up offline package installation...${NC}"
-# Export variables to ensure they're available to the embedded script
-export INSTALL_DIR="$INSTALL_DIR"
-export PACKAGES_DIR="$PACKAGES_DIR"
-export OFFLINE_PACKAGES_DIR="$OFFLINE_PACKAGES_DIR"
-
-# Create the installation script with 'EOF' not in quotes to allow variable substitution
-cat > "$INSTALL_DIR/install_offline_dependencies.sh" << EOFMARKER
-#!/bin/bash
-
-# AMSLPR Offline Package Installation
-# This script installs Python packages with compatibility fallbacks
-
-set -e
-
-# Define important directories
-INSTALL_DIR="/opt/amslpr"
-PACKAGES_DIR="/opt/amslpr/packages"
-OFFLINE_PACKAGES_DIR="/opt/amslpr/packages/offline"
-
-# Activate virtual environment
-source /opt/amslpr/venv/bin/activate
-
-# Use pre-built packages or compatibility alternatives for problematic packages
-echo "Installing pre-built compatibility packages..."
-
-# Install core dependencies
-pip install wheel setuptools
-
-# Install from offline wheels directory
-if [ -d "$OFFLINE_PACKAGES_DIR" ]; then
-    echo "Installing packages from $OFFLINE_PACKAGES_DIR"
-    pip install --no-index --find-links="$OFFLINE_PACKAGES_DIR" -r "$INSTALL_DIR/requirements.txt"
-else
-    echo "Error: Offline packages directory not found at $OFFLINE_PACKAGES_DIR"
-    exit 1
-fi
-EOFMARKER
-
-chmod +x "$INSTALL_DIR/install_offline_dependencies.sh"
-
-# Install Python dependencies
-echo -e "${YELLOW}Installing Python dependencies...${NC}"
-pip install --upgrade pip
-
-# Create the offline installation script for Python packages
-echo -e "${YELLOW}Setting up offline package installation...${NC}"
-# Export variables to ensure they're available to the embedded script
-export INSTALL_DIR="$INSTALL_DIR"
-export PACKAGES_DIR="$PACKAGES_DIR"
-export OFFLINE_PACKAGES_DIR="$OFFLINE_PACKAGES_DIR"
-
-# Create the installation script with 'EOF' not in quotes to allow variable substitution
-cat > "$INSTALL_DIR/install_offline_dependencies.sh" << EOFMARKER
-#!/bin/bash
-
-# AMSLPR Offline Package Installation
-# This script installs Python packages with compatibility fallbacks
-
-set -e
-
-# Define important directories
-INSTALL_DIR="/opt/amslpr"
-PACKAGES_DIR="/opt/amslpr/packages"
-OFFLINE_PACKAGES_DIR="/opt/amslpr/packages/offline"
-
-# Activate virtual environment
-source /opt/amslpr/venv/bin/activate
-
-# Use pre-built packages or compatibility alternatives for problematic packages
-echo "Installing pre-built compatibility packages..."
-
-# Install core dependencies
-pip install wheel setuptools
-
-# Install from offline wheels directory
-if [ -d "$OFFLINE_PACKAGES_DIR" ]; then
-    echo "Installing packages from $OFFLINE_PACKAGES_DIR"
-    pip install --no-index --find-links="$OFFLINE_PACKAGES_DIR" -r "$INSTALL_DIR/requirements.txt"
-else
-    echo "Error: Offline packages directory not found at $OFFLINE_PACKAGES_DIR"
-    exit 1
-fi
-EOFMARKER
-
-chmod +x "$INSTALL_DIR/install_offline_dependencies.sh"
-
 # Configure Flask app settings
 echo -e "${YELLOW}Configuring Flask application...${NC}"
 cat > "$CONFIG_DIR/flask_config.py" << EOL
 import os
+import nest_asyncio
+import asyncio
 
 class Config:
     SECRET_KEY = os.urandom(24)
@@ -382,6 +296,9 @@ class Config:
     SESSION_TYPE = 'filesystem'
     UPLOAD_FOLDER = '/var/lib/amslpr/uploads'
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
+
+# Initialize event loop support
+nest_asyncio.apply()
 EOL
 
 # Create systemd service
@@ -574,10 +491,11 @@ echo -e "${RED}Run 'sudo reboot' now${NC}"
 echo 
 
 # Ask if user wants to reboot now
-read -p "Do you want to reboot the system now to complete installation? (y/n): " REBOOT_NOW
+echo -e "${YELLOW}A reboot is required to complete the installation.${NC}"
+read -p "Do you want to reboot the system now? (y/n): " REBOOT_NOW
 if [[ $REBOOT_NOW == "y" || $REBOOT_NOW == "Y" ]]; then
     echo -e "${GREEN}Rebooting system now...${NC}"
     reboot
 else
-    echo -e "${YELLOW}Remember to reboot your system with 'sudo reboot' before using AMSLPR${NC}"
+    echo -e "${RED}Please remember to reboot your system with 'sudo reboot' before using AMSLPR${NC}"
 fi

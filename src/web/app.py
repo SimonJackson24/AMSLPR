@@ -15,6 +15,9 @@ import asyncio
 import nest_asyncio
 from functools import wraps
 
+# Initialize event loop support
+nest_asyncio.apply()
+
 # Try to import flask_limiter, but don't fail if it's not available
 try:
     from flask_limiter import Limiter
@@ -94,9 +97,6 @@ def create_app(config, db_manager, detector, barrier_controller=None, paxton_int
     except RuntimeError:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-    
-    # Allow nested event loops (needed for Flask development server)
-    nest_asyncio.apply()
     
     # Session configuration
     app.config['SESSION_TYPE'] = 'filesystem'
