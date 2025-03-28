@@ -584,218 +584,6 @@ class Config:
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
 EOL
 
-# Ask if user wants to reboot now
-read -p "Do you want to reboot the system now to complete installation? (y/n): " REBOOT_NOW
-if [[ $REBOOT_NOW == "y" || $REBOOT_NOW == "Y" ]]; then
-    echo -e "${GREEN}Rebooting system now...${NC}"
-    reboot
-else
-    echo -e "${YELLOW}Remember to reboot your system with 'sudo reboot' before using AMSLPR${NC}"
-fi
-
-# Create missing modules
-echo "Creating fallback modules for missing packages..."
-
-# Check if key packages are installed
-echo "Verifying critical packages..."
-if ! pip list | grep -q "numpy"; then
-    echo "WARNING: numpy is not installed. Attempting to install from PyPI..."
-    pip install numpy
-fi
-
-if ! pip list | grep -q "opencv-python-headless"; then
-    echo "WARNING: opencv-python-headless is not installed. Attempting to install from PyPI..."
-    pip install opencv-python-headless
-fi
-
-if ! pip list | grep -q "Pillow"; then
-    echo "WARNING: Pillow is not installed. Attempting to install from PyPI..."
-    pip install Pillow
-fi
-
-if ! pip list | grep -q "flask-session"; then
-    echo "WARNING: flask-session is not installed. Attempting to install from PyPI..."
-    pip install flask-session
-fi
-
-if ! pip list | grep -q "hailort"; then
-    echo "WARNING: hailort is not installed. Attempting to install from local package..."
-    pip install "$INSTALL_DIR/packages/hailo/hailort-4.20.0-cp311-cp311-linux_aarch64.whl"
-fi
-
-# Create mock for uvloop
-# Use a simpler approach to get site-packages directory
-SITE_PACKAGES_DIR=/opt/amslpr/venv/lib/python3.11/site-packages
-mkdir -p "$SITE_PACKAGES_DIR/uvloop"
-cat > "$SITE_PACKAGES_DIR/uvloop/__init__.py" << 'EOL'
-# Mock uvloop module
-import asyncio
-import warnings
-
-__version__ = "0.0.0"
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger('uvloop')
-
-# Check if we're on ARM (Raspberry Pi) or x86_64 (development)
-is_arm = platform.machine() in ('aarch64', 'armv7l', 'armv6l')
-
-# On ARM, try to use the real uvloop if found, otherwise use mock
-if is_arm:
-    try:
-        # Check if the device file exists
-        if os.path.exists('/dev/hailo0'):
-            logger.info("Hailo device found at /dev/hailo0")
-            
-            # Check if we can access the real uvloop libraries
-            try:
-                from _pyuvloop import Loop as RealLoop
-                from _pyuvloop import get_event_loop as get_real_event_loop
-                
-                logger.info("Using real uvloop")
-                
-                class Loop(RealLoop):
-                    def __init__(self):
-                        super().__init__()
-                        logger.info("Initialized real uvloop")
-                
-                def get_event_loop():
-                    return get_real_event_loop()
-                
-            except ImportError:
-                logger.warning("Real uvloop libraries not found, using mock implementation")
-                # Fall back to mock implementation
-                class Loop:
-                    def __init__(self):
-                        logger.info("Initialized mock uvloop")
-                        
-                    def close(self):
-                        logger.info("Closed mock uvloop")
-            
-            def get_event_loop():
-                logger.info("Getting mock event loop")
-                return Loop()
-        else:
-            logger.warning("Hailo device file not found, using mock implementation")
-            # Use mock implementation
-            class Loop:
-                def __init__(self):
-                    logger.info("Initialized mock uvloop")
-                    
-                def close(self):
-                    logger.info("Closed mock uvloop")
-            
-            def get_event_loop():
-                logger.info("Getting mock event loop")
-                return Loop()
-    except Exception as e:
-        logger.error(f"Error initializing uvloop: {e}")
-        # Fall back to mock implementation
-        class Loop:
-            def __init__(self):
-                logger.info("Initialized fallback uvloop")
-                
-            def close(self):
-                logger.info("Closed fallback uvloop")
-        
-        def get_event_loop():
-            logger.info("Getting fallback event loop")
-            return Loop()
-else
-    # On development platform, use mock implementation
-    logger.info("Running on development platform, using mock implementation")
-    class Loop:
-        def __init__(self):
-            logger.info("Initialized dev uvloop")
-            
-        def close(self):
-            logger.info("Closed dev uvloop")
-    
-    def get_event_loop():
-        logger.info("Getting dev event loop")
-        return Loop()
-EOL
-
-# Create hailo_platform module
-mkdir -p "$SITE_PACKAGES_DIR/hailo_platform"
-cat > "$SITE_PACKAGES_DIR/hailo_platform/__init__.py" << 'EOL'
-# hailo_platform module
-import logging
-import sys
-import os
-import platform
-
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger('hailo_platform')
-
-__version__ = "4.20.0"
-
-# Try to import from hailort
-try:
-    import hailort
-    from hailort import Device, load_and_run
-    logger.info("Successfully imported hailort")
-except ImportError as e:
-    logger.warning(f"Failed to import hailort: {e}")
-    
-    # Fallback implementation
-    class Device:
-        def __init__(self):
-            self.device_id = "HAILO-PLATFORM-MOCK"
-            logger.info(f"Initialized mock Device: {self.device_id}")
-        
-        def close(self):
-            logger.info("Closed mock Device")
-    
-    def load_and_run(model_path):
-        logger.info(f"Loading mock model: {model_path}")
-        return None
-
-# Create HailoDevice class for newer SDK compatibility
-HailoDevice = Device
-
-# Create pyhailort module for older SDK compatibility
-class pyhailort:
-    Device = Device
-    
-    @staticmethod
-    def load_and_run(model_path):
-        return load_and_run(model_path)
-EOL
-
-chown -R "$APP_USER:$APP_GROUP" "$SITE_PACKAGES_DIR/hailort" "$SITE_PACKAGES_DIR/hailo_platform"
-
-# Fix imports with our script if it exists
-if [ -f "$INSTALL_DIR/scripts/fix_hailo_imports.py" ]; then
-    echo -e "${YELLOW}Running Hailo imports fix script...${NC}"
-    cd "$INSTALL_DIR" && source venv/bin/activate && python scripts/fix_hailo_imports.py || echo -e "${YELLOW}Warning: Fix script ran with errors${NC}"
-fi
-
-# Configure Hailo modules with our script if it exists
-if [ -f "$INSTALL_DIR/scripts/configure_hailo_modules.py" ]; then
-    echo -e "${YELLOW}Configuring Hailo modules...${NC}"
-    cd "$INSTALL_DIR" && source venv/bin/activate && python scripts/configure_hailo_modules.py || echo -e "${YELLOW}Warning: Hailo module configuration failed${NC}"
-fi
-
-# Copy Hailo models if available
-echo -e "${YELLOW}Setting up Hailo models...${NC}"
-if [ -d "$ROOT_DIR/packages/models" ] && [ "$(ls -A "$ROOT_DIR/packages/models/"*.hef 2>/dev/null)" ]; then
-    echo -e "${GREEN}Found Hailo models in packages/models directory${NC}"
-    cp "$ROOT_DIR/packages/models/"*.hef "$INSTALL_DIR/models/"
-    chown -R "$APP_USER:$APP_GROUP" "$INSTALL_DIR/models"
-    echo -e "${GREEN}Models copied to $INSTALL_DIR/models/${NC}"
-elif [ -d "$ROOT_DIR/models" ] && [ "$(ls -A "$ROOT_DIR/models/"*.hef 2>/dev/null)" ]; then
-    echo -e "${GREEN}Found Hailo models in models directory${NC}"
-    cp "$ROOT_DIR/models/"*.hef "$INSTALL_DIR/models/"
-    chown -R "$APP_USER:$APP_GROUP" "$INSTALL_DIR/models"
-    echo -e "${GREEN}Models copied to $INSTALL_DIR/models/${NC}"
-else
-    echo -e "${YELLOW}No Hailo models found${NC}"
-    echo -e "${YELLOW}The system will not be able to use Hailo TPU for inference${NC}"
-fi
-
 # Create systemd service
 echo -e "${YELLOW}Creating systemd service...${NC}"
 cat > /etc/systemd/system/amslpr.service << EOL
@@ -804,6 +592,7 @@ Description=AMSLPR License Plate Recognition Service
 After=network.target multi-user.target
 
 [Service]
+Type=simple
 User=$APP_USER
 Group=$APP_GROUP
 WorkingDirectory=$INSTALL_DIR
@@ -816,20 +605,28 @@ Restart=always
 RestartSec=10
 TimeoutStartSec=60
 TimeoutStopSec=30
+StandardOutput=append:/var/log/amslpr/server.log
+StandardError=append:/var/log/amslpr/error.log
 
 [Install]
 WantedBy=multi-user.target
 EOL
 
-systemctl daemon-reload
-systemctl enable amslpr.service
-echo -e "${GREEN}✅ AMSLPR service enabled to start automatically at boot${NC}"
+# Set proper permissions
+chmod 644 /etc/systemd/system/amslpr.service
 
-# Enable and start the AMSLPR service
+# Create log directory if it doesn't exist
+mkdir -p /var/log/amslpr
+chown -R $APP_USER:$APP_GROUP /var/log/amslpr
+
+# Reload systemd and enable/start service
 echo -e "${YELLOW}Enabling and starting AMSLPR service...${NC}"
 systemctl daemon-reload
 systemctl enable amslpr.service
 systemctl start amslpr.service
+
+# Check service status
+echo -e "${YELLOW}Checking service status...${NC}"
 systemctl status amslpr.service
 
 # Configure Nginx
