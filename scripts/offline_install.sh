@@ -282,6 +282,13 @@ source "$INSTALL_DIR/venv/bin/activate"
 echo -e "${YELLOW}Installing Python dependencies...${NC}"
 pip install --upgrade pip
 
+echo -e "${YELLOW}Installing Python packages...${NC}"
+pip3 install --no-index --find-links "$INSTALL_DIR/packages" -r "$INSTALL_DIR/requirements.txt"
+
+echo -e "${YELLOW}Setting Python network capabilities...${NC}"
+# Give Python permission to bind to privileged ports for ONVIF discovery
+setcap 'cap_net_bind_service,cap_net_raw+ep' $(readlink -f $(which python3))
+
 # Configure Flask app settings
 echo -e "${YELLOW}Configuring Flask application...${NC}"
 cat > "$CONFIG_DIR/flask_config.py" << EOL

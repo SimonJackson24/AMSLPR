@@ -58,6 +58,10 @@ chmod +x "$INSTALL_DIR/scripts/install.sh"
 echo "=== Installing Python dependencies ==="
 pip3 install -r "$INSTALL_DIR/requirements.txt"
 
+echo "=== Setting Python network capabilities ==="
+# Give Python permission to bind to privileged ports for ONVIF discovery
+setcap 'cap_net_bind_service,cap_net_raw+ep' $(readlink -f $(which python3))
+
 echo "=== Creating database ==="
 python3 "$INSTALL_DIR/src/database/db_manager.py" --init
 
