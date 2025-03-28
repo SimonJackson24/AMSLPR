@@ -551,6 +551,39 @@ else
     fi
 fi
 
+# Install core Python packages
+echo -e "${YELLOW}Installing core Python packages...${NC}"
+CORE_PACKAGES=(
+    "Flask==2.0.3"
+    "Flask-Login==0.6.0"
+    "Flask-WTF==1.0.1"
+    "Flask-Session==0.4.0"
+    "Flask-SQLAlchemy==2.5.1"
+    "Flask-Limiter==2.5.0"
+    "Werkzeug==2.0.3"
+    "nest-asyncio==1.5.8"
+    "fastapi==0.103.2"
+    "uvicorn==0.23.2"
+)
+
+for package in "${CORE_PACKAGES[@]}"; do
+    pip install "$package" || echo -e "${YELLOW}Warning: Failed to install $package${NC}"
+done
+
+# Configure Flask app settings
+echo -e "${YELLOW}Configuring Flask application...${NC}"
+cat > "$CONFIG_DIR/flask_config.py" << EOL
+import os
+
+class Config:
+    SECRET_KEY = os.urandom(24)
+    WTF_CSRF_ENABLED = True
+    WTF_CSRF_SECRET_KEY = os.urandom(24)
+    SESSION_TYPE = 'filesystem'
+    UPLOAD_FOLDER = '/var/lib/amslpr/uploads'
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
+EOL
+
 # Ask if user wants to reboot now
 read -p "Do you want to reboot the system now to complete installation? (y/n): " REBOOT_NOW
 if [[ $REBOOT_NOW == "y" || $REBOOT_NOW == "Y" ]]; then
@@ -559,14 +592,6 @@ if [[ $REBOOT_NOW == "y" || $REBOOT_NOW == "Y" ]]; then
 else
     echo -e "${YELLOW}Remember to reboot your system with 'sudo reboot' before using AMSLPR${NC}"
 fi
-EOFMARKER
-
-# Make the script executable
-chmod +x "$INSTALL_DIR/install_offline_dependencies.sh"
-
-# Run the offline installation script
-echo -e "${YELLOW}Running offline package installation...${NC}"
-bash "$INSTALL_DIR/install_offline_dependencies.sh"
 
 # Create missing modules
 echo "Creating fallback modules for missing packages..."
