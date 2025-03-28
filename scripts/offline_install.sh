@@ -290,7 +290,7 @@ export PACKAGES_DIR="$PACKAGES_DIR"
 export OFFLINE_PACKAGES_DIR="$OFFLINE_PACKAGES_DIR"
 
 # Create the installation script with 'EOF' not in quotes to allow variable substitution
-cat > "$INSTALL_DIR/install_offline_dependencies.sh" << 'EOFMARKER'
+cat > "$INSTALL_DIR/install_offline_dependencies.sh" << EOFMARKER
 #!/bin/bash
 
 # AMSLPR Offline Package Installation
@@ -309,266 +309,66 @@ source /opt/amslpr/venv/bin/activate
 # Use pre-built packages or compatibility alternatives for problematic packages
 echo "Installing pre-built compatibility packages..."
 
-# Use pre-packaged wheels from the packages/offline directory
-WHEELS_DIR="/opt/amslpr/packages/offline"
-echo "Looking for wheel packages in: ${WHEELS_DIR}"
+# Install core dependencies
+pip install wheel setuptools
 
-# Add fallback directories if primary doesn't have wheels
-FALLBACK_DIRS=(
-    "/opt/amslpr/packages/offline"
-    "/opt/amslpr/packages/wheels"
-    "/tmp/amslpr_wheels"
-    "${INSTALL_DIR}/packages/offline"
-)
-
-# Path debugging for installation troubleshooting
-echo "Current directory: $(pwd)"
-echo "Primary wheel directory: ${WHEELS_DIR}"
-[ -z "${WHEELS_DIR}" ] && WHEELS_DIR="/opt/amslpr/packages/offline" && echo "Empty WHEELS_DIR detected, using default"
-mkdir -p "${WHEELS_DIR}"  # Ensure directory exists
-
-# Check for wheels in the primary directory
-if ! ls ${WHEELS_DIR}/*.whl >/dev/null 2>&1; then
-    echo "No wheels found in primary directory, checking fallbacks..."
-    for dir in "${FALLBACK_DIRS[@]}"; do
-        echo "Checking fallback directory: $dir"
-        if [ -d "$dir" ] && ls $dir/*.whl >/dev/null 2>&1; then
-            echo "Found wheels in fallback directory: $dir"
-            WHEELS_DIR="$dir"
-            break
-        fi
-    done
-fi
-
-echo "Final wheel directory: ${WHEELS_DIR}"
-[ -z "${WHEELS_DIR}" ] && WHEELS_DIR="/opt/amslpr/packages/offline" && echo "Empty WHEELS_DIR detected, using default"
-mkdir -p "${WHEELS_DIR}"  # Ensure directory exists
-ls -la "${WHEELS_DIR}" || echo "Cannot list directory contents"
-
-# Check where the wheels are in the repository
-REPO_WHEELS_DIR="${INSTALL_DIR}/packages/offline"
-echo "Checking repository wheels: ${REPO_WHEELS_DIR}"
-if [ -d "${REPO_WHEELS_DIR}" ]; then
-    ls -la "${REPO_WHEELS_DIR}" || echo "Cannot list repository wheels"
-fi
-
-# Try to fix any invalid wheel files if the script exists
-if [ -f "${INSTALL_DIR}/scripts/fix_wheel_files.py" ]; then
-    echo "Running wheel metadata fix script..."
-    python "${INSTALL_DIR}/scripts/fix_wheel_files.py" "${WHEELS_DIR}" || echo "Warning: Wheel fix script failed"
-    
-    # If fixed wheels were created, move them
-    if ls ${WHEELS_DIR}/fixed_*.whl >/dev/null 2>&1; then
-        echo "Found fixed wheel files, using them instead of originals"
-        for fixed_wheel in ${WHEELS_DIR}/fixed_*.whl; do
-            orig_name=$(basename "$fixed_wheel" | sed 's/^fixed_//')
-            mv "$fixed_wheel" "${WHEELS_DIR}/$orig_name" || echo "Warning: Failed to replace original wheel"
-        done
-    fi
-fi
-
-# Try to convert platform-specific wheels to universal wheels if the script exists
-if [ -f "${INSTALL_DIR}/scripts/convert_wheels_to_universal.py" ]; then
-    echo "Converting platform-specific wheels to universal format..."
-    python "${INSTALL_DIR}/scripts/convert_wheels_to_universal.py" "${WHEELS_DIR}" || echo "Warning: Wheel conversion script failed"
-fi
-
-# Check if the wheels directory exists and contains the required packages
-# Use a safer check that won't fail if no .whl files exist
-if [ -d "${WHEELS_DIR}" ] && ls ${WHEELS_DIR}/*.whl >/dev/null 2>&1; then
-    echo "Using pre-packaged wheels from ${WHEELS_DIR}"
-    
-    # Initialize counters for installation stats
-    INSTALLED_COUNT=0
-    FAILED_COUNT=0
-    
-    # Process wheels in a specific order to respect dependencies
-    echo "Creating a priority list for package installation..."
-    PRIORITY_WHEELS=()
-    ALL_WHEELS=()
-    
-    # Collect all wheels first
-    for wheel in "${WHEELS_DIR}"/*.whl; do
-        ALL_WHEELS+=("$wheel")
-    done
-    
-    # Add high-priority wheels first (dependencies)
-    for wheel in "${WHEELS_DIR}"/*.whl; do
-        base_name=$(basename "$wheel" | tr '[:upper:]' '[:lower:]')
-        # Process base dependencies first (core packages)
-        if [[ "$base_name" == *"numpy"* || 
-              "$base_name" == *"pillow"* || 
-              "$base_name" == *"requests"* || 
-              "$base_name" == *"six"* || 
-              "$base_name" == *"setuptools"* ]]; then
-            PRIORITY_WHEELS+=("$wheel")
-        fi
-    done
-    
-    # Add the remaining wheels
-    for wheel in "${ALL_WHEELS[@]}"; do
-        # Check if wheel is not already in priority list
-        is_in_priority=false
-        for pw in "${PRIORITY_WHEELS[@]}"; do
-            if [[ "$pw" == "$wheel" ]]; then
-                is_in_priority=true
-                break
-            fi
-        done
-        
-        if [[ "$is_in_priority" == "false" ]]; then
-            PRIORITY_WHEELS+=("$wheel")
-        fi
-    done
-    
-    # Install wheels with priority order and better error handling
-    echo "Installing wheels in priority order..."
-    for wheel in "${PRIORITY_WHEELS[@]}"; do
-        wheel_name=$(basename "$wheel")
-        echo "Installing $wheel_name..."
-        
-        # Check if wheel file actually exists
-        if [ ! -f "$wheel" ]; then
-            echo "WARNING: Wheel file $wheel_name not found, skipping"
-            FAILED_COUNT=$((FAILED_COUNT + 1))
-            continue
-        fi
-        
-        # Use the robust wheel installer script if available
-        if [ -f "${INSTALL_DIR}/scripts/install_wheel.py" ]; then
-            echo "Using robust wheel installer for $wheel_name"
-            if python "${INSTALL_DIR}/scripts/install_wheel.py" "$wheel" --force; then
-                echo "Successfully installed $wheel_name with robust installer"
-                INSTALLED_COUNT=$((INSTALLED_COUNT + 1))
-            else
-                echo "WARNING: Failed to install $wheel_name with robust installer"
-                FAILED_COUNT=$((FAILED_COUNT + 1))
-            fi
-        else
-            # Fall back to standard installation if script is not available
-            echo "Using standard pip installation for $wheel_name (robust installer not found)"
-            # Try installing with different options for better compatibility
-            if pip install --no-deps "$wheel" 2>/dev/null; then
-                echo "Successfully installed $wheel_name (no dependencies)"
-                INSTALLED_COUNT=$((INSTALLED_COUNT + 1))
-            elif pip install "$wheel" 2>/dev/null; then
-                echo "Successfully installed $wheel_name (with dependencies)"
-                INSTALLED_COUNT=$((INSTALLED_COUNT + 1))
-            else
-                # Try to get more detailed error information
-                error_output=$(pip install "$wheel" 2>&1 || true)
-                
-                # Check for specific error patterns
-                if [[ "$error_output" == *"not a supported wheel on this platform"* ]]; then
-                    echo "WARNING: $wheel_name is not compatible with this platform, skipping"
-                elif [[ "$error_output" == *"has an invalid wheel"* ]]; then
-                    echo "WARNING: $wheel_name is an invalid wheel package, skipping"
-                else
-                    echo "WARNING: Failed to install $wheel_name (unknown error)"
-                    echo "Error details: $error_output"
-                fi
-                FAILED_COUNT=$((FAILED_COUNT + 1))
-            fi
-        fi
-    done
-    
-    echo "Wheel installation complete: $INSTALLED_COUNT installed, $FAILED_COUNT failed"
-    
-    # Install requests separately as it's a basic dependency
-    pip install requests
-elif [ -d "${REPO_WHEELS_DIR}" ] && ls ${REPO_WHEELS_DIR}/*.whl >/dev/null 2>&1; then
-    echo "Using wheels from repository directory: ${REPO_WHEELS_DIR}"
-    # Create the offline packages directory if it doesn't exist
-    mkdir -p "${WHEELS_DIR}"
-    chmod 775 "${WHEELS_DIR}"
-    
-    # Copy the wheels to the offline packages directory with verbose output
-    echo "Copying wheels from ${REPO_WHEELS_DIR} to ${WHEELS_DIR}"
-    cp -v "${REPO_WHEELS_DIR}"/*.whl "${WHEELS_DIR}/" || echo "ERROR: Failed to copy wheel files"
-    
-    # Verify the wheels were copied
-    ls -la "${WHEELS_DIR}/"
-    
-    # Try to fix any invalid wheel files if the script exists
-    if [ -f "${INSTALL_DIR}/scripts/fix_wheel_files.py" ]; then
-        echo "Running wheel metadata fix script..."
-        python "${INSTALL_DIR}/scripts/fix_wheel_files.py" "${WHEELS_DIR}" || echo "Warning: Wheel fix script failed"
-    fi
-    
-    # Try to convert platform-specific wheels to universal wheels if the script exists
-    if [ -f "${INSTALL_DIR}/scripts/convert_wheels_to_universal.py" ]; then
-        echo "Converting platform-specific wheels to universal format..."
-        python "${INSTALL_DIR}/scripts/convert_wheels_to_universal.py" "${WHEELS_DIR}" || echo "Warning: Wheel conversion script failed"
-    fi
-    
-    # Install the wheels
-    echo "Installing wheels from ${WHEELS_DIR}"
-    for wheel in "${WHEELS_DIR}"/*.whl; do
-        wheel_name=$(basename "$wheel")
-        echo "Installing $wheel_name..."
-        pip install --no-deps "$wheel" || echo "WARNING: Failed to install $wheel_name"
-    done
+# Install from offline wheels directory
+if [ -d "$OFFLINE_PACKAGES_DIR" ]; then
+    echo "Installing packages from $OFFLINE_PACKAGES_DIR"
+    pip install --no-index --find-links="$OFFLINE_PACKAGES_DIR" -r "$INSTALL_DIR/requirements.txt"
 else
-    echo "WARNING: No wheel packages found in ${WHEELS_DIR} or ${REPO_WHEELS_DIR}"
-    echo "Attempting to install required packages from PyPI..."
-    
-    # Install required packages
-    pip install numpy opencv-python-headless pillow flask werkzeug requests
-    
-    # Try to install Hailo packages if they exist
-    if [ -d "${PACKAGES_DIR}/hailo" ]; then
-        echo "Installing Hailo packages..."
-        
-        # Install Hailo OS packages
-        if [ -f "${PACKAGES_DIR}/hailo/hailort_4.20.0_arm64.deb" ]; then
-            echo "Installing Hailo OS package..."
-            dpkg -i "${PACKAGES_DIR}/hailo/hailort_4.20.0_arm64.deb" || echo "WARNING: Failed to install Hailo OS package"
-        fi
-        
-        # Install Hailo PCIe driver
-        if [ -f "${PACKAGES_DIR}/hailo/hailort-pcie-driver_4.20.0_all.deb" ]; then
-            echo "Installing Hailo PCIe driver..."
-            dpkg -i "${PACKAGES_DIR}/hailo/hailort-pcie-driver_4.20.0_all.deb" || echo "WARNING: Failed to install Hailo PCIe driver"
-        fi
-        
-        # Install Hailo Python package
-        if [ -f "${PACKAGES_DIR}/hailo/hailort-4.20.0-cp311-cp311-linux_aarch64.whl" ]; then
-            echo "Installing Hailo Python package..."
-            pip install "${PACKAGES_DIR}/hailo/hailort-4.20.0-cp311-cp311-linux_aarch64.whl" || echo "WARNING: Failed to install Hailo Python package"
-        fi
-    fi
-    
-    # Install Hailo platform package if it exists in offline packages
-    if [ -f "${OFFLINE_PACKAGES_DIR}/hailo_platform-4.20.0-py3-none-any.whl" ]; then
-        echo "Installing Hailo platform package..."
-        pip install "${OFFLINE_PACKAGES_DIR}/hailo_platform-4.20.0-py3-none-any.whl" || echo "WARNING: Failed to install Hailo platform package"
-    fi
-    
-    # Install Hailo runtime package if it exists in offline packages
-    if [ -f "${OFFLINE_PACKAGES_DIR}/hailort-4.20.0-py3-none-any.whl" ]; then
-        echo "Installing Hailo runtime package..."
-        pip install "${OFFLINE_PACKAGES_DIR}/hailort-4.20.0-py3-none-any.whl" || echo "WARNING: Failed to install Hailo runtime package"
-    fi
+    echo "Error: Offline packages directory not found at $OFFLINE_PACKAGES_DIR"
+    exit 1
 fi
+EOFMARKER
 
-# Install core Python packages
-echo -e "${YELLOW}Installing core Python packages...${NC}"
-CORE_PACKAGES=(
-    "Flask==2.0.3"
-    "Flask-Login==0.6.0"
-    "Flask-WTF==1.0.1"
-    "Flask-Session==0.4.0"
-    "Flask-SQLAlchemy==2.5.1"
-    "Flask-Limiter==2.5.0"
-    "Werkzeug==2.0.3"
-    "nest-asyncio==1.5.8"
-    "fastapi==0.103.2"
-    "uvicorn==0.23.2"
-)
+chmod +x "$INSTALL_DIR/install_offline_dependencies.sh"
 
-for package in "${CORE_PACKAGES[@]}"; do
-    pip install "$package" || echo -e "${YELLOW}Warning: Failed to install $package${NC}"
-done
+# Install Python dependencies
+echo -e "${YELLOW}Installing Python dependencies...${NC}"
+pip install --upgrade pip
+
+# Create the offline installation script for Python packages
+echo -e "${YELLOW}Setting up offline package installation...${NC}"
+# Export variables to ensure they're available to the embedded script
+export INSTALL_DIR="$INSTALL_DIR"
+export PACKAGES_DIR="$PACKAGES_DIR"
+export OFFLINE_PACKAGES_DIR="$OFFLINE_PACKAGES_DIR"
+
+# Create the installation script with 'EOF' not in quotes to allow variable substitution
+cat > "$INSTALL_DIR/install_offline_dependencies.sh" << EOFMARKER
+#!/bin/bash
+
+# AMSLPR Offline Package Installation
+# This script installs Python packages with compatibility fallbacks
+
+set -e
+
+# Define important directories
+INSTALL_DIR="/opt/amslpr"
+PACKAGES_DIR="/opt/amslpr/packages"
+OFFLINE_PACKAGES_DIR="/opt/amslpr/packages/offline"
+
+# Activate virtual environment
+source /opt/amslpr/venv/bin/activate
+
+# Use pre-built packages or compatibility alternatives for problematic packages
+echo "Installing pre-built compatibility packages..."
+
+# Install core dependencies
+pip install wheel setuptools
+
+# Install from offline wheels directory
+if [ -d "$OFFLINE_PACKAGES_DIR" ]; then
+    echo "Installing packages from $OFFLINE_PACKAGES_DIR"
+    pip install --no-index --find-links="$OFFLINE_PACKAGES_DIR" -r "$INSTALL_DIR/requirements.txt"
+else
+    echo "Error: Offline packages directory not found at $OFFLINE_PACKAGES_DIR"
+    exit 1
+fi
+EOFMARKER
+
+chmod +x "$INSTALL_DIR/install_offline_dependencies.sh"
 
 # Configure Flask app settings
 echo -e "${YELLOW}Configuring Flask application...${NC}"
