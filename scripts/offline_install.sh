@@ -131,7 +131,7 @@ required_packages=("python3" "python3-pip" "python3-venv" "python3-dev" "git" "t
                    "libtesseract-dev" "libsm6" "libxext6" "libxrender-dev" "libgl1-mesa-glx" 
                    "build-essential" "libjpeg-dev" "zlib1g-dev" "libfreetype6-dev" "liblcms2-dev" 
                    "libopenjp2-7-dev" "libtiff5-dev" "libwebp-dev" "nginx" "openssl" "supervisor"
-                   "dkms" "python3-wheel" "python3-setuptools" "python3-distutils")
+                   "dkms" "python3-wheel" "python3-setuptools" "python3-distutils" "libcap2-bin")
 
 for package in "${required_packages[@]}"; do
     # Skip packages with wildcards as they might not exist
