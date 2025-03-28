@@ -10,6 +10,7 @@ import os
 import logging
 from datetime import datetime
 from flask_session import Session
+from flask_wtf.csrf import CSRFProtect
 import asyncio
 from functools import wraps
 
@@ -81,6 +82,10 @@ def create_app(config, db_manager, detector, barrier_controller=None, paxton_int
     app.config['UPLOAD_FOLDER'] = config['web']['upload_folder']
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload size
     app.config['DETECTOR_AVAILABLE'] = detector is not None
+    
+    # Initialize CSRF protection
+    csrf = CSRFProtect()
+    csrf.init_app(app)
     
     # Session configuration
     app.config['SESSION_TYPE'] = 'filesystem'

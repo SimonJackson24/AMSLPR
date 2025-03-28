@@ -270,6 +270,7 @@
             </div>
             <div class="modal-body">
                 <form id="addCameraForm" action="{{ url_for('camera.add_camera') }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="row">
                         <div class="col-md-6">
                             <h6 class="mb-3">Camera Information</h6>
