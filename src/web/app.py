@@ -12,6 +12,7 @@ from datetime import datetime
 from flask_session import Session
 from flask_wtf.csrf import CSRFProtect
 import asyncio
+import nest_asyncio
 from functools import wraps
 
 # Try to import flask_limiter, but don't fail if it's not available
@@ -86,6 +87,16 @@ def create_app(config, db_manager, detector, barrier_controller=None, paxton_int
     # Initialize CSRF protection
     csrf = CSRFProtect()
     csrf.init_app(app)
+    
+    # Set up event loop for async operations
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    # Allow nested event loops (needed for Flask development server)
+    nest_asyncio.apply()
     
     # Session configuration
     app.config['SESSION_TYPE'] = 'filesystem'
