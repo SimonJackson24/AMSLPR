@@ -59,7 +59,8 @@
                 "ip": "192.168.1.100",
                 "port": 80,
                 "username": "admin",
-                "password": "admin"
+                "password": "admin",
+                "rtsp_url": "rtsp://192.168.1.100:554/stream1"
             },
             {
                 "id": "exit",
@@ -68,7 +69,8 @@
                 "ip": "192.168.1.101",
                 "port": 80,
                 "username": "admin",
-                "password": "admin"
+                "password": "admin",
+                "rtsp_url": "rtsp://192.168.1.101:554/stream1"
             }
         ]
     }

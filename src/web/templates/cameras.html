@@ -11,6 +11,9 @@
         <p class="text-muted">Configure and monitor all connected cameras</p>
     </div>
     <div class="col-auto">
+        <button type="button" class="btn btn-secondary me-2" id="discoverCameras">
+            <i class="bi bi-search me-2"></i> Discover Cameras
+        </button>
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCameraModal">
             <i class="bi bi-plus-lg me-2"></i> Add Camera
         </button>
@@ -85,7 +88,7 @@
 <div class="card mb-4">
     <div class="card-body">
         <div class="row">
-            <div class="col-md-3 mb-3 mb-md-0">
+            <div class="col-md-3 mb-3">
                 <label for="statusFilter" class="form-label">Status</label>
                 <select class="form-select" id="statusFilter">
                     <option value="all" selected>All</option>
@@ -94,7 +97,7 @@
                     <option value="issues">With Issues</option>
                 </select>
             </div>
-            <div class="col-md-3 mb-3 mb-md-0">
+            <div class="col-md-3 mb-3">
                 <label for="locationFilter" class="form-label">Location</label>
                 <select class="form-select" id="locationFilter">
                     <option value="all" selected>All Locations</option>
@@ -103,7 +106,7 @@
                     <option value="parking">Parking Area</option>
                 </select>
             </div>
-            <div class="col-md-4 mb-3 mb-md-0">
+            <div class="col-md-4 mb-3">
                 <label for="searchFilter" class="form-label">Search</label>
                 <input type="text" class="form-control" id="searchFilter" placeholder="Search by name or ID...">
             </div>
@@ -219,7 +222,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveCamera({{ camera.id }})">Save Changes</button>
+                    <button type="button" class="btn btn-primary" onclick="saveCamera('{{ camera.id }}')">Save Changes</button>
                 </div>
             </div>
         </div>
@@ -239,7 +242,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" onclick="deleteCamera({{ camera.id }})">Delete Camera</button>
+                    <button type="button" class="btn btn-danger" onclick="deleteCamera('{{ camera.id }}')">Delete Camera</button>
                 </div>
             </div>
         </div>
@@ -258,6 +261,49 @@
         </div>
     </div>
     {% endfor %}
+</div>
+
+<!-- Discovery Results Modal -->
+<div class="modal fade" id="discoveryModal" tabindex="-1" aria-labelledby="discoveryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="discoveryModalLabel">Discovered Cameras</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="discoverySpinner" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Discovering cameras...</span>
+                    </div>
+                    <p class="mt-3">Searching for ONVIF cameras on your network...</p>
+                </div>
+                <div id="discoveryResults" class="d-none">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>IP Address</th>
+                                    <th>Manufacturer</th>
+                                    <th>Model</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="discoveredCamerasList">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="discoveryError" class="d-none">
+                    <div class="alert alert-danger" role="alert">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <span id="discoveryErrorMessage"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Add Camera Modal -->
@@ -298,6 +344,11 @@
                                 <label for="port" class="form-label">Port</label>
                                 <input type="number" class="form-control" id="port" name="port" value="80" min="1" max="65535">
                                 <div class="form-text">Default ONVIF port is 80</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="rtsp_url" class="form-label">RTSP URL</label>
+                                <input type="text" class="form-control" id="rtsp_url" name="rtsp_url" placeholder="e.g. rtsp://192.168.1.100:554/stream1">
+                                <div class="form-text">Optional: Direct RTSP stream URL if ONVIF is not available</div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
@@ -424,6 +475,73 @@
             // For demo purposes, we'll just show a toast message
             showToast(`Filters applied: Status=${statusFilter}, Location=${locationFilter}, Search="${searchFilter}"`, 'info');
         });
+        
+        // Discovery button handler
+        document.getElementById('discoverCameras').addEventListener('click', async function() {
+            const modal = new bootstrap.Modal(document.getElementById('discoveryModal'));
+            modal.show();
+            
+            // Reset modal state
+            document.getElementById('discoverySpinner').classList.remove('d-none');
+            document.getElementById('discoveryResults').classList.add('d-none');
+            document.getElementById('discoveryError').classList.add('d-none');
+            document.getElementById('discoveredCamerasList').innerHTML = '';
+            
+            try {
+                const response = await fetch('/cameras/discover', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to start camera discovery');
+                }
+                
+                const data = await response.json();
+                
+                // Hide spinner and show results
+                document.getElementById('discoverySpinner').classList.add('d-none');
+                document.getElementById('discoveryResults').classList.remove('d-none');
+                
+                // Populate results table
+                const tbody = document.getElementById('discoveredCamerasList');
+                data.cameras.forEach(camera => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${camera.name}</td>
+                        <td>${camera.ip}</td>
+                        <td>${camera.manufacturer}</td>
+                        <td>${camera.model}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-primary" 
+                                    onclick="addDiscoveredCamera('${camera.ip}', '${camera.name}', '${camera.manufacturer}', '${camera.model}')">
+                                Add Camera
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                
+                if (data.cameras.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center py-4">
+                                <i class="bi bi-camera-video-slash fa-2x mb-3 d-block text-muted"></i>
+                                No ONVIF cameras found on your network
+                            </td>
+                        </tr>
+                    `;
+                }
+                
+            } catch (error) {
+                document.getElementById('discoverySpinner').classList.add('d-none');
+                document.getElementById('discoveryError').classList.remove('d-none');
+                document.getElementById('discoveryErrorMessage').textContent = error.message;
+            }
+        });
     });
     
     // Save Camera Changes
@@ -476,6 +594,19 @@
                 location.reload();
             }, 1000);
         }, 1500);
+    }
+    
+    // Add discovered camera
+    function addDiscoveredCamera(ip, name, manufacturer, model) {
+        // Pre-fill the add camera form with discovered camera info
+        document.getElementById('camera_id').value = ip.replace(/\./g, '_');
+        document.getElementById('name').value = name;
+        document.getElementById('location').value = 'Auto Discovered';
+        document.getElementById('ip').value = ip;
+        
+        // Close discovery modal and open add camera modal
+        bootstrap.Modal.getInstance(document.getElementById('discoveryModal')).hide();
+        new bootstrap.Modal(document.getElementById('addCameraModal')).show();
     }
 </script>
 {% endblock %}

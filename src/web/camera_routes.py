@@ -141,6 +141,7 @@ def add_camera():
         port = int(request.form.get('port', 80))
         username = request.form.get('username', 'admin')
         password = request.form.get('password', 'admin')
+        rtsp_url = request.form.get('rtsp_url')  # Get RTSP URL from form
         enabled = request.form.get('enabled') == 'true'
         use_for_recognition = request.form.get('use_for_recognition') == 'true'
         
@@ -198,32 +199,27 @@ def add_camera():
                 import json
                 json.dump(app_config, f, indent=4)
         
-        # Connect to camera using ONVIF
-        if onvif_camera_manager:
-            # Run async operations in a background task
-            async def connect_camera():
-                success = await onvif_camera_manager.add_camera(
-                    camera_id=camera_id,
-                    ip=ip,
-                    port=port,
-                    name=name,
-                    location=location,
-                    username=username,
-                    password=password
-                )
-                
-                if success:
-                    # Configure camera imaging settings
-                    await onvif_camera_manager.configure_camera_imaging(
-                        camera_id=camera_id,
-                        hlc_enabled=hlc_enabled,
-                        hlc_level=hlc_level,
-                        wdr_enabled=wdr_enabled,
-                        wdr_level=wdr_level
-                    )
-            
-            # Schedule the async task to run in the background
-            asyncio.create_task(connect_camera())
+        # Add camera to manager
+        success = onvif_camera_manager.add_camera(
+            camera_id=camera_id,
+            ip=ip,
+            port=port,
+            name=name,
+            location=location,
+            username=username,
+            password=password,
+            rtsp_url=rtsp_url  # Pass RTSP URL to camera manager
+        )
+        
+        if success:
+            # Configure camera imaging settings
+            onvif_camera_manager.configure_camera_imaging(
+                camera_id=camera_id,
+                hlc_enabled=hlc_enabled,
+                hlc_level=hlc_level,
+                wdr_enabled=wdr_enabled,
+                wdr_level=wdr_level
+            )
             flash(f'Camera {name} configuration saved. Connection will be established in the background.', 'success')
         else:
             flash('Failed to add camera. ONVIF camera manager not initialized.', 'error')
@@ -453,6 +449,23 @@ def view_camera(camera_id):
         return redirect(url_for('camera.cameras'))
     
     return render_template('camera_view.html', camera=camera, camera_id=camera_id)
+
+@camera_bp.route('/cameras/discover', methods=['POST'])
+@login_required(user_manager)
+@permission_required('edit', user_manager)
+async def discover_cameras():
+    """Discover ONVIF cameras on the network."""
+    global onvif_camera_manager
+    if onvif_camera_manager is None:
+        init_camera_manager(current_app.config)
+    
+    try:
+        # Start discovery
+        discovered = await onvif_camera_manager.discover_cameras(timeout=5)
+        return jsonify({'success': True, 'cameras': discovered})
+    except Exception as e:
+        logger.error(f"Error during camera discovery: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 def register_camera_routes(app, detector, db_manager):
     """Register camera routes with the Flask application."""
