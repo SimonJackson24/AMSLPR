@@ -229,53 +229,62 @@ class ONVIFCameraManager:
             '<Types>dn:NetworkVideoTransmitter</Types></Probe></Body></Envelope>'
         )
 
-        # Create UDP socket for discovery
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.settimeout(timeout)
-
         try:
-            # Send discovery message
-            sock.sendto(wsdd_message.encode(), ('239.255.255.250', 3702))
+            # Create UDP socket for discovery
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            except PermissionError:
+                raise PermissionError("Insufficient permissions for network discovery. Please run the application with sudo/root privileges.")
             
-            # Collect responses
-            start_time = time.time()
-            while time.time() - start_time < timeout:
-                try:
-                    data, addr = sock.recvfrom(4096)
-                    ip = addr[0]
-                    
-                    # Skip if we already found this IP
-                    if any(d['ip'] == ip for d in discovered):
+            sock.settimeout(timeout)
+
+            try:
+                # Send discovery message
+                sock.sendto(wsdd_message.encode(), ('239.255.255.250', 3702))
+                
+                # Collect responses
+                start_time = time.time()
+                while time.time() - start_time < timeout:
+                    try:
+                        data, addr = sock.recvfrom(4096)
+                        ip = addr[0]
+                        
+                        # Skip if we already found this IP
+                        if any(d['ip'] == ip for d in discovered):
+                            continue
+                        
+                        # Try to connect to verify it's an ONVIF camera
+                        try:
+                            camera = ONVIFCamera(ip, 80, 
+                                            self.default_username, 
+                                            self.default_password,
+                                            no_cache=True)
+                            await camera.update_xaddrs()
+                            device_info = await camera.devicemgmt.GetDeviceInformation()
+                            
+                            discovered.append({
+                                'ip': ip,
+                                'port': 80,
+                                'manufacturer': device_info.Manufacturer,
+                                'model': device_info.Model,
+                                'serial': device_info.SerialNumber,
+                                'name': f"{device_info.Manufacturer} {device_info.Model}",
+                                'location': 'Auto Discovered'
+                            })
+                            logger.info(f"Discovered ONVIF camera at {ip}")
+                        except Exception as e:
+                            logger.debug(f"Could not connect to discovered device at {ip}: {e}")
+                            
+                    except socket.timeout:
                         continue
                     
-                    # Try to connect to verify it's an ONVIF camera
-                    try:
-                        camera = ONVIFCamera(ip, 80, 
-                                          self.default_username, 
-                                          self.default_password,
-                                          no_cache=True)
-                        await camera.update_xaddrs()
-                        device_info = await camera.devicemgmt.GetDeviceInformation()
-                        
-                        discovered.append({
-                            'ip': ip,
-                            'port': 80,
-                            'manufacturer': device_info.Manufacturer,
-                            'model': device_info.Model,
-                            'serial': device_info.SerialNumber,
-                            'name': f"{device_info.Manufacturer} {device_info.Model}",
-                            'location': 'Auto Discovered'
-                        })
-                        logger.info(f"Discovered ONVIF camera at {ip}")
-                    except Exception as e:
-                        logger.debug(f"Could not connect to discovered device at {ip}: {e}")
-                        
-                except socket.timeout:
-                    continue
+            except PermissionError:
+                raise PermissionError("Insufficient permissions to send discovery messages. Please run the application with sudo/root privileges.")
                     
         except Exception as e:
             logger.error(f"Error during camera discovery: {e}")
+            raise
         finally:
             sock.close()
             
