@@ -127,11 +127,17 @@ apt-get update
 
 # Install required packages
 echo -e "${YELLOW}Installing required packages...${NC}"
+
+# First, install libcap2-bin since we need it for setcap
+echo -e "${YELLOW}Installing libcap2-bin for network capabilities...${NC}"
+apt-get install -y libcap2-bin
+
+# Then install other required packages
 required_packages=("python3" "python3-pip" "python3-venv" "python3-dev" "git" "tesseract-ocr"
                    "libtesseract-dev" "libsm6" "libxext6" "libxrender-dev" "libgl1-mesa-glx" 
                    "build-essential" "libjpeg-dev" "zlib1g-dev" "libfreetype6-dev" "liblcms2-dev" 
                    "libopenjp2-7-dev" "libtiff5-dev" "libwebp-dev" "nginx" "openssl" "supervisor"
-                   "dkms" "python3-wheel" "python3-setuptools" "python3-distutils" "libcap2-bin")
+                   "dkms" "python3-wheel" "python3-setuptools" "python3-distutils")
 
 for package in "${required_packages[@]}"; do
     # Skip packages with wildcards as they might not exist
@@ -287,7 +293,12 @@ pip3 install --no-index --find-links "$INSTALL_DIR/packages" -r "$INSTALL_DIR/re
 
 echo -e "${YELLOW}Setting Python network capabilities...${NC}"
 # Give Python permission to bind to privileged ports for ONVIF discovery
-setcap 'cap_net_bind_service,cap_net_raw+ep' $(readlink -f $(which python3))
+PYTHON_PATH=$(readlink -f $(which python3))
+echo -e "${YELLOW}Setting capabilities for Python at: $PYTHON_PATH${NC}"
+setcap 'cap_net_bind_service,cap_net_raw+ep' "$PYTHON_PATH" || {
+    echo -e "${RED}Failed to set Python capabilities. This may affect ONVIF camera discovery.${NC}"
+    echo -e "${RED}Error details: $?${NC}"
+}
 
 # Configure Flask app settings
 echo -e "${YELLOW}Configuring Flask application...${NC}"
