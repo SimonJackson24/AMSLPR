@@ -126,7 +126,7 @@ def cameras():
 @camera_bp.route('/cameras/add', methods=['POST'])
 @login_required(user_manager)
 @permission_required('edit', user_manager)
-async def add_camera():
+def add_camera():
     """Add a new camera."""
     global onvif_camera_manager
     if onvif_camera_manager is None:
@@ -200,28 +200,31 @@ async def add_camera():
         
         # Connect to camera using ONVIF
         if onvif_camera_manager:
-            success = await onvif_camera_manager.add_camera(
-                camera_id=camera_id,
-                ip=ip,
-                port=port,
-                name=name,
-                location=location,
-                username=username,
-                password=password
-            )
-            
-            if success:
-                # Configure camera imaging settings
-                await onvif_camera_manager.configure_camera_imaging(
+            # Run async operations in a background task
+            async def connect_camera():
+                success = await onvif_camera_manager.add_camera(
                     camera_id=camera_id,
-                    hlc_enabled=hlc_enabled,
-                    hlc_level=hlc_level,
-                    wdr_enabled=wdr_enabled,
-                    wdr_level=wdr_level
+                    ip=ip,
+                    port=port,
+                    name=name,
+                    location=location,
+                    username=username,
+                    password=password
                 )
-                flash(f'Camera {name} added successfully', 'success')
-            else:
-                flash('Failed to connect to camera. Camera added to configuration but not connected.', 'warning')
+                
+                if success:
+                    # Configure camera imaging settings
+                    await onvif_camera_manager.configure_camera_imaging(
+                        camera_id=camera_id,
+                        hlc_enabled=hlc_enabled,
+                        hlc_level=hlc_level,
+                        wdr_enabled=wdr_enabled,
+                        wdr_level=wdr_level
+                    )
+            
+            # Schedule the async task to run in the background
+            asyncio.create_task(connect_camera())
+            flash(f'Camera {name} configuration saved. Connection will be established in the background.', 'success')
         else:
             flash('Failed to add camera. ONVIF camera manager not initialized.', 'error')
     
