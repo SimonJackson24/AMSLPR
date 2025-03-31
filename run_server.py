@@ -17,7 +17,7 @@ import json
 import argparse
 from src.web.app import create_app
 from src.database.db_manager import DatabaseManager
-from src.recognition.detector import Detector
+from src.recognition.detector import LicensePlateDetector
 from src.utils.config import load_config
 
 # Set up logging
@@ -50,7 +50,7 @@ def main():
         # Initialize detector if enabled
         detector = None
         if config.get('detector', {}).get('enabled', True):
-            detector = Detector(config)
+            detector = LicensePlateDetector(config)
         
         # Create and run app
         app = create_app(config, db_manager, detector)
