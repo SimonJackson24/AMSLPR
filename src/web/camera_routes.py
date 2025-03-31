@@ -457,6 +457,14 @@ def discover_cameras():
     global onvif_camera_manager
     logger.debug("Starting camera discovery route...")
     
+    if not request.is_json:
+        return jsonify({'success': False, 'error': 'Request must be JSON'}), 400
+
+    # Validate CSRF token
+    csrf_token = request.headers.get('X-CSRFToken')
+    if not csrf_token:
+        return jsonify({'success': False, 'error': 'Missing CSRF token'}), 400
+    
     try:
         # Import here to avoid circular imports
         from src.recognition.onvif_camera import ONVIFCameraManager
