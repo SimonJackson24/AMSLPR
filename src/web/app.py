@@ -14,19 +14,22 @@ from flask_wtf.csrf import CSRFProtect
 import asyncio
 import nest_asyncio
 from functools import wraps
+import redis
 
 # Initialize event loop support
 nest_asyncio.apply()
 
-# Try to import flask_limiter, but don't fail if it's not available
-try:
-    from flask_limiter import Limiter
-    from flask_limiter.util import get_remote_address
-    LIMITER_AVAILABLE = True
-except ImportError as e:
-    logging.warning(f"Could not import flask_limiter: {e}")
-    logging.warning("Running without rate limiting")
-    LIMITER_AVAILABLE = False
+def async_route(f):
+    """Decorator to make a route async-compatible."""
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        return loop.run_until_complete(f(*args, **kwargs))
+    return wrapper
 
 # Import routes with fallback for missing dependencies
 try:
@@ -55,17 +58,6 @@ except ImportError as e:
     logging.warning("Running in limited mode without some functionality")
     OTHER_ROUTES_AVAILABLE = False
 
-def async_route(f):
-    """Decorator to make a route async-compatible."""
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            return loop.create_task(f(*args, **kwargs))
-        else:
-            return loop.run_until_complete(f(*args, **kwargs))
-    return wrapper
-
 def create_app(config, db_manager, detector, barrier_controller=None, paxton_integration=None, nayax_integration=None):
     """
     Create and configure the Flask application.
@@ -82,56 +74,48 @@ def create_app(config, db_manager, detector, barrier_controller=None, paxton_int
         Flask: Configured Flask application
     """
     app = Flask(__name__)
-    app.config['SECRET_KEY'] = config['web']['secret_key']
-    app.config['UPLOAD_FOLDER'] = config['web']['upload_folder']
+    
+    # Configure Flask app
+    app.config['SECRET_KEY'] = os.urandom(24)
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload size
     app.config['DETECTOR_AVAILABLE'] = detector is not None
+    
+    # Store the full config in app config
+    app.config.update(config)
+    
+    # Configure session with Redis
+    app.config['SESSION_TYPE'] = 'redis'
+    app.config['SESSION_REDIS'] = redis.Redis(host='localhost', port=6379, db=0)
+    app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours in seconds
+    app.config['SESSION_COOKIE_SECURE'] = True
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    
+    # Initialize session
+    Session(app)
     
     # Initialize CSRF protection
     csrf = CSRFProtect()
     csrf.init_app(app)
     
-    # Set up event loop for async operations
+    # Enable async support
+    from asgiref.wsgi import WsgiToAsgi
+    app.asgi_app = WsgiToAsgi(app.wsgi_app)
+    
+    # Ensure we have an event loop
     try:
         loop = asyncio.get_event_loop()
     except RuntimeError:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
     
-    # Session configuration
-    app.config['SESSION_TYPE'] = 'filesystem'
-    app.config['SESSION_PERMANENT'] = False
-    app.config['SESSION_USE_SIGNER'] = True
-    app.config['SESSION_COOKIE_SECURE'] = config['web']['ssl']['enabled']
-    app.config['SESSION_COOKIE_HTTPONLY'] = True
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-    app.config['SESSION_FILE_DIR'] = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'instance', 'flask_session')
-    
-    # Make sure the session directory exists
-    os.makedirs(app.config['SESSION_FILE_DIR'], exist_ok=True)
-    
-    # Initialize Flask-Session
-    Session(app)
-    
     # Configure SSL if enabled
     if config['web']['ssl']['enabled']:
         app.config['SSL_ENABLED'] = True
-        app.config['SSL_CERT'] = config['web']['ssl']['cert']
+        app.config['SSL_CERTIFICATE'] = config['web']['ssl']['certificate']
         app.config['SSL_KEY'] = config['web']['ssl']['key']
     else:
         app.config['SSL_ENABLED'] = False
-    
-    # Set up rate limiting if available
-    if LIMITER_AVAILABLE:
-        limiter = Limiter(
-            app=app,
-            key_func=get_remote_address,
-            default_limits=["200 per day", "50 per hour"],
-            storage_uri="memory://",
-        )
-    
-    # Store config in app config for access in routes
-    app.config.update(config)
     
     # Store dependencies in app config for access in routes
     app.config['DB_MANAGER'] = db_manager
@@ -272,7 +256,7 @@ def create_app(config, db_manager, detector, barrier_controller=None, paxton_int
 try:
     from src.utils.config import load_config
     from src.recognition.detector import LicensePlateDetector
-    from src.db.manager import DatabaseManager
+    from src.database.db_manager import DatabaseManager
 
     config = load_config()
     db_manager = DatabaseManager(config['database'])

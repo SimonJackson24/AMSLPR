@@ -50,27 +50,17 @@
         "discovery_enabled": true,
         "discovery_interval": 60,
         "default_username": "admin",
-        "default_password": "admin",
+        "default_password": "Aut0mate2048",
         "cameras": [
             {
                 "id": "entrance",
                 "name": "Main Entrance",
                 "location": "Front Gate",
-                "ip": "192.168.1.100",
+                "ip": "192.168.1.222",
                 "port": 80,
                 "username": "admin",
-                "password": "admin",
-                "rtsp_url": "rtsp://192.168.1.100:554/stream1"
-            },
-            {
-                "id": "exit",
-                "name": "Exit Gate",
-                "location": "Back Gate",
-                "ip": "192.168.1.101",
-                "port": 80,
-                "username": "admin",
-                "password": "admin",
-                "rtsp_url": "rtsp://192.168.1.101:554/stream1"
+                "password": "Aut0mate2048",
+                "rtsp_url": "rtsp://192.168.1.222:554/stream1"
             }
         ]
     }

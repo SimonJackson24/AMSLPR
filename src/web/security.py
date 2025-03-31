@@ -22,45 +22,45 @@ class RateLimiter:
     Rate limiter for API endpoints.
     """
     
-    def __init__(self, max_requests=100, window_seconds=60):
+    def __init__(self):
         """
         Initialize rate limiter.
-        
-        Args:
-            max_requests (int): Maximum number of requests per window
-            window_seconds (int): Time window in seconds
         """
-        self.max_requests = max_requests
-        self.window_seconds = window_seconds
-        self.requests = {}
-    
-    def is_rate_limited(self, key):
-        """
-        Check if a key is rate limited.
+        self.max_requests = 100
+        self.window_seconds = 60
+        self._request_counts = {}
+        self._last_cleanup = time.time()
         
-        Args:
-            key (str): Key to check (usually IP address)
+    def _cleanup_old_entries(self):
+        """Remove old entries from the request counts."""
+        now = time.time()
+        if now - self._last_cleanup > self.window_seconds:
+            cutoff = now - self.window_seconds
+            self._request_counts = {
+                ip: (count, timestamp) 
+                for ip, (count, timestamp) in self._request_counts.items() 
+                if timestamp > cutoff
+            }
+            self._last_cleanup = now
+            
+    def is_rate_limited(self, ip):
+        """Check if an IP is rate limited."""
+        self._cleanup_old_entries()
+        now = time.time()
         
-        Returns:
-            bool: True if rate limited, False otherwise
-        """
-        current_time = time.time()
-        
-        # Initialize request tracking for this key if not exists
-        if key not in self.requests:
-            self.requests[key] = []
-        
-        # Remove old requests outside the window
-        self.requests[key] = [req_time for req_time in self.requests[key] 
-                             if current_time - req_time <= self.window_seconds]
-        
-        # Check if rate limit is exceeded
-        if len(self.requests[key]) >= self.max_requests:
-            logger.warning(f"Rate limit exceeded for {key}")
+        if ip not in self._request_counts:
+            self._request_counts[ip] = (1, now)
+            return False
+            
+        count, timestamp = self._request_counts[ip]
+        if now - timestamp > self.window_seconds:
+            self._request_counts[ip] = (1, now)
+            return False
+            
+        if count >= self.max_requests:
             return True
-        
-        # Add current request
-        self.requests[key].append(current_time)
+            
+        self._request_counts[ip] = (count + 1, timestamp)
         return False
 
 # Create global rate limiter instance

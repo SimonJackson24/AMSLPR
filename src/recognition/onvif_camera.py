@@ -13,22 +13,18 @@ ONVIF-compatible IP cameras for license plate recognition.
 """
 
 import os
-import cv2
 import time
+import socket
 import logging
 import asyncio
-import numpy as np
-from datetime import datetime
-from onvif2_zeep import ONVIFCamera, ONVIFService, ONVIFError
+from onvif.client import ONVIFCamera
 from urllib.parse import urlparse
 from src.utils.security import CredentialManager
-import socket
-import struct
-import threading
-from queue import Queue
-import zeep
+import cv2
+import numpy as np
+from datetime import datetime
 
-logger = logging.getLogger('AMSLPR.recognition.onvif')
+logger = logging.getLogger('AMSLPR.recognition.onvif_camera')
 
 class ONVIFCameraManager:
     """
@@ -54,9 +50,6 @@ class ONVIFCameraManager:
         self.discovery_interval = config.get('discovery_interval', 60)  # seconds
         self.default_username = config.get('default_username', 'admin')
         self.default_password = config.get('default_password', 'Aut0mate2048')
-        
-        # Fix for zeep's type handling
-        zeep.xsd.simple.AnySimpleType.pythonvalue = lambda self, xmlvalue: xmlvalue
         
         # Initialize cameras without using event loop
         self._init_cameras_sync()
@@ -150,16 +143,15 @@ class ONVIFCameraManager:
 
             # Otherwise proceed with ONVIF discovery
             camera = ONVIFCamera(ip, port, cam_username, cam_password)
-            await camera.update_xaddrs()  # Initialize services
             
             # Get camera information
-            device_info = await camera.devicemgmt.GetDeviceInformation()
+            device_info = camera.devicemgmt.GetDeviceInformation()
             
             # Get camera media service
-            media_service = camera.create_media_service()
+            media_service = camera.media
             
             # Get camera profiles
-            profiles = await media_service.GetProfiles()
+            profiles = media_service.media.GetProfiles()
             
             # Get stream URI for the first profile
             token = profiles[0].token
@@ -169,11 +161,10 @@ class ONVIFCameraManager:
                     'Protocol': 'RTSP'
                 }
             }
-            stream_uri = await media_service.GetStreamUri(stream_setup, token)
+            stream_uri = media_service.media.GetStreamUri(stream_setup, token)
             
             # Get imaging service for HLC/WDR configuration
-            imaging_service = camera.create_imaging_service()
-            video_source_token = profiles[0].VideoSourceConfiguration.SourceToken
+            imaging_service = camera.media.imaging
             
             # Update camera information
             self.cameras[camera_id].update({
@@ -187,7 +178,6 @@ class ONVIFCameraManager:
                 'device': camera,
                 'media_service': media_service,
                 'imaging_service': imaging_service,
-                'video_source_token': video_source_token,
                 'profile_token': token
             })
             
@@ -280,8 +270,8 @@ class ONVIFCameraManager:
                                 for username, password in credentials:
                                     try:
                                         # Get WSDL directory from package location
-                                        import onvif2_zeep
-                                        wsdl_dir = os.path.join(os.path.dirname(onvif2_zeep.__file__), 'wsdl')
+                                        import onvif_zeep
+                                        wsdl_dir = '/opt/amslpr/venv/lib/python3.11/site-packages/onvif/wsdl'
                                         logger.debug(f"Using WSDL directory: {wsdl_dir}")
                                         
                                         cam = ONVIFCamera(addr[0], 80, username, password, wsdl_dir=wsdl_dir)
@@ -363,13 +353,13 @@ class ONVIFCameraManager:
                 raise ValueError(f"Camera {camera_id} not found")
             
             imaging_service = camera_info['imaging_service']
-            video_source_token = camera_info['video_source_token']
+            video_source_token = camera_info.get('video_source_token', None)
             
             # Get current settings
-            settings = await imaging_service.GetImagingSettings({'VideoSourceToken': video_source_token})
+            settings = imaging_service.GetImagingSettings({'VideoSourceToken': video_source_token})
             
             # Create settings type for modification
-            new_settings = camera_info['camera'].imaging.create_type('ImagingSettings20')
+            new_settings = camera_info['device'].media.imaging.create_type('ImagingSettings20')
             
             # Update HLC settings if provided
             if hlc_enabled is not None and hasattr(new_settings, 'HighlightCompensation'):
@@ -384,7 +374,7 @@ class ONVIFCameraManager:
                     new_settings.WideDynamicRange.Level = max(0.0, min(1.0, wdr_level))
             
             # Apply settings
-            await imaging_service.SetImagingSettings({
+            imaging_service.SetImagingSettings({
                 'VideoSourceToken': video_source_token,
                 'ImagingSettings': new_settings
             })
@@ -411,3 +401,37 @@ class ONVIFCameraManager:
         """Get information about all cameras."""
         return {k: {key: val for key, val in v.items() if not callable(val)} 
                 for k, v in self.cameras.items()}
+
+def init_camera_manager(config):
+    """
+    Initialize the camera manager with the application configuration.
+    
+    Args:
+        config (dict): Application configuration
+    
+    Returns:
+        ONVIFCameraManager: Initialized camera manager instance
+    """
+    global onvif_camera_manager
+    
+    # Don't initialize if already initialized
+    if onvif_camera_manager is not None:
+        return onvif_camera_manager
+    
+    try:
+        # Import here to avoid circular imports
+        from src.recognition.onvif_camera import ONVIFCameraManager
+        
+        # Set WSDL directory to the one in site-packages
+        wsdl_dir = '/opt/amslpr/venv/lib/python3.11/site-packages/onvif/wsdl'
+        config['camera'] = config.get('camera', {})
+        config['camera']['wsdl_dir'] = wsdl_dir
+        
+        logger.debug("Initializing ONVIFCameraManager with config: %s", config.get('camera', {}))
+        onvif_camera_manager = ONVIFCameraManager(config.get('camera', {}))
+        return onvif_camera_manager
+    except Exception as e:
+        logger.error(f"Failed to initialize ONVIF camera manager: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise

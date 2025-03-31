@@ -1,4 +1,3 @@
-
 # AMSLPR - Automate Systems License Plate Recognition
 # Copyright (c) 2025 Automate Systems. All rights reserved.
 #
@@ -57,6 +56,9 @@ _detector = None
 _db_manager = None
 _app = None
 
+import nest_asyncio
+nest_asyncio.apply()
+
 def setup_routes(app, detector, db_manager):
     """Set up camera routes with the detector and database manager."""
     global _detector, _db_manager, _app
@@ -84,11 +86,6 @@ def init_camera_manager(config):
     """
     global onvif_camera_manager
     
-    # Skip ONVIF camera initialization when running in Docker with Hailo TPU
-    if os.environ.get('HAILO_ENABLED') == 'true':
-        logger.info("ONVIF camera initialization skipped in Docker environment with Hailo TPU")
-        return None
-        
     # Don't initialize if already initialized
     if onvif_camera_manager is not None:
         return onvif_camera_manager
@@ -96,12 +93,14 @@ def init_camera_manager(config):
     try:
         # Import here to avoid circular imports
         from src.recognition.onvif_camera import ONVIFCameraManager
+        logger.debug("Initializing ONVIFCameraManager with config: %s", config.get('camera', {}))
         onvif_camera_manager = ONVIFCameraManager(config.get('camera', {}))
-        logger.info("ONVIF camera manager initialized successfully")
         return onvif_camera_manager
     except Exception as e:
-        logger.error(f"Failed to initialize ONVIF camera manager: {e}")
-        return None
+        logger.error(f"Failed to initialize ONVIF camera manager: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise
 
 @camera_bp.route('/cameras')
 @login_required(user_manager)
@@ -453,19 +452,87 @@ def view_camera(camera_id):
 @camera_bp.route('/cameras/discover', methods=['POST'])
 @login_required(user_manager)
 @permission_required('edit', user_manager)
-async def discover_cameras():
+def discover_cameras():
     """Discover ONVIF cameras on the network."""
     global onvif_camera_manager
-    if onvif_camera_manager is None:
-        init_camera_manager(current_app.config)
+    logger.debug("Starting camera discovery route...")
     
     try:
-        # Start discovery
-        discovered = await onvif_camera_manager.discover_cameras(timeout=5)
-        return jsonify({'success': True, 'cameras': discovered})
+        # Import here to avoid circular imports
+        from src.recognition.onvif_camera import ONVIFCameraManager
+        
+        # Check if we have onvif2-zeep installed
+        try:
+            import onvif2_zeep as onvif2
+            logger.debug("onvif2-zeep package is installed")
+        except ImportError as e:
+            logger.error("onvif2-zeep package is not installed")
+            return jsonify({'success': False, 'error': 'Required package onvif2-zeep is not installed'}), 500
+        
+        # Check if we have zeep installed
+        try:
+            import zeep
+            logger.debug("zeep package is installed")
+        except ImportError as e:
+            logger.error("zeep package is not installed")
+            return jsonify({'success': False, 'error': 'Required package zeep is not installed'}), 500
+        
+        if onvif_camera_manager is None:
+            logger.debug("Initializing camera manager...")
+            try:
+                # Get camera config from app config
+                camera_config = current_app.config.get('camera', {})
+                logger.debug(f"Camera config from app: {camera_config}")
+                if not camera_config:
+                    logger.error("No camera configuration found in app config")
+                    return jsonify({'success': False, 'error': 'No camera configuration found'}), 500
+                
+                # Initialize camera manager directly
+                logger.debug("Creating ONVIFCameraManager instance...")
+                onvif_camera_manager = ONVIFCameraManager(camera_config)
+                if onvif_camera_manager is None:
+                    raise Exception("Failed to initialize camera manager")
+                logger.debug("ONVIFCameraManager initialized successfully")
+            except Exception as e:
+                logger.error(f"Error initializing camera manager: {str(e)}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                return jsonify({'success': False, 'error': f'Failed to initialize camera manager: {str(e)}'}), 500
+        
+        logger.debug("Starting discovery process...")
+        try:
+            # Run discovery
+            logger.debug("Running discover_cameras...")
+            discovered = onvif_camera_manager.discover_cameras(timeout=5)
+            logger.debug(f"Discovery completed. Found cameras: {discovered}")
+            
+            # Format the response for the frontend
+            cameras = []
+            for camera in discovered:
+                cameras.append({
+                    'name': f"{camera.get('manufacturer', 'Unknown')} {camera.get('model', 'Camera')}",
+                    'ip': camera.get('ip', ''),
+                    'manufacturer': camera.get('manufacturer', 'Unknown'),
+                    'model': camera.get('model', 'Unknown'),
+                    'firmware_version': camera.get('firmware_version', ''),
+                    'serial_number': camera.get('serial_number', '')
+                })
+            
+            return jsonify({
+                'success': True,
+                'cameras': cameras
+            })
+            
+        except Exception as e:
+            logger.error(f"Error during camera discovery: {str(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return jsonify({'success': False, 'error': f'Error during camera discovery: {str(e)}'}), 500
     except Exception as e:
-        logger.error(f"Error during camera discovery: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Unexpected error in discover_cameras route: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': f'Unexpected error: {str(e)}'}), 500
 
 def register_camera_routes(app, detector, db_manager):
     """Register camera routes with the Flask application."""
