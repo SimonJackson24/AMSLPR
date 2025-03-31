@@ -461,13 +461,13 @@ def discover_cameras():
         # Import here to avoid circular imports
         from src.recognition.onvif_camera import ONVIFCameraManager
         
-        # Check if we have onvif2-zeep installed
+        # Check if we have onvif installed
         try:
-            import onvif2_zeep as onvif2
-            logger.debug("onvif2-zeep package is installed")
+            import onvif
+            logger.debug("onvif package is installed")
         except ImportError as e:
-            logger.error("onvif2-zeep package is not installed")
-            return jsonify({'success': False, 'error': 'Required package onvif2-zeep is not installed'}), 500
+            logger.error("onvif package is not installed")
+            return jsonify({'success': False, 'error': 'Required package onvif is not installed'}), 500
         
         # Check if we have zeep installed
         try:
