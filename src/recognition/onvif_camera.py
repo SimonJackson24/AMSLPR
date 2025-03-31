@@ -17,7 +17,7 @@ import time
 import socket
 import logging
 import asyncio
-from onvif.client import ONVIFCamera
+from onvif_zeep2.client import ONVIFCamera
 from urllib.parse import urlparse
 from src.utils.security import CredentialManager
 import cv2
@@ -270,8 +270,8 @@ class ONVIFCameraManager:
                                 for username, password in credentials:
                                     try:
                                         # Get WSDL directory from package location
-                                        import onvif_zeep
-                                        wsdl_dir = '/opt/amslpr/venv/lib/python3.11/site-packages/onvif/wsdl'
+                                        import onvif_zeep2
+                                        wsdl_dir = '/opt/amslpr/venv/lib/python3.11/site-packages/onvif_zeep2/wsdl'
                                         logger.debug(f"Using WSDL directory: {wsdl_dir}")
                                         
                                         cam = ONVIFCamera(addr[0], 80, username, password, wsdl_dir=wsdl_dir)
@@ -423,7 +423,7 @@ def init_camera_manager(config):
         from src.recognition.onvif_camera import ONVIFCameraManager
         
         # Set WSDL directory to the one in site-packages
-        wsdl_dir = '/opt/amslpr/venv/lib/python3.11/site-packages/onvif/wsdl'
+        wsdl_dir = '/opt/amslpr/venv/lib/python3.11/site-packages/onvif_zeep2/wsdl'
         config['camera'] = config.get('camera', {})
         config['camera']['wsdl_dir'] = wsdl_dir
         
