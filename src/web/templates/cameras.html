@@ -479,13 +479,18 @@
         // Discovery button handler
         document.getElementById('discoverCameras').addEventListener('click', async function() {
             const modal = new bootstrap.Modal(document.getElementById('discoveryModal'));
-            modal.show();
             
             // Reset modal state
             document.getElementById('discoverySpinner').classList.remove('d-none');
             document.getElementById('discoveryResults').classList.add('d-none');
             document.getElementById('discoveryError').classList.add('d-none');
             document.getElementById('discoveredCamerasList').innerHTML = '';
+            
+            // Show modal and wait for it to be fully shown
+            modal.show();
+            await new Promise(resolve => {
+                document.getElementById('discoveryModal').addEventListener('shown.bs.modal', resolve, { once: true });
+            });
             
             try {
                 const response = await fetch('/cameras/discover', {
@@ -496,11 +501,12 @@
                     }
                 });
                 
-                if (!response.ok) {
-                    throw new Error('Failed to start camera discovery');
-                }
-                
                 const data = await response.json();
+                console.log('Discovery response:', data);  // Debug log
+                
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Failed to start camera discovery');
+                }
                 
                 // Hide spinner and show results
                 document.getElementById('discoverySpinner').classList.add('d-none');
@@ -511,13 +517,13 @@
                 data.cameras.forEach(camera => {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td>${camera.name}</td>
+                        <td>${camera.name || `${camera.manufacturer} ${camera.model}`}</td>
                         <td>${camera.ip}</td>
                         <td>${camera.manufacturer}</td>
                         <td>${camera.model}</td>
                         <td>
                             <button type="button" class="btn btn-sm btn-primary" 
-                                    onclick="addDiscoveredCamera('${camera.ip}', '${camera.name}', '${camera.manufacturer}', '${camera.model}')">
+                                    onclick="addDiscoveredCamera('${camera.ip}', '${camera.name || `${camera.manufacturer} ${camera.model}`}', '${camera.manufacturer}', '${camera.model}')">
                                 Add Camera
                             </button>
                         </td>
@@ -537,6 +543,8 @@
                 }
                 
             } catch (error) {
+                console.error('Discovery error:', error);  // Debug log
+                // Hide spinner and show error
                 document.getElementById('discoverySpinner').classList.add('d-none');
                 document.getElementById('discoveryError').classList.remove('d-none');
                 document.getElementById('discoveryErrorMessage').textContent = error.message;

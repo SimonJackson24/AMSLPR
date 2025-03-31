@@ -19,14 +19,14 @@ import logging
 import asyncio
 import numpy as np
 from datetime import datetime
-from onvif import ONVIFCamera, ONVIFService
+from onvif2_zeep import ONVIFCamera, ONVIFService, ONVIFError
 from urllib.parse import urlparse
 from src.utils.security import CredentialManager
-import onvif.exceptions
 import socket
 import struct
 import threading
 from queue import Queue
+import zeep
 
 logger = logging.getLogger('AMSLPR.recognition.onvif')
 
@@ -53,7 +53,10 @@ class ONVIFCameraManager:
         self.discovery_enabled = config.get('discovery_enabled', True)
         self.discovery_interval = config.get('discovery_interval', 60)  # seconds
         self.default_username = config.get('default_username', 'admin')
-        self.default_password = config.get('default_password', 'admin')
+        self.default_password = config.get('default_password', 'Aut0mate2048')
+        
+        # Fix for zeep's type handling
+        zeep.xsd.simple.AnySimpleType.pythonvalue = lambda self, xmlvalue: xmlvalue
         
         # Initialize cameras without using event loop
         self._init_cameras_sync()
@@ -197,7 +200,7 @@ class ONVIFCameraManager:
                 self.cameras[camera_id]['last_error'] = str(e)
             return False
     
-    async def discover_cameras(self, timeout=5):
+    def discover_cameras(self, timeout=5):
         """
         Discover ONVIF cameras on the network using WS-Discovery.
         
@@ -207,89 +210,141 @@ class ONVIFCameraManager:
         Returns:
             list: List of discovered cameras with their info
         """
-        logger.info("Starting ONVIF camera discovery...")
         discovered = []
+        logger.debug("Starting camera discovery...")
         
-        # WS-Discovery message
-        wsdd_message = (
-            '<?xml version="1.0" encoding="utf-8"?>'
-            '<Envelope xmlns:dn="http://www.onvif.org/ver10/network/wsdl" '
-            'xmlns="http://www.w3.org/2003/05/soap-envelope">'
-            '<Header><wsa:MessageID xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing">'
-            'uuid:84ede3de-7dec-11d0-c360-f01234567890'
-            '</wsa:MessageID>'
-            '<wsa:To xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing">'
-            'urn:schemas-xmlsoap-org:ws:2005:04:discovery</wsa:To>'
-            '<wsa:Action xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing">'
-            'http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe'
-            '</wsa:Action></Header>'
-            '<Body><Probe xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
-            'xmlns:xsd="http://www.w3.org/2001/XMLSchema" '
-            'xmlns="http://schemas.xmlsoap.org/ws/2005/04/discovery">'
-            '<Types>dn:NetworkVideoTransmitter</Types></Probe></Body></Envelope>'
-        )
-
         try:
             # Create UDP socket for discovery
+            logger.debug("Creating UDP socket for discovery...")
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            try:
-                sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-            except PermissionError:
-                raise PermissionError("Insufficient permissions for network discovery. Please run the application with sudo/root privileges.")
             
-            sock.settimeout(timeout)
-
             try:
-                # Send discovery message
-                sock.sendto(wsdd_message.encode(), ('239.255.255.250', 3702))
+                # Set socket options
+                logger.debug("Setting socket options...")
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                
+                # Bind to all interfaces
+                sock.bind(('', 0))
+                logger.debug("Successfully bound to all interfaces")
+                
+                sock.settimeout(timeout)
+                
+                # WS-Discovery probe message
+                probe = """<?xml version="1.0" encoding="UTF-8"?>
+                <e:Envelope xmlns:e="http://www.w3.org/2003/05/soap-envelope"
+                           xmlns:w="http://schemas.xmlsoap.org/ws/2004/08/addressing"
+                           xmlns:d="http://schemas.xmlsoap.org/ws/2005/04/discovery"
+                           xmlns:dn="http://www.onvif.org/ver10/network/wsdl">
+                    <e:Header>
+                        <w:MessageID>uuid:84ede3de-7dec-11d0-c360-f01234567890</w:MessageID>
+                        <w:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</w:To>
+                        <w:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</w:Action>
+                    </e:Header>
+                    <e:Body>
+                        <d:Probe>
+                            <d:Types>dn:NetworkVideoTransmitter</d:Types>
+                        </d:Probe>
+                    </e:Body>
+                </e:Envelope>"""
+                
+                # Send discovery probe
+                logger.debug("Sending discovery probe...")
+                try:
+                    sock.sendto(probe.encode(), ('239.255.255.250', 3702))
+                    logger.debug("Discovery probe sent successfully")
+                except Exception as e:
+                    logger.error(f"Failed to send discovery probe: {str(e)}")
+                    import traceback
+                    logger.error(f"Traceback: {traceback.format_exc()}")
+                    raise
                 
                 # Collect responses
                 start_time = time.time()
                 while time.time() - start_time < timeout:
                     try:
-                        data, addr = sock.recvfrom(4096)
-                        ip = addr[0]
-                        
-                        # Skip if we already found this IP
-                        if any(d['ip'] == ip for d in discovered):
-                            continue
-                        
-                        # Try to connect to verify it's an ONVIF camera
-                        try:
-                            camera = ONVIFCamera(ip, 80, 
-                                            self.default_username, 
-                                            self.default_password,
-                                            no_cache=True)
-                            await camera.update_xaddrs()
-                            device_info = await camera.devicemgmt.GetDeviceInformation()
-                            
-                            discovered.append({
-                                'ip': ip,
-                                'port': 80,
-                                'manufacturer': device_info.Manufacturer,
-                                'model': device_info.Model,
-                                'serial': device_info.SerialNumber,
-                                'name': f"{device_info.Manufacturer} {device_info.Model}",
-                                'location': 'Auto Discovered'
-                            })
-                            logger.info(f"Discovered ONVIF camera at {ip}")
-                        except Exception as e:
-                            logger.debug(f"Could not connect to discovered device at {ip}: {e}")
-                            
+                        data, addr = sock.recvfrom(65535)
+                        if data:
+                            logger.debug(f"Received response from {addr}")
+                            try:
+                                # Try different common credentials
+                                credentials = [
+                                    (self.default_username, self.default_password),
+                                    ('admin', 'admin'),
+                                    ('admin', ''),
+                                    ('Admin', 'Admin'),
+                                    ('root', 'root')
+                                ]
+                                
+                                device_info = None
+                                for username, password in credentials:
+                                    try:
+                                        # Get WSDL directory from package location
+                                        import onvif2_zeep
+                                        wsdl_dir = os.path.join(os.path.dirname(onvif2_zeep.__file__), 'wsdl')
+                                        logger.debug(f"Using WSDL directory: {wsdl_dir}")
+                                        
+                                        cam = ONVIFCamera(addr[0], 80, username, password, wsdl_dir=wsdl_dir)
+                                        device_info = cam.devicemgmt.GetDeviceInformation()
+                                        logger.debug(f"Successfully connected to {addr[0]} with {username}:{password}")
+                                        break
+                                    except Exception as e:
+                                        logger.debug(f"Failed to connect with {username}:{password}: {str(e)}")
+                                        continue
+                                
+                                if device_info:
+                                    camera_info = {
+                                        'ip': addr[0],
+                                        'port': 80,
+                                        'manufacturer': device_info.get('Manufacturer', 'Unknown'),
+                                        'model': device_info.get('Model', 'Unknown'),
+                                        'firmware_version': device_info.get('FirmwareVersion', ''),
+                                        'serial_number': device_info.get('SerialNumber', '')
+                                    }
+                                else:
+                                    # Basic info without device details
+                                    camera_info = {
+                                        'ip': addr[0],
+                                        'port': 80,
+                                        'manufacturer': 'Unknown',
+                                        'model': 'Unknown'
+                                    }
+                                
+                                # Check if this camera is already in the list
+                                if not any(d['ip'] == addr[0] for d in discovered):
+                                    discovered.append(camera_info)
+                                    logger.debug(f"Added camera: {camera_info}")
+                                
+                            except Exception as e:
+                                logger.warning(f"Could not get device info from {addr[0]}: {str(e)}")
+                                # Still add the camera with basic info
+                                if not any(d['ip'] == addr[0] for d in discovered):
+                                    discovered.append({
+                                        'ip': addr[0],
+                                        'port': 80,
+                                        'manufacturer': 'Unknown',
+                                        'model': 'Unknown'
+                                    })
                     except socket.timeout:
+                        logger.debug("Socket timeout, discovery complete")
+                        break
+                    except Exception as e:
+                        logger.error(f"Error receiving discovery response: {str(e)}")
                         continue
-                    
-            except PermissionError:
-                raise PermissionError("Insufficient permissions to send discovery messages. Please run the application with sudo/root privileges.")
-                    
-        except Exception as e:
-            logger.error(f"Error during camera discovery: {e}")
-            raise
-        finally:
-            sock.close()
             
+            finally:
+                sock.close()
+                logger.debug("Discovery socket closed")
+        
+        except Exception as e:
+            logger.error(f"Error in discover_cameras: {str(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            raise
+        
+        logger.info(f"Discovery completed. Found {len(discovered)} devices")
         return discovered
-
+    
     async def configure_camera_imaging(self, camera_id, hlc_enabled=None, hlc_level=None, 
                                     wdr_enabled=None, wdr_level=None):
         """
