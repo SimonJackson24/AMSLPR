@@ -1,4 +1,3 @@
-
 # AMSLPR - Automate Systems License Plate Recognition
 # Copyright (c) 2025 Automate Systems. All rights reserved.
 #
@@ -58,6 +57,11 @@ def login():
     
     # Handle login form submission
     if request.method == 'POST':
+        # Verify CSRF token
+        if not request.form.get('csrf_token'):
+            flash('CSRF token missing', 'danger')
+            return render_template('auth/login.html', current_year=datetime.now().year)
+        
         username = request.form.get('username')
         password = request.form.get('password')
         
