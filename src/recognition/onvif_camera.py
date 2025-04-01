@@ -60,7 +60,22 @@ class ONVIFCameraManager:
         ]
         
         # Common ONVIF ports
-        self.onvif_ports = [80, 8080, 8000, 8081, 8899]
+        self.onvif_ports = [80, 8080, 8000, 8081, 8899, 554]  # Added RTSP port
+        
+        # Common RTSP paths
+        self.rtsp_paths = [
+            'h264Preview_01_main',
+            'h264Preview_01_sub',
+            'cam/realmonitor',
+            'videoMain',
+            'video1',
+            'live/ch0',
+            'live/ch00_0',
+            'stream1',
+            'live',
+            'media/video1',
+            'cam1/h264'
+        ]
         
         logger.info("ONVIF camera manager initialized")
 
@@ -86,6 +101,36 @@ class ONVIFCameraManager:
         """
         logger.debug(f"Trying to connect to camera at {ip}:{port}")
         
+        # Try RTSP first if it's port 554
+        if port == 554:
+            for path in self.rtsp_paths:
+                rtsp_url = f"rtsp://{ip}:{port}/{path}"
+                try:
+                    cap = cv2.VideoCapture(rtsp_url)
+                    if cap.isOpened():
+                        ret, _ = cap.read()
+                        if ret:
+                            logger.info(f"Successfully connected to RTSP stream at {rtsp_url}")
+                            cap.release()
+                            return {
+                                'ip': ip,
+                                'port': port,
+                                'username': '',
+                                'password': '',
+                                'stream_uri': rtsp_url,
+                                'manufacturer': 'Unknown',
+                                'model': 'RTSP Camera',
+                                'firmware': '',
+                                'serial': '',
+                                'status': 'discovered',
+                                'connection_type': 'rtsp'
+                            }
+                    cap.release()
+                except Exception as e:
+                    logger.debug(f"Failed to connect to RTSP stream at {rtsp_url}: {str(e)}")
+                    continue
+        
+        # Try ONVIF if RTSP didn't work or it's not port 554
         for username, password in self.default_credentials:
             try:
                 camera = ONVIFCamera(ip, port, username, password, self.wsdl_dir, timeout=2)
@@ -115,7 +160,8 @@ class ONVIFCameraManager:
                         'firmware': device_info.FirmwareVersion,
                         'serial': device_info.SerialNumber,
                         'stream_uri': stream_uri.Uri,
-                        'status': 'discovered'
+                        'status': 'discovered',
+                        'connection_type': 'onvif'
                     }
                     logger.info(f"Successfully connected to camera at {ip}:{port}")
                     return camera_info
