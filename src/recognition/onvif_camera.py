@@ -114,7 +114,10 @@ class ONVIFCameraManager:
         try:
             # Try to connect to device service endpoint
             url = f"http://{ip}:{port}/onvif/device_service"
-            response = requests.get(url, timeout=1)
+            headers = {
+                'Content-Type': 'application/soap+xml; charset=utf-8'
+            }
+            response = requests.get(url, timeout=1, headers=headers)
             
             if response.status_code in [401, 403]:  # Authentication required
                 logger.info(f"Found potential ONVIF camera at {ip}:{port}")
@@ -285,22 +288,73 @@ class ONVIFCameraManager:
             username = camera_info['username']
             password = camera_info['password']
             
-            # Initialize camera connection
-            cam = ONVIFCamera(ip, port, username, password, wsdl_dir=self.wsdl_dir)
+            # Initialize camera connection with proper WSDL path
+            wsdl_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wsdl')
+            logger.debug(f"Using WSDL path: {wsdl_path}")
             
-            # Store camera info
-            self.cameras[ip] = {
-                'camera': cam,
-                'info': camera_info
-            }
+            # Create camera with explicit WSDL files
+            cam = ONVIFCamera(
+                ip, 
+                port,
+                username, 
+                password,
+                wsdl_dir=wsdl_path,
+                encrypt=True
+            )
             
-            logger.info(f"Successfully added camera at {ip}")
-            return True
+            # Initialize services
+            cam.create_devicemgmt_service()
+            media_service = cam.create_media_service()
             
+            # Get device info
+            device_info = cam.devicemgmt.GetDeviceInformation()
+            profiles = media_service.GetProfiles()
+            
+            if profiles:
+                # Create stream URI request
+                request = media_service.create_type('GetStreamUri')
+                request.ProfileToken = profiles[0].token
+                
+                # Create StreamSetup
+                stream_setup = media_service.create_type('StreamSetup')
+                stream_setup.Stream = 'RTP-Unicast'
+                stream_setup.Transport = media_service.create_type('Transport')
+                stream_setup.Transport.Protocol = 'RTSP'
+                request.StreamSetup = stream_setup
+                
+                # Get stream URI
+                stream_uri = media_service.GetStreamUri(request)
+                
+                # Store camera info
+                self.cameras[ip] = {
+                    'camera': cam,
+                    'info': {
+                        'ip': ip,
+                        'port': port,
+                        'username': username,
+                        'password': password,
+                        'profiles': [{'token': p.token, 'name': p.Name} for p in profiles],
+                        'manufacturer': device_info.Manufacturer,
+                        'model': device_info.Model,
+                        'firmware': device_info.FirmwareVersion,
+                        'serial': device_info.SerialNumber,
+                        'stream_uri': stream_uri.Uri,
+                        'status': 'connected'
+                    }
+                }
+                
+                logger.info(f"Successfully added camera at {ip}")
+                return True
+            else:
+                logger.error(f"No media profiles found for camera at {ip}")
+                return False
+                
         except Exception as e:
             logger.error(f"Failed to add camera: {str(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return False
-    
+
     def get_camera_stream(self, ip):
         """
         Get the RTSP stream URL for a camera.
