@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?xml-stylesheet type="text/xsl" href="../../../ver20/util/onvif-wsdl-viewer.xsl"?>
 <!--
 Copyright (c) 2008-2018 by ONVIF: Open Network Video Interface Forum. All rights reserved.
 
@@ -98,4 +97,9 @@ IN NO EVENT WILL THE CORPORATION OR ITS MEMBERS OR THEIR AFFILIATES BE LIABLE FO
             </wsdl:output>
         </wsdl:operation>
     </wsdl:binding>
+    <wsdl:service name="MediaService">
+        <wsdl:port name="MediaPort" binding="trt:MediaBinding">
+            <soap:address location="http://www.onvif.org/ver10/media/wsdl"/>
+        </wsdl:port>
+    </wsdl:service>
 </wsdl:definitions>
