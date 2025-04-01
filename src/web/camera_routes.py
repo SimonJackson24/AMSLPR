@@ -506,19 +506,9 @@ def discover_cameras():
                 logger.error(f"Error initializing camera manager: {str(e)}")
                 return jsonify({'success': False, 'error': f'Error initializing camera manager: {str(e)}'}), 500
         
-        # Get known IPs from config or request
-        known_ips = []
-        if 'ip' in request.json:
-            known_ips.append(request.json['ip'])
-        elif 'known_ips' in request.json:
-            known_ips.extend(request.json['known_ips'])
-        else:
-            # Add default known IP
-            known_ips.append('192.168.1.222')
-        
         # Start camera discovery
         logger.debug("Starting camera discovery...")
-        discovered_cameras = onvif_camera_manager.discover_cameras(timeout=5, known_ips=known_ips)
+        discovered_cameras = onvif_camera_manager.discover_cameras(timeout=5)
         
         if not discovered_cameras:
             logger.warning("No cameras found during discovery")

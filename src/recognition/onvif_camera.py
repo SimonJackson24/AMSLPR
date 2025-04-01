@@ -17,6 +17,9 @@ import cv2
 import numpy as np
 from datetime import datetime
 import zeep
+import ipaddress
+import concurrent.futures
+import threading
 
 logger = logging.getLogger('AMSLPR.recognition.onvif_camera')
 
@@ -121,80 +124,139 @@ class ONVIFCameraManager:
                 continue
         return None
 
-    def discover_cameras(self, timeout=2, known_ips=None):
+    def get_local_network(self):
+        """Get the local network address range."""
+        try:
+            # Create a temporary socket to get local IP
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            local_ip = s.getsockname()[0]
+            s.close()
+            
+            # Get network address range (assuming /24 subnet)
+            network = ipaddress.IPv4Network(f"{local_ip}/24", strict=False)
+            return network
+        except Exception as e:
+            logger.error(f"Error getting local network: {str(e)}")
+            return None
+
+    def scan_network(self, timeout=2):
         """
-        Discover ONVIF cameras on the network using WS-Discovery and try known IPs.
+        Scan the local network for potential cameras.
         
         Args:
-            timeout (int): Timeout in seconds for discovery
-            known_ips (list): List of known IP addresses to try
+            timeout (int): Timeout in seconds for each connection attempt
             
         Returns:
             list: List of discovered camera information dictionaries
         """
         discovered_cameras = []
-        known_ips = known_ips or []
+        network = self.get_local_network()
         
-        # First, try known IP addresses
-        for ip in known_ips:
-            logger.info(f"Trying known IP address: {ip}")
-            for port in self.onvif_ports:
-                camera_info = self.try_connect_camera(ip, port)
-                if camera_info:
-                    discovered_cameras.append(camera_info)
-                    break
+        if not network:
+            return []
+        
+        # Use a thread pool to scan IPs in parallel
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+            futures = []
+            for ip in network.hosts():
+                ip_str = str(ip)
+                # Skip broadcast and network addresses
+                if ip_str.endswith('.0') or ip_str.endswith('.255'):
+                    continue
+                    
+                for port in self.onvif_ports:
+                    futures.append(executor.submit(self.try_connect_camera, ip_str, port))
+            
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    result = future.result()
+                    if result:
+                        discovered_cameras.append(result)
+                except Exception as e:
+                    logger.debug(f"Error in scan task: {str(e)}")
+        
+        return discovered_cameras
+
+    def discover_cameras(self, timeout=2):
+        """
+        Discover ONVIF cameras on the network using both WS-Discovery and network scanning.
+        
+        Args:
+            timeout (int): Timeout in seconds for discovery
+            
+        Returns:
+            list: List of discovered camera information dictionaries
+        """
+        discovered_cameras = []
         
         try:
-            # Create a UDP socket for discovery
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
-            sock.settimeout(timeout)
+            # First, try WS-Discovery
+            logger.info("Starting WS-Discovery...")
+            try:
+                # Create a UDP socket for discovery
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
+                sock.settimeout(timeout)
 
-            # WS-Discovery message
-            message = """<?xml version="1.0" encoding="UTF-8"?>
-            <e:Envelope xmlns:e="http://www.w3.org/2003/05/soap-envelope"
-                       xmlns:w="http://schemas.xmlsoap.org/ws/2004/08/addressing"
-                       xmlns:d="http://schemas.xmlsoap.org/ws/2005/04/discovery"
-                       xmlns:dn="http://www.onvif.org/ver10/network/wsdl">
-                <e:Header>
-                    <w:MessageID>uuid:84ede3de-7dec-11d0-c360-f01234567890</w:MessageID>
-                    <w:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</w:To>
-                    <w:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</w:Action>
-                </e:Header>
-                <e:Body>
-                    <d:Probe>
-                        <d:Types>dn:NetworkVideoTransmitter</d:Types>
-                    </d:Probe>
-                </e:Body>
-            </e:Envelope>"""
+                # WS-Discovery message
+                message = """<?xml version="1.0" encoding="UTF-8"?>
+                <e:Envelope xmlns:e="http://www.w3.org/2003/05/soap-envelope"
+                           xmlns:w="http://schemas.xmlsoap.org/ws/2004/08/addressing"
+                           xmlns:d="http://schemas.xmlsoap.org/ws/2005/04/discovery"
+                           xmlns:dn="http://www.onvif.org/ver10/network/wsdl">
+                    <e:Header>
+                        <w:MessageID>uuid:84ede3de-7dec-11d0-c360-f01234567890</w:MessageID>
+                        <w:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</w:To>
+                        <w:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</w:Action>
+                    </e:Header>
+                    <e:Body>
+                        <d:Probe>
+                            <d:Types>dn:NetworkVideoTransmitter</d:Types>
+                        </d:Probe>
+                    </e:Body>
+                </e:Envelope>"""
 
-            # Send discovery message
-            sock.sendto(message.encode('utf-8'), ('239.255.255.250', 3702))
+                # Send discovery message
+                sock.sendto(message.encode('utf-8'), ('239.255.255.250', 3702))
 
-            start_time = time.time()
-            while time.time() - start_time < timeout:
-                try:
-                    data, addr = sock.recvfrom(65535)
-                    if data:
-                        ip = addr[0]
-                        if ip not in [cam['ip'] for cam in discovered_cameras]:
-                            logger.debug(f"Found potential camera at {ip}")
-                            for port in self.onvif_ports:
-                                camera_info = self.try_connect_camera(ip, port)
-                                if camera_info:
-                                    discovered_cameras.append(camera_info)
-                                    break
-                except socket.timeout:
-                    break
+                start_time = time.time()
+                while time.time() - start_time < timeout:
+                    try:
+                        data, addr = sock.recvfrom(65535)
+                        if data:
+                            ip = addr[0]
+                            if ip not in [cam['ip'] for cam in discovered_cameras]:
+                                logger.debug(f"Found potential camera at {ip}")
+                                for port in self.onvif_ports:
+                                    camera_info = self.try_connect_camera(ip, port)
+                                    if camera_info:
+                                        discovered_cameras.append(camera_info)
+                                        break
+                    except socket.timeout:
+                        break
 
-            sock.close()
+                sock.close()
+
+            except Exception as e:
+                logger.error(f"Error during WS-Discovery: {str(e)}")
+
+            # Then, perform network scan
+            logger.info("Starting network scan...")
+            scan_results = self.scan_network(timeout)
+            
+            # Merge results, avoiding duplicates
+            for camera in scan_results:
+                if camera['ip'] not in [cam['ip'] for cam in discovered_cameras]:
+                    discovered_cameras.append(camera)
+
+            logger.info(f"Discovery complete. Found {len(discovered_cameras)} cameras")
+            return discovered_cameras
 
         except Exception as e:
             logger.error(f"Error during camera discovery: {str(e)}")
-
-        logger.info(f"Discovery complete. Found {len(discovered_cameras)} cameras")
-        return discovered_cameras
+            return []
 
     def add_camera(self, camera_info):
         """
