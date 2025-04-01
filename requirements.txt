@@ -45,7 +45,7 @@ SQLAlchemy==2.0.0
 xlsxwriter==3.0.3
 
 # Camera Integration
-onvif2-zeep==0.3.4  # ARM64 compatible version
+onvif-zeep==0.2.12  # Updated to latest available version
 zeep==4.2.1  # Stable version for ARM64
 yarl==1.9.2
 multidict==6.0.4
