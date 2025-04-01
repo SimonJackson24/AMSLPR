@@ -94,6 +94,12 @@ def create_app(config, db_manager, detector, barrier_controller=None, paxton_int
     # Initialize session
     Session(app)
     
+    # Configure CSRF protection
+    app.config['WTF_CSRF_ENABLED'] = True
+    app.config['WTF_CSRF_SECRET_KEY'] = os.urandom(24)
+    app.config['WTF_CSRF_SSL_STRICT'] = True
+    app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour in seconds
+    
     # Initialize CSRF protection
     csrf = CSRFProtect()
     csrf.init_app(app)

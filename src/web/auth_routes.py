@@ -59,7 +59,8 @@ def login():
     if request.method == 'POST':
         # Verify CSRF token
         if not request.form.get('csrf_token'):
-            flash('CSRF token missing', 'danger')
+            logger.error('CSRF token missing in login request')
+            flash('Security token missing. Please try again.', 'danger')
             return render_template('login.html', current_year=datetime.now().year)
         
         username = request.form.get('username')
