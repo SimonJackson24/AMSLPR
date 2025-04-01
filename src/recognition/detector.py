@@ -50,8 +50,17 @@ class LicensePlateDetector:
         self.save_images = config.get('save_images', True)
         self.image_save_path = config.get('image_save_path', 'data/images')
         self.use_onvif = config.get('use_onvif', True)
-        self.onvif_camera_manager = None
         self.mock_mode = config.get('mock_mode', False)
+        
+        # Initialize ONVIF camera manager
+        try:
+            from src.recognition.onvif_camera import init_camera_manager
+            self.onvif_camera_manager = init_camera_manager(config)
+            if not self.onvif_camera_manager:
+                raise RuntimeError("Failed to initialize ONVIF camera manager")
+        except Exception as e:
+            logger.error(f"Failed to initialize ONVIF camera manager: {e}")
+            self.mock_mode = True
         
         # Load OCR configuration
         if ocr_config is None:
@@ -80,13 +89,6 @@ class LicensePlateDetector:
         # Create image save directory if it doesn't exist
         if self.save_images and not os.path.exists(self.image_save_path):
             os.makedirs(self.image_save_path)
-        
-        # Initialize camera
-        try:
-            self._init_camera()
-        except Exception as e:
-            logger.warning(f"Failed to initialize camera: {e}. Running in mock mode.")
-            self.mock_mode = True
         
         # Initialize detector
         self._init_detector()
