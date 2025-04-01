@@ -49,7 +49,7 @@ class LicensePlateDetector:
         self.confidence_threshold = config.get('confidence_threshold', 0.7)
         self.save_images = config.get('save_images', True)
         self.image_save_path = config.get('image_save_path', 'data/images')
-        self.use_onvif = config.get('use_onvif', False)
+        self.use_onvif = config.get('use_onvif', True)
         self.onvif_camera_manager = None
         self.mock_mode = config.get('mock_mode', False)
         
@@ -176,18 +176,9 @@ class LicensePlateDetector:
         """
         Initialize the camera.
         """
-        if self.mock_mode:
-            logger.info("Running in mock mode - no camera initialization needed")
-            return
-            
         try:
             if self.use_onvif:
-                # Use ONVIF camera manager if provided
-                if 'onvif_camera_manager' in self.config:
-                    self.onvif_camera_manager = self.config['onvif_camera_manager']
-                    logger.info(f"Using ONVIF camera manager for camera {self.camera_id}")
-                    
-                    # Start streaming from the camera
+                if hasattr(self, 'onvif_camera_manager') and self.onvif_camera_manager:
                     if not self.onvif_camera_manager.start_stream(self.camera_id):
                         logger.error(f"Failed to start stream for ONVIF camera {self.camera_id}")
                         raise RuntimeError(f"Failed to start stream for ONVIF camera {self.camera_id}")
@@ -195,20 +186,13 @@ class LicensePlateDetector:
                     logger.error("ONVIF camera manager not provided")
                     raise ValueError("ONVIF camera manager not provided")
             else:
-                # Use OpenCV VideoCapture for local camera
-                self.camera = cv2.VideoCapture(self.camera_id)
-                self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, self.frame_width)
-                self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self.frame_height)
-                
-                if not self.camera.isOpened():
-                    logger.error(f"Failed to open camera {self.camera_id}")
-                    raise RuntimeError(f"Failed to open camera {self.camera_id}")
-                    
-                logger.info(f"Camera {self.camera_id} initialized")
+                # Don't try to use a local camera, raise an error since we only support ONVIF cameras
+                logger.error("Only ONVIF cameras are supported")
+                raise ValueError("Only ONVIF cameras are supported")
         except Exception as e:
             logger.error(f"Error initializing camera: {e}")
             raise
-    
+        
     def _init_detector(self):
         """
         Initialize the license plate detector.
@@ -234,11 +218,9 @@ class LicensePlateDetector:
                 logger.error("Failed to get frame from ONVIF camera")
                 return None
         else:
-            # Get frame from OpenCV VideoCapture
-            ret, frame = self.camera.read()
-            if not ret:
-                logger.error("Failed to capture frame from camera")
-                return None
+            # Don't try to use a local camera, raise an error since we only support ONVIF cameras
+            logger.error("Only ONVIF cameras are supported")
+            raise ValueError("Only ONVIF cameras are supported")
         
         # Detect license plate
         plates = self.detect_license_plates(frame, self.config.get('camera_settings'))
@@ -640,6 +622,7 @@ class LicensePlateDetector:
             # No need to clean up ONVIF camera manager here
             # It will be cleaned up by the caller
             pass
-        elif hasattr(self, 'camera') and self.camera is not None:
-            self.camera.release()
-            logger.info("Camera released")
+        else:
+            # Don't try to use a local camera, raise an error since we only support ONVIF cameras
+            logger.error("Only ONVIF cameras are supported")
+            raise ValueError("Only ONVIF cameras are supported")
