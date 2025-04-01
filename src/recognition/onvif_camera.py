@@ -35,37 +35,11 @@ class ONVIFCameraManager:
     """
     Class for managing ONVIF-compatible IP cameras.
     """
-    def __init__(self, config=None):
-        """
-        Initialize the ONVIF camera manager.
-        
-        Args:
-            config (dict): Configuration dictionary containing camera settings
-        """
-        self.config = config or {}
+    def __init__(self):
+        """Initialize the ONVIF camera manager."""
         self.cameras = {}
-        self.credential_manager = CredentialManager()
         self.wsdl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wsdl')
-        
-        # Common ONVIF ports
-        self.onvif_ports = [80, 8080, 8000, 8081, 8899, 554]  # Added RTSP port
-        
-        # Common RTSP paths
-        self.rtsp_paths = [
-            'h264Preview_01_main',
-            'h264Preview_01_sub',
-            'cam/realmonitor',
-            'videoMain',
-            'video1',
-            'live/ch0',
-            'live/ch00_0',
-            'stream1',
-            'live',
-            'media/video1',
-            'cam1/h264'
-        ]
-        
-        logger.info("ONVIF camera manager initialized")
+        logger.info(f"Initialized ONVIF camera manager with WSDL path: {self.wsdl_dir}")
 
     def get_all_cameras(self):
         """
@@ -288,66 +262,35 @@ class ONVIFCameraManager:
             username = camera_info['username']
             password = camera_info['password']
             
-            # Initialize camera connection with proper WSDL path
-            wsdl_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wsdl')
-            logger.debug(f"Using WSDL path: {wsdl_path}")
+            logger.info(f"Adding camera at {ip}:{port}")
             
             # Create camera with explicit WSDL files
-            cam = ONVIFCamera(
+            camera = ONVIFCamera(
                 ip, 
                 port,
                 username, 
                 password,
-                wsdl_dir=wsdl_path,
+                self.wsdl_dir,
                 encrypt=True
             )
             
-            # Initialize services
-            cam.create_devicemgmt_service()
-            media_service = cam.create_media_service()
+            # Test connection by getting device info
+            device_info = camera.devicemgmt.GetDeviceInformation()
+            logger.info(f"Successfully connected to camera at {ip}. Device info: {device_info}")
             
-            # Get device info
-            device_info = cam.devicemgmt.GetDeviceInformation()
-            profiles = media_service.GetProfiles()
-            
-            if profiles:
-                # Create stream URI request
-                request = media_service.create_type('GetStreamUri')
-                request.ProfileToken = profiles[0].token
-                
-                # Create StreamSetup
-                stream_setup = media_service.create_type('StreamSetup')
-                stream_setup.Stream = 'RTP-Unicast'
-                stream_setup.Transport = media_service.create_type('Transport')
-                stream_setup.Transport.Protocol = 'RTSP'
-                request.StreamSetup = stream_setup
-                
-                # Get stream URI
-                stream_uri = media_service.GetStreamUri(request)
-                
-                # Store camera info
-                self.cameras[ip] = {
-                    'camera': cam,
-                    'info': {
-                        'ip': ip,
-                        'port': port,
-                        'username': username,
-                        'password': password,
-                        'profiles': [{'token': p.token, 'name': p.Name} for p in profiles],
-                        'manufacturer': device_info.Manufacturer,
-                        'model': device_info.Model,
-                        'firmware': device_info.FirmwareVersion,
-                        'serial': device_info.SerialNumber,
-                        'stream_uri': stream_uri.Uri,
-                        'status': 'connected'
-                    }
+            # Store camera info
+            self.cameras[ip] = {
+                'camera': camera,
+                'info': {
+                    'ip': ip,
+                    'port': port,
+                    'username': username,
+                    'password': password,
+                    'status': 'initializing'
                 }
-                
-                logger.info(f"Successfully added camera at {ip}")
-                return True
-            else:
-                logger.error(f"No media profiles found for camera at {ip}")
-                return False
+            }
+            
+            return True
                 
         except Exception as e:
             logger.error(f"Failed to add camera: {str(e)}")
@@ -382,7 +325,7 @@ def init_camera_manager(config):
         ONVIFCameraManager: Initialized camera manager instance
     """
     try:
-        manager = ONVIFCameraManager(config)
+        manager = ONVIFCameraManager()
         logger.info("Camera manager initialized successfully")
         return manager
     except Exception as e:
