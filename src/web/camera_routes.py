@@ -136,7 +136,7 @@ def add_camera():
         return jsonify({'success': False, 'error': 'Missing CSRF token'}), 400
         
     data = request.get_json()
-    required_fields = ['ip', 'port', 'username', 'password']
+    required_fields = ['ip', 'username', 'password']
     
     # Validate required fields
     for field in required_fields:
@@ -147,10 +147,13 @@ def add_camera():
         # Import here to avoid circular imports
         from src.recognition.onvif_camera import ONVIFCamera
         
+        # Get port with default of 80
+        port = int(data.get('port', 80))
+        
         # Try to connect with provided credentials
         camera = ONVIFCamera(
             data['ip'], 
-            data['port'], 
+            port,
             data['username'], 
             data['password'], 
             os.path.join(os.path.dirname(os.path.abspath(__file__)), '../recognition/wsdl')
@@ -172,7 +175,7 @@ def add_camera():
             
             camera_info = {
                 'ip': data['ip'],
-                'port': data['port'],
+                'port': port,
                 'username': data['username'],
                 'password': data['password'],
                 'profiles': [{'token': p.token, 'name': p.Name} for p in profiles],

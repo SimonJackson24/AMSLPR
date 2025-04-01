@@ -55,13 +55,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${itemId}">
                                 <div>
                                     <strong>${camera.type}</strong>
-                                    <span class="ms-3 text-muted">${camera.ip}:${camera.port}</span>
+                                    <span class="ms-3 text-muted">${camera.ip}${camera.port ? ':' + camera.port : ''}</span>
                                 </div>
                             </button>
                         </h2>
                         <div id="${itemId}" class="accordion-collapse collapse" data-bs-parent="#cameraAccordion">
                             <div class="accordion-body">
-                                <form class="add-camera-form" data-ip="${camera.ip}" data-port="${camera.port}">
+                                <form class="add-camera-form" data-ip="${camera.ip}" data-port="${camera.port || '80'}">
                                     <div class="row">
                                         <div class="col-md-6">
                                             <div class="mb-3">
