@@ -50,10 +50,17 @@ class ONVIFCameraManager:
             ('admin', 'Admin123'),
             ('admin', '1234'),
             ('admin', 'password'),
+            ('admin', ''),  # Some cameras use blank password
+            ('root', 'root'),  # Added more common credentials
+            ('root', 'pass'),
+            ('root', 'admin')
         ]
         
+        # Common ONVIF ports
+        self.onvif_ports = [80, 8080, 8000, 8081, 8899]
+        
         logger.info("ONVIF camera manager initialized")
-    
+
     def get_all_cameras(self):
         """
         Get all registered cameras.
@@ -62,17 +69,81 @@ class ONVIFCameraManager:
             dict: Dictionary of all registered cameras with their information
         """
         return self.cameras
-    
-    def discover_cameras(self, timeout=2):
+
+    def try_connect_camera(self, ip, port=80):
         """
-        Discover ONVIF cameras on the network using WS-Discovery.
+        Try to connect to a camera at a specific IP and port using default credentials.
+        
+        Args:
+            ip (str): IP address of the camera
+            port (int): Port number to try
+            
+        Returns:
+            dict: Camera information if connection successful, None otherwise
+        """
+        logger.debug(f"Trying to connect to camera at {ip}:{port}")
+        
+        for username, password in self.default_credentials:
+            try:
+                camera = ONVIFCamera(ip, port, username, password, self.wsdl_dir, timeout=2)
+                media_service = camera.create_media_service()
+                profiles = media_service.GetProfiles()
+                
+                if profiles:
+                    # Get device information
+                    device_info = camera.devicemgmt.GetDeviceInformation()
+                    
+                    # Get stream URI for the first profile
+                    token = profiles[0].token
+                    stream_setup = {
+                        'Stream': 'RTP-Unicast',
+                        'Transport': {'Protocol': 'RTSP'}
+                    }
+                    stream_uri = media_service.GetStreamUri(stream_setup, token)
+                    
+                    camera_info = {
+                        'ip': ip,
+                        'port': port,
+                        'username': username,
+                        'password': password,
+                        'profiles': [{'token': p.token, 'name': p.Name} for p in profiles],
+                        'manufacturer': device_info.Manufacturer,
+                        'model': device_info.Model,
+                        'firmware': device_info.FirmwareVersion,
+                        'serial': device_info.SerialNumber,
+                        'stream_uri': stream_uri.Uri,
+                        'status': 'discovered'
+                    }
+                    logger.info(f"Successfully connected to camera at {ip}:{port}")
+                    return camera_info
+            except Exception as e:
+                logger.debug(f"Failed to connect to {ip}:{port} with credentials {username}: {str(e)}")
+                continue
+        return None
+
+    def discover_cameras(self, timeout=2, known_ips=None):
+        """
+        Discover ONVIF cameras on the network using WS-Discovery and try known IPs.
         
         Args:
             timeout (int): Timeout in seconds for discovery
+            known_ips (list): List of known IP addresses to try
             
         Returns:
             list: List of discovered camera information dictionaries
         """
+        discovered_cameras = []
+        known_ips = known_ips or []
+        
+        # First, try known IP addresses
+        for ip in known_ips:
+            logger.info(f"Trying known IP address: {ip}")
+            for port in self.onvif_ports:
+                camera_info = self.try_connect_camera(ip, port)
+                if camera_info:
+                    discovered_cameras.append(camera_info)
+                    break
+        
         try:
             # Create a UDP socket for discovery
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -101,47 +172,30 @@ class ONVIFCameraManager:
             # Send discovery message
             sock.sendto(message.encode('utf-8'), ('239.255.255.250', 3702))
 
-            discovered_cameras = []
             start_time = time.time()
-
             while time.time() - start_time < timeout:
                 try:
                     data, addr = sock.recvfrom(65535)
                     if data:
                         ip = addr[0]
-                        logger.debug(f"Found potential camera at {ip}")
-                        
-                        # Try to connect with default credentials
-                        for username, password in self.default_credentials:
-                            try:
-                                camera = ONVIFCamera(ip, 80, username, password, self.wsdl_dir)
-                                media_service = camera.create_media_service()
-                                profiles = media_service.GetProfiles()
-                                
-                                if profiles:
-                                    camera_info = {
-                                        'ip': ip,
-                                        'username': username,
-                                        'password': password,
-                                        'profiles': [{'token': p.token, 'name': p.Name} for p in profiles],
-                                        'status': 'discovered'
-                                    }
+                        if ip not in [cam['ip'] for cam in discovered_cameras]:
+                            logger.debug(f"Found potential camera at {ip}")
+                            for port in self.onvif_ports:
+                                camera_info = self.try_connect_camera(ip, port)
+                                if camera_info:
                                     discovered_cameras.append(camera_info)
-                                    logger.info(f"Successfully connected to camera at {ip}")
                                     break
-                            except Exception as e:
-                                logger.debug(f"Failed to connect to {ip} with credentials {username}: {str(e)}")
-                                continue
                 except socket.timeout:
                     break
 
             sock.close()
-            return discovered_cameras
 
         except Exception as e:
             logger.error(f"Error during camera discovery: {str(e)}")
-            return []
-    
+
+        logger.info(f"Discovery complete. Found {len(discovered_cameras)} cameras")
+        return discovered_cameras
+
     def add_camera(self, camera_info):
         """
         Add a camera to the manager.

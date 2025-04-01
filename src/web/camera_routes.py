@@ -499,48 +499,41 @@ def discover_cameras():
                 logger.debug("Creating ONVIFCameraManager instance...")
                 onvif_camera_manager = ONVIFCameraManager(camera_config)
                 if onvif_camera_manager is None:
-                    raise Exception("Failed to initialize camera manager")
-                logger.debug("ONVIFCameraManager initialized successfully")
+                    logger.error("Failed to create camera manager")
+                    return jsonify({'success': False, 'error': 'Failed to initialize camera manager'}), 500
+                
             except Exception as e:
                 logger.error(f"Error initializing camera manager: {str(e)}")
-                import traceback
-                logger.error(f"Traceback: {traceback.format_exc()}")
-                return jsonify({'success': False, 'error': f'Failed to initialize camera manager: {str(e)}'}), 500
+                return jsonify({'success': False, 'error': f'Error initializing camera manager: {str(e)}'}), 500
         
-        logger.debug("Starting discovery process...")
-        try:
-            # Run discovery
-            logger.debug("Running discover_cameras...")
-            discovered = onvif_camera_manager.discover_cameras(timeout=5)
-            logger.debug(f"Discovery completed. Found cameras: {discovered}")
-            
-            # Format the response for the frontend
-            cameras = []
-            for camera in discovered:
-                cameras.append({
-                    'name': f"{camera.get('manufacturer', 'Unknown')} {camera.get('model', 'Camera')}",
-                    'ip': camera.get('ip', ''),
-                    'manufacturer': camera.get('manufacturer', 'Unknown'),
-                    'model': camera.get('model', 'Unknown'),
-                    'firmware_version': camera.get('firmware_version', ''),
-                    'serial_number': camera.get('serial_number', '')
-                })
-            
-            return jsonify({
-                'success': True,
-                'cameras': cameras
-            })
-            
-        except Exception as e:
-            logger.error(f"Error during camera discovery: {str(e)}")
-            import traceback
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            return jsonify({'success': False, 'error': f'Error during camera discovery: {str(e)}'}), 500
+        # Get known IPs from config or request
+        known_ips = []
+        if 'ip' in request.json:
+            known_ips.append(request.json['ip'])
+        elif 'known_ips' in request.json:
+            known_ips.extend(request.json['known_ips'])
+        else:
+            # Add default known IP
+            known_ips.append('192.168.1.222')
+        
+        # Start camera discovery
+        logger.debug("Starting camera discovery...")
+        discovered_cameras = onvif_camera_manager.discover_cameras(timeout=5, known_ips=known_ips)
+        
+        if not discovered_cameras:
+            logger.warning("No cameras found during discovery")
+            return jsonify({'success': True, 'cameras': [], 'message': 'No cameras found'}), 200
+        
+        logger.info(f"Found {len(discovered_cameras)} cameras")
+        return jsonify({
+            'success': True,
+            'cameras': discovered_cameras,
+            'message': f'Found {len(discovered_cameras)} cameras'
+        }), 200
+        
     except Exception as e:
-        logger.error(f"Unexpected error in discover_cameras route: {str(e)}")
-        import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        return jsonify({'success': False, 'error': f'Unexpected error: {str(e)}'}), 500
+        logger.error(f"Error during camera discovery: {str(e)}")
+        return jsonify({'success': False, 'error': f'Error during camera discovery: {str(e)}'}), 500
 
 def register_camera_routes(app, detector, db_manager):
     """Register camera routes with the Flask application."""
