@@ -156,7 +156,7 @@ def add_camera():
             port,
             data['username'], 
             data['password'], 
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), '../recognition/wsdl')
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'recognition/wsdl')
         )
         
         # Get camera info
