@@ -171,7 +171,7 @@ def add_camera():
                 'Stream': 'RTP-Unicast',
                 'Transport': {'Protocol': 'RTSP'}
             }
-            stream_uri = media_service.GetStreamUri(stream_setup, token)
+            stream_uri = media_service.GetStreamUri({'StreamSetup': stream_setup, 'ProfileToken': token})
             
             camera_info = {
                 'ip': data['ip'],
