@@ -10,7 +10,6 @@ import os
 import time
 import socket
 import logging
-import asyncio
 from onvif.client import ONVIFCamera
 from urllib.parse import urlparse
 from src.utils.security import CredentialManager
@@ -64,7 +63,7 @@ class ONVIFCameraManager:
         """
         return self.cameras
     
-    async def discover_cameras(self, timeout=2):
+    def discover_cameras(self, timeout=2):
         """
         Discover ONVIF cameras on the network using WS-Discovery.
         
@@ -74,93 +73,74 @@ class ONVIFCameraManager:
         Returns:
             list: List of discovered camera information dictionaries
         """
-        logger.info("Starting camera discovery...")
-        discovered_cameras = []
-        
-        # Create UDP socket for discovery
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
-        
-        # WS-Discovery message
-        discovery_msg = """<?xml version="1.0" encoding="UTF-8"?>
-        <e:Envelope xmlns:e="http://www.w3.org/2003/05/soap-envelope" xmlns:w="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:d="http://schemas.xmlsoap.org/ws/2005/04/discovery" xmlns:dn="http://www.onvif.org/ver10/network/wsdl">
-            <e:Header>
-                <w:MessageID>uuid:84ede3de-7dec-11d0-c360-f01234567890</w:MessageID>
-                <w:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</w:To>
-                <w:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</w:Action>
-            </e:Header>
-            <e:Body>
-                <d:Probe>
-                    <d:Types>dn:NetworkVideoTransmitter</d:Types>
-                </d:Probe>
-            </e:Body>
-        </e:Envelope>"""
-        
         try:
-            # Send discovery message
-            sock.sendto(discovery_msg.encode(), ('239.255.255.250', 3702))
+            # Create a UDP socket for discovery
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
             sock.settimeout(timeout)
-            
-            # Listen for responses
+
+            # WS-Discovery message
+            message = """<?xml version="1.0" encoding="UTF-8"?>
+            <e:Envelope xmlns:e="http://www.w3.org/2003/05/soap-envelope"
+                       xmlns:w="http://schemas.xmlsoap.org/ws/2004/08/addressing"
+                       xmlns:d="http://schemas.xmlsoap.org/ws/2005/04/discovery"
+                       xmlns:dn="http://www.onvif.org/ver10/network/wsdl">
+                <e:Header>
+                    <w:MessageID>uuid:84ede3de-7dec-11d0-c360-f01234567890</w:MessageID>
+                    <w:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</w:To>
+                    <w:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</w:Action>
+                </e:Header>
+                <e:Body>
+                    <d:Probe>
+                        <d:Types>dn:NetworkVideoTransmitter</d:Types>
+                    </d:Probe>
+                </e:Body>
+            </e:Envelope>"""
+
+            # Send discovery message
+            sock.sendto(message.encode('utf-8'), ('239.255.255.250', 3702))
+
+            discovered_cameras = []
             start_time = time.time()
+
             while time.time() - start_time < timeout:
                 try:
                     data, addr = sock.recvfrom(65535)
-                    if data and addr:
+                    if data:
                         ip = addr[0]
-                        logger.info(f"Found potential camera at {ip}")
+                        logger.debug(f"Found potential camera at {ip}")
                         
                         # Try to connect with default credentials
                         for username, password in self.default_credentials:
                             try:
-                                cam = ONVIFCamera(ip, 80, username, password, wsdl_dir=self.wsdl_dir)
-                                
-                                # Get device information
-                                device_info = cam.devicemgmt.GetDeviceInformation()
-                                media_service = cam.create_media_service()
+                                camera = ONVIFCamera(ip, 80, username, password, self.wsdl_dir)
+                                media_service = camera.create_media_service()
                                 profiles = media_service.GetProfiles()
                                 
-                                # Get stream URI
-                                token = profiles[0].token
-                                stream_setup = {
-                                    'Stream': 'RTP-Unicast',
-                                    'Transport': {
-                                        'Protocol': 'RTSP'
+                                if profiles:
+                                    camera_info = {
+                                        'ip': ip,
+                                        'username': username,
+                                        'password': password,
+                                        'profiles': [{'token': p.token, 'name': p.Name} for p in profiles],
+                                        'status': 'discovered'
                                     }
-                                }
-                                stream_uri = media_service.GetStreamUri(stream_setup, token)
-                                
-                                camera_info = {
-                                    'ip': ip,
-                                    'port': 80,
-                                    'username': username,
-                                    'password': password,
-                                    'manufacturer': device_info.Manufacturer,
-                                    'model': device_info.Model,
-                                    'serial_number': device_info.SerialNumber,
-                                    'stream_uri': stream_uri.Uri
-                                }
-                                
-                                discovered_cameras.append(camera_info)
-                                logger.info(f"Successfully connected to camera at {ip}")
-                                break
-                                
+                                    discovered_cameras.append(camera_info)
+                                    logger.info(f"Successfully connected to camera at {ip}")
+                                    break
                             except Exception as e:
-                                logger.debug(f"Failed to connect to {ip} with credentials {username}:{password}: {str(e)}")
+                                logger.debug(f"Failed to connect to {ip} with credentials {username}: {str(e)}")
                                 continue
-                
                 except socket.timeout:
-                    continue
-                
+                    break
+
+            sock.close()
+            return discovered_cameras
+
         except Exception as e:
             logger.error(f"Error during camera discovery: {str(e)}")
-        
-        finally:
-            sock.close()
-        
-        logger.info(f"Discovery complete. Found {len(discovered_cameras)} cameras")
-        return discovered_cameras
+            return []
     
     def add_camera(self, camera_info):
         """
