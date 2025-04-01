@@ -87,7 +87,7 @@ def create_app(config, db_manager, detector, barrier_controller=None, paxton_int
     app.config['SESSION_TYPE'] = 'redis'
     app.config['SESSION_REDIS'] = redis.Redis(host='localhost', port=6379, db=0)
     app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours in seconds
-    app.config['SESSION_COOKIE_SECURE'] = True
+    app.config['SESSION_COOKIE_SECURE'] = False  # Set to False for development
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     
@@ -95,16 +95,12 @@ def create_app(config, db_manager, detector, barrier_controller=None, paxton_int
     Session(app)
     
     # Configure CSRF protection
+    csrf = CSRFProtect(app)
     app.config['WTF_CSRF_ENABLED'] = True
     app.config['WTF_CSRF_SECRET_KEY'] = config.get('web', {}).get('csrf_secret_key', os.urandom(24))
-    app.config['WTF_CSRF_SSL_STRICT'] = True
+    app.config['WTF_CSRF_SSL_STRICT'] = False  # Set to False for development
     app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour in seconds
-    app.config['WTF_CSRF_CHECK_DEFAULT'] = True
     app.config['WTF_CSRF_METHODS'] = ['POST', 'PUT', 'PATCH', 'DELETE']
-    
-    # Initialize CSRF protection
-    csrf = CSRFProtect()
-    csrf.init_app(app)
     
     # Enable async support
     from asgiref.wsgi import WsgiToAsgi
