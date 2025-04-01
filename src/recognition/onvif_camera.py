@@ -20,6 +20,7 @@ import zeep
 import ipaddress
 import concurrent.futures
 import threading
+import requests
 
 logger = logging.getLogger('AMSLPR.recognition.onvif_camera')
 
@@ -45,19 +46,6 @@ class ONVIFCameraManager:
         self.cameras = {}
         self.credential_manager = CredentialManager()
         self.wsdl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wsdl')
-        
-        # Default credentials for camera discovery
-        self.default_credentials = [
-            ('admin', 'admin'),
-            ('Admin', 'Admin'),
-            ('admin', 'Admin123'),
-            ('admin', '1234'),
-            ('admin', 'password'),
-            ('admin', ''),  # Some cameras use blank password
-            ('root', 'root'),  # Added more common credentials
-            ('root', 'pass'),
-            ('root', 'admin')
-        ]
         
         # Common ONVIF ports
         self.onvif_ports = [80, 8080, 8000, 8081, 8899, 554]  # Added RTSP port
@@ -90,84 +78,57 @@ class ONVIFCameraManager:
 
     def try_connect_camera(self, ip, port=80):
         """
-        Try to connect to a camera at a specific IP and port using default credentials.
+        Try to detect a camera at a specific IP and port without authentication.
         
         Args:
             ip (str): IP address of the camera
             port (int): Port number to try
             
         Returns:
-            dict: Camera information if connection successful, None otherwise
+            dict: Camera information if detected, None otherwise
         """
-        logger.debug(f"Trying to connect to camera at {ip}:{port}")
+        logger.debug(f"Checking for camera at {ip}:{port}")
         
-        # Try RTSP first if it's port 554
+        # For RTSP port, just check if the port is open
         if port == 554:
-            for path in self.rtsp_paths:
-                rtsp_url = f"rtsp://{ip}:{port}/{path}"
-                try:
-                    cap = cv2.VideoCapture(rtsp_url)
-                    if cap.isOpened():
-                        ret, _ = cap.read()
-                        if ret:
-                            logger.info(f"Successfully connected to RTSP stream at {rtsp_url}")
-                            cap.release()
-                            return {
-                                'ip': ip,
-                                'port': port,
-                                'username': '',
-                                'password': '',
-                                'stream_uri': rtsp_url,
-                                'manufacturer': 'Unknown',
-                                'model': 'RTSP Camera',
-                                'firmware': '',
-                                'serial': '',
-                                'status': 'discovered',
-                                'connection_type': 'rtsp'
-                            }
-                    cap.release()
-                except Exception as e:
-                    logger.debug(f"Failed to connect to RTSP stream at {rtsp_url}: {str(e)}")
-                    continue
-        
-        # Try ONVIF if RTSP didn't work or it's not port 554
-        for username, password in self.default_credentials:
             try:
-                camera = ONVIFCamera(ip, port, username, password, self.wsdl_dir, timeout=2)
-                media_service = camera.create_media_service()
-                profiles = media_service.GetProfiles()
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(1)
+                result = sock.connect_ex((ip, port))
+                sock.close()
                 
-                if profiles:
-                    # Get device information
-                    device_info = camera.devicemgmt.GetDeviceInformation()
-                    
-                    # Get stream URI for the first profile
-                    token = profiles[0].token
-                    stream_setup = {
-                        'Stream': 'RTP-Unicast',
-                        'Transport': {'Protocol': 'RTSP'}
-                    }
-                    stream_uri = media_service.GetStreamUri(stream_setup, token)
-                    
-                    camera_info = {
+                if result == 0:
+                    logger.info(f"Found potential RTSP camera at {ip}:{port}")
+                    return {
                         'ip': ip,
                         'port': port,
-                        'username': username,
-                        'password': password,
-                        'profiles': [{'token': p.token, 'name': p.Name} for p in profiles],
-                        'manufacturer': device_info.Manufacturer,
-                        'model': device_info.Model,
-                        'firmware': device_info.FirmwareVersion,
-                        'serial': device_info.SerialNumber,
-                        'stream_uri': stream_uri.Uri,
-                        'status': 'discovered',
-                        'connection_type': 'onvif'
+                        'type': 'RTSP Camera',
+                        'requires_auth': True,
+                        'status': 'detected'
                     }
-                    logger.info(f"Successfully connected to camera at {ip}:{port}")
-                    return camera_info
             except Exception as e:
-                logger.debug(f"Failed to connect to {ip}:{port} with credentials {username}: {str(e)}")
-                continue
+                logger.debug(f"Error checking RTSP port at {ip}:{port}: {str(e)}")
+                return None
+        
+        # For other ports, try ONVIF device discovery without auth
+        try:
+            # Try to connect to device service endpoint
+            url = f"http://{ip}:{port}/onvif/device_service"
+            response = requests.get(url, timeout=1)
+            
+            if response.status_code in [401, 403]:  # Authentication required
+                logger.info(f"Found potential ONVIF camera at {ip}:{port}")
+                return {
+                    'ip': ip,
+                    'port': port,
+                    'type': 'ONVIF Camera',
+                    'requires_auth': True,
+                    'status': 'detected'
+                }
+        except requests.exceptions.RequestException as e:
+            logger.debug(f"Error checking ONVIF endpoint at {ip}:{port}: {str(e)}")
+            return None
+        
         return None
 
     def get_local_network(self):
@@ -211,14 +172,20 @@ class ONVIFCameraManager:
                 if ip_str.endswith('.0') or ip_str.endswith('.255'):
                     continue
                     
-                for port in self.onvif_ports:
+                # First check RTSP port
+                futures.append(executor.submit(self.try_connect_camera, ip_str, 554))
+                
+                # Then check common ONVIF ports
+                for port in [80, 8080, 8000, 8081, 8899]:
                     futures.append(executor.submit(self.try_connect_camera, ip_str, port))
             
             for future in concurrent.futures.as_completed(futures):
                 try:
                     result = future.result()
                     if result:
-                        discovered_cameras.append(result)
+                        # Only add if we haven't found this IP yet
+                        if not any(cam['ip'] == result['ip'] for cam in discovered_cameras):
+                            discovered_cameras.append(result)
                 except Exception as e:
                     logger.debug(f"Error in scan task: {str(e)}")
         
@@ -226,7 +193,7 @@ class ONVIFCameraManager:
 
     def discover_cameras(self, timeout=2):
         """
-        Discover ONVIF cameras on the network using both WS-Discovery and network scanning.
+        Discover cameras on the network using both WS-Discovery and network scanning.
         
         Args:
             timeout (int): Timeout in seconds for discovery
@@ -240,13 +207,11 @@ class ONVIFCameraManager:
             # First, try WS-Discovery
             logger.info("Starting WS-Discovery...")
             try:
-                # Create a UDP socket for discovery
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
                 sock.settimeout(timeout)
 
-                # WS-Discovery message
                 message = """<?xml version="1.0" encoding="UTF-8"?>
                 <e:Envelope xmlns:e="http://www.w3.org/2003/05/soap-envelope"
                            xmlns:w="http://schemas.xmlsoap.org/ws/2004/08/addressing"
@@ -264,7 +229,6 @@ class ONVIFCameraManager:
                     </e:Body>
                 </e:Envelope>"""
 
-                # Send discovery message
                 sock.sendto(message.encode('utf-8'), ('239.255.255.250', 3702))
 
                 start_time = time.time()
@@ -273,13 +237,14 @@ class ONVIFCameraManager:
                         data, addr = sock.recvfrom(65535)
                         if data:
                             ip = addr[0]
-                            if ip not in [cam['ip'] for cam in discovered_cameras]:
-                                logger.debug(f"Found potential camera at {ip}")
-                                for port in self.onvif_ports:
-                                    camera_info = self.try_connect_camera(ip, port)
-                                    if camera_info:
-                                        discovered_cameras.append(camera_info)
-                                        break
+                            if not any(cam['ip'] == ip for cam in discovered_cameras):
+                                logger.info(f"Found camera via WS-Discovery at {ip}")
+                                discovered_cameras.append({
+                                    'ip': ip,
+                                    'type': 'ONVIF Camera',
+                                    'requires_auth': True,
+                                    'status': 'detected'
+                                })
                     except socket.timeout:
                         break
 
@@ -294,7 +259,7 @@ class ONVIFCameraManager:
             
             # Merge results, avoiding duplicates
             for camera in scan_results:
-                if camera['ip'] not in [cam['ip'] for cam in discovered_cameras]:
+                if not any(cam['ip'] == camera['ip'] for cam in discovered_cameras):
                     discovered_cameras.append(camera)
 
             logger.info(f"Discovery complete. Found {len(discovered_cameras)} cameras")

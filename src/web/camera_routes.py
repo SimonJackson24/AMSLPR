@@ -126,6 +126,83 @@ def cameras():
 @login_required(user_manager)
 @permission_required('edit', user_manager)
 def add_camera():
+    """Add a new camera with credentials."""
+    if not request.is_json:
+        return jsonify({'success': False, 'error': 'Request must be JSON'}), 400
+
+    # Validate CSRF token
+    csrf_token = request.headers.get('X-CSRFToken')
+    if not csrf_token:
+        return jsonify({'success': False, 'error': 'Missing CSRF token'}), 400
+        
+    data = request.get_json()
+    required_fields = ['ip', 'port', 'username', 'password']
+    
+    # Validate required fields
+    for field in required_fields:
+        if field not in data:
+            return jsonify({'success': False, 'error': f'Missing required field: {field}'}), 400
+            
+    try:
+        # Import here to avoid circular imports
+        from src.recognition.onvif_camera import ONVIFCamera
+        
+        # Try to connect with provided credentials
+        camera = ONVIFCamera(
+            data['ip'], 
+            data['port'], 
+            data['username'], 
+            data['password'], 
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), '../recognition/wsdl'),
+            timeout=5
+        )
+        
+        # Get camera info
+        device_info = camera.devicemgmt.GetDeviceInformation()
+        media_service = camera.create_media_service()
+        profiles = media_service.GetProfiles()
+        
+        if profiles:
+            # Get stream URI
+            token = profiles[0].token
+            stream_setup = {
+                'Stream': 'RTP-Unicast',
+                'Transport': {'Protocol': 'RTSP'}
+            }
+            stream_uri = media_service.GetStreamUri(stream_setup, token)
+            
+            camera_info = {
+                'ip': data['ip'],
+                'port': data['port'],
+                'username': data['username'],
+                'password': data['password'],
+                'profiles': [{'token': p.token, 'name': p.Name} for p in profiles],
+                'manufacturer': device_info.Manufacturer,
+                'model': device_info.Model,
+                'firmware': device_info.FirmwareVersion,
+                'serial': device_info.SerialNumber,
+                'stream_uri': stream_uri.Uri,
+                'status': 'connected'
+            }
+            
+            # Add to camera manager
+            if onvif_camera_manager:
+                onvif_camera_manager.add_camera(camera_info)
+                
+            return jsonify({
+                'success': True,
+                'camera': camera_info,
+                'message': 'Camera added successfully'
+            }), 200
+            
+    except Exception as e:
+        logger.error(f"Error adding camera: {str(e)}")
+        return jsonify({'success': False, 'error': f'Error adding camera: {str(e)}'}), 500
+
+@camera_bp.route('/cameras/add', methods=['POST'])
+@login_required(user_manager)
+@permission_required('edit', user_manager)
+def add_camera_old():
     """Add a new camera."""
     global onvif_camera_manager
     if onvif_camera_manager is None:
@@ -518,7 +595,7 @@ def discover_cameras():
         return jsonify({
             'success': True,
             'cameras': discovered_cameras,
-            'message': f'Found {len(discovered_cameras)} cameras'
+            'message': f'Found {len(discovered_cameras)} cameras. Please configure credentials for each camera you want to use.'
         }), 200
         
     except Exception as e:
