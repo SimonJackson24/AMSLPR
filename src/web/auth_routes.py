@@ -60,7 +60,7 @@ def login():
         # Verify CSRF token
         if not request.form.get('csrf_token'):
             flash('CSRF token missing', 'danger')
-            return render_template('auth/login.html', current_year=datetime.now().year)
+            return render_template('login.html', current_year=datetime.now().year)
         
         username = request.form.get('username')
         password = request.form.get('password')
@@ -96,7 +96,7 @@ def login():
     # Get the next page from the query string
     next_page = request.args.get('next', '')
     
-    return render_template('auth/login.html', current_year=current_year, next=next_page)
+    return render_template('login.html', current_year=current_year, next=next_page)
 
 @auth_bp.route('/logout')
 def logout():
