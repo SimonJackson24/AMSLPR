@@ -58,203 +58,37 @@ except ImportError as e:
     logging.warning("Running in limited mode without some functionality")
     OTHER_ROUTES_AVAILABLE = False
 
-def create_app(config, db_manager, detector, barrier_controller=None, paxton_integration=None, nayax_integration=None):
+def create_app(config=None):
     """
     Create and configure the Flask application.
     
     Args:
         config (dict): Application configuration
-        db_manager (DatabaseManager): Database manager instance
-        detector (LicensePlateDetector): License plate detector instance
-        barrier_controller (BarrierController, optional): Barrier controller instance
-        paxton_integration (PaxtonIntegration, optional): Paxton integration instance
-        nayax_integration (NayaxIntegration, optional): Nayax integration instance
-    
+        
     Returns:
         Flask: Configured Flask application
     """
-    app = Flask(__name__)
-    
-    # Configure Flask app
-    app.config['SECRET_KEY'] = config.get('web', {}).get('secret_key', os.urandom(24))
-    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload size
-    app.config['DETECTOR_AVAILABLE'] = detector is not None
-    
-    # Store the full config in app config
-    app.config.update(config)
-    
-    # Configure session with Redis
-    app.config['SESSION_TYPE'] = 'redis'
-    app.config['SESSION_REDIS'] = redis.Redis(host='localhost', port=6379, db=0)
-    app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours in seconds
-    app.config['SESSION_COOKIE_SECURE'] = False  # Set to False for development
-    app.config['SESSION_COOKIE_HTTPONLY'] = True
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-    
-    # Initialize session
-    Session(app)
-    
-    # Configure CSRF protection
-    csrf = CSRFProtect(app)
-    app.config['WTF_CSRF_ENABLED'] = True
-    app.config['WTF_CSRF_SECRET_KEY'] = config.get('web', {}).get('csrf_secret_key', os.urandom(24))
-    app.config['WTF_CSRF_SSL_STRICT'] = False  # Set to False for development
-    app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour in seconds
-    app.config['WTF_CSRF_METHODS'] = ['POST', 'PUT', 'PATCH', 'DELETE']
-    
-    # Enable async support
-    from asgiref.wsgi import WsgiToAsgi
-    app.asgi_app = WsgiToAsgi(app.wsgi_app)
-    
-    # Ensure we have an event loop
     try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    
-    # Configure SSL if enabled
-    if config['web']['ssl']['enabled']:
-        app.config['SSL_ENABLED'] = True
-        app.config['SSL_CERTIFICATE'] = config['web']['ssl']['certificate']
-        app.config['SSL_KEY'] = config['web']['ssl']['key']
-    else:
-        app.config['SSL_ENABLED'] = False
-    
-    # Store dependencies in app config for access in routes
-    app.config['DB_MANAGER'] = db_manager
-    app.config['DETECTOR'] = detector
-    if barrier_controller:
-        app.config['BARRIER_CONTROLLER'] = barrier_controller
-    if paxton_integration:
-        app.config['PAXTON_INTEGRATION'] = paxton_integration
-    if nayax_integration:
-        app.config['NAYAX_INTEGRATION'] = nayax_integration
-    
-    # Configure app
-    app.config['DEBUG'] = True
-    app.config['TEMPLATES_AUTO_RELOAD'] = True
-    app.config['EXPLAIN_TEMPLATE_LOADING'] = True
-    
-    # Register custom template filters
-    @app.template_filter('formatDateTime')
-    def format_datetime(value):
-        """Format a datetime object to a readable string."""
-        if not value:
-            return ""
-        if isinstance(value, str):
-            try:
-                value = datetime.fromisoformat(value)
-            except ValueError:
-                return value
-        return value.strftime('%Y-%m-%d %H:%M:%S')
-    
-    # Initialize security features if available
-    try:
-        from src.web.security import setup_security
-        setup_security(app)
-    except ImportError as e:
-        logging.warning(f"Could not import security module: {e}")
-        logging.warning("Running without security features")
-    
-    # Initialize camera health monitor if available
-    try:
-        from src.utils.camera_health import AsyncCameraHealthMonitor
-        # We'll initialize this later when we have a camera manager
-        app.config['CAMERA_HEALTH_MONITOR_ENABLED'] = True
-    except ImportError as e:
-        logging.warning(f"Could not import camera health monitor: {e}")
-        logging.warning("Running without camera health monitoring")
-        app.config['CAMERA_HEALTH_MONITOR_ENABLED'] = False
-    
-    # Initialize authentication system if available
-    try:
-        from src.web.auth_routes import init_user_manager, register_routes as register_auth_routes, auth_bp
-        init_user_manager(app)
-        app.register_blueprint(auth_bp, url_prefix='/auth')
-        register_auth_routes(app, db_manager)
-        app.config['AUTH_ENABLED'] = True
+        from src.web import create_app as flask_create_app
         
-        # Initialize mode-based permissions
-        try:
-            from src.utils.mode_permissions import get_visible_features
-            
-            @app.context_processor
-            def inject_visible_features():
-                """Make visible features available in templates."""
-                return {'visible_features': get_visible_features()}
-                
-            logging.info("Mode-based permission system initialized")
-        except ImportError as e:
-            logging.warning(f"Could not import mode permissions module: {e}")
-            logging.warning("Running without mode-based permissions")
-    except ImportError as e:
-        logging.warning(f"Could not import auth module: {e}")
-        logging.warning("Running without authentication")
-        app.config['AUTH_ENABLED'] = False
-    
-    # Register camera routes if available
-    if ROUTES_AVAILABLE:
-        register_camera_routes(app, detector, db_manager)
-        register_ocr_routes(app, detector)
-    
-    # Register system routes if available
-    if OTHER_ROUTES_AVAILABLE:
-        register_system_routes(app, db_manager)
-    
-    # Register blueprints if available
-    try:
-        from src.web.main_routes import main_bp, register_main_routes
-        register_main_routes(app, db_manager)
-    except ImportError as e:
-        logging.warning(f"Could not import main routes: {e}")
-    
-    try:
-        from src.web.vehicle_routes import vehicle_bp
-        app.register_blueprint(vehicle_bp)
-    except ImportError as e:
-        logging.warning(f"Could not import vehicle routes: {e}")
+        # Create Flask app
+        app = flask_create_app(config)
         
-    # Register parking blueprint if available
-    try:
-        from src.web.parking_routes import parking_bp
-        app.register_blueprint(parking_bp)
-        logging.info("Parking routes registered")
-    except (ImportError, NameError) as e:
-        logging.warning(f"Could not register parking routes: {e}")
-    
-    # Register other routes if available
-    if OTHER_ROUTES_AVAILABLE:
-        register_vehicle_routes(app, db_manager)
-        register_barrier_routes(app, db_manager)
-        register_api_routes(app, db_manager)
-        register_stats_routes(app, db_manager)
-        register_user_routes(app, db_manager)
-        # Auth routes already registered above
-    
-    # Register global redirects
-    @app.route('/backup')
-    def backup_redirect():
-        return redirect(url_for('system.backup_restore'))
-    
-    @app.route('/users')
-    def users_redirect():
-        return redirect(url_for('auth.users_list'))
-    
-    @app.route('/ocr/settings')
-    def ocr_settings_redirect():
-        return redirect(url_for('ocr.ocr_settings'))
-    
-    # Initialize user manager
-    try:
-        from src.utils.user_management import UserManager
-        user_manager = UserManager()
-        app.config['USER_MANAGER'] = user_manager
-    except ImportError as e:
-        logging.warning(f"Could not import user manager: {e}")
-        logging.warning("Running without user management")
-    
-    return app
+        # Configure logging
+        logging.basicConfig(level=logging.INFO)
+        logger = logging.getLogger(__name__)
+        
+        # Log startup information
+        logger.info("Starting AMSLPR web application")
+        logger.info(f"Configuration: {config}")
+        
+        return app
+        
+    except Exception as e:
+        logger.error(f"Error creating Flask app: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise
 
 # Load configuration and create app instance for uvicorn
 try:
@@ -265,7 +99,7 @@ try:
     config = load_config()
     db_manager = DatabaseManager(config['database'])
     detector = LicensePlateDetector(config['recognition'])
-    app = create_app(config, db_manager, detector)
+    app = create_app(config)
 
     # Add health check endpoint
     @app.route('/health')

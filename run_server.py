@@ -49,34 +49,28 @@ def main():
         
         # Initialize detector if enabled
         detector = None
-        if config.get('detector', {}).get('enabled', True):
+        if config.get("recognition", {}).get("enabled", False):
             detector = LicensePlateDetector(config)
         
-        # Create and run app
-        app = create_app(config, db_manager, detector)
-        
-        # Add Jinja2 filter for formatDateTime
-        @app.template_filter('formatDateTime')
-        def format_datetime(value):
-            if not value:
-                return '-'
-            from datetime import datetime
-            if isinstance(value, str):
-                try:
-                    value = datetime.fromisoformat(value.replace('Z', '+00:00'))
-                except ValueError:
-                    return value
-            return value.strftime('%Y-%m-%d %H:%M:%S')
+        # Create Flask app
+        app = create_app(config)
         
         # Run the app
+        port = config.get("port", 5000)
+        host = config.get("host", "0.0.0.0")  # Listen on all interfaces
+        logger.info(f"Starting server on {host}:{port}")
+        
         app.run(
-            host=config["host"],
-            port=config["port"],
-            debug=True
+            host=host,
+            port=port,
+            debug=True,
+            use_reloader=False  # Disable reloader to prevent duplicate processes
         )
         
     except Exception as e:
-        logger.error(f"Error starting server: {e}")
+        logger.error(f"Error starting server: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         sys.exit(1)
 
 if __name__ == "__main__":
