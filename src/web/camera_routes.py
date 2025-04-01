@@ -135,83 +135,103 @@ def add_camera():
     if not csrf_token:
         return jsonify({'success': False, 'error': 'Missing CSRF token'}), 400
         
-    data = request.get_json()
-    required_fields = ['ip', 'username', 'password']
-    
-    # Validate required fields
-    for field in required_fields:
-        if field not in data:
-            return jsonify({'success': False, 'error': f'Missing required field: {field}'}), 400
-            
     try:
+        data = request.get_json()
+        required_fields = ['ip', 'username', 'password']
+        
+        # Validate required fields
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'success': False, 'error': f'Missing required field: {field}'}), 400
+                
         # Import here to avoid circular imports
         from src.recognition.onvif_camera import ONVIFCamera
         
         # Get port with default of 80
         port = int(data.get('port', 80))
         
-        # Try to connect with provided credentials
-        camera = ONVIFCamera(
-            data['ip'], 
-            port,
-            data['username'], 
-            data['password'], 
-            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'recognition/wsdl')
-        )
-        
-        # Get camera info
-        device_info = camera.devicemgmt.GetDeviceInformation()
-        media_service = camera.create_media_service()
-        profiles = media_service.GetProfiles()
-        
-        if profiles:
-            # Get stream URI
-            token = profiles[0].token
+        try:
+            # Try to connect with provided credentials
+            camera = ONVIFCamera(
+                data['ip'], 
+                port,
+                data['username'], 
+                data['password'], 
+                os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'recognition/wsdl')
+            )
             
-            # Create media service
+            # Get camera info
+            device_info = camera.devicemgmt.GetDeviceInformation()
             media_service = camera.create_media_service()
+            profiles = media_service.GetProfiles()
             
-            # Create stream URI request
-            request = media_service.create_type('GetStreamUri')
-            request.ProfileToken = token
-            
-            # Create StreamSetup
-            stream_setup = media_service.create_type('StreamSetup')
-            stream_setup.Stream = 'RTP-Unicast'
-            stream_setup.Transport = media_service.create_type('Transport')
-            stream_setup.Transport.Protocol = 'RTSP'
-            request.StreamSetup = stream_setup
-            
-            # Get stream URI
-            stream_uri = media_service.GetStreamUri(request)
-            
-            camera_info = {
-                'ip': data['ip'],
-                'port': port,
-                'username': data['username'],
-                'password': data['password'],
-                'profiles': [{'token': p.token, 'name': p.Name} for p in profiles],
-                'manufacturer': device_info.Manufacturer,
-                'model': device_info.Model,
-                'firmware': device_info.FirmwareVersion,
-                'serial': device_info.SerialNumber,
-                'stream_uri': stream_uri.Uri,
-                'status': 'connected'
-            }
-            
-            # Add to camera manager
-            if onvif_camera_manager:
-                onvif_camera_manager.add_camera(camera_info)
+            if profiles:
+                # Get stream URI
+                token = profiles[0].token
                 
+                # Create media service
+                media_service = camera.create_media_service()
+                
+                # Create stream URI request
+                request = media_service.create_type('GetStreamUri')
+                request.ProfileToken = token
+                
+                # Create StreamSetup
+                stream_setup = media_service.create_type('StreamSetup')
+                stream_setup.Stream = 'RTP-Unicast'
+                stream_setup.Transport = media_service.create_type('Transport')
+                stream_setup.Transport.Protocol = 'RTSP'
+                request.StreamSetup = stream_setup
+                
+                # Get stream URI
+                stream_uri = media_service.GetStreamUri(request)
+                
+                camera_info = {
+                    'ip': data['ip'],
+                    'port': port,
+                    'username': data['username'],
+                    'password': data['password'],
+                    'profiles': [{'token': p.token, 'name': p.Name} for p in profiles],
+                    'manufacturer': device_info.Manufacturer,
+                    'model': device_info.Model,
+                    'firmware': device_info.FirmwareVersion,
+                    'serial': device_info.SerialNumber,
+                    'stream_uri': stream_uri.Uri,
+                    'status': 'connected'
+                }
+                
+                # Add to camera manager
+                if onvif_camera_manager:
+                    onvif_camera_manager.add_camera(camera_info)
+                    
+                return jsonify({
+                    'success': True,
+                    'camera': camera_info,
+                    'message': 'Camera added successfully'
+                }), 200
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'No media profiles found for camera'
+                }), 400
+                
+        except Exception as e:
+            logger.error(f"Error adding camera: {str(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return jsonify({
-                'success': True,
-                'camera': camera_info,
-                'message': 'Camera added successfully'
-            }), 200
+                'success': False,
+                'error': f'Error adding camera: {str(e)}'
+            }), 400
             
     except Exception as e:
-        logger.error(f"Error adding camera: {str(e)}")
-        return jsonify({'success': False, 'error': f'Error adding camera: {str(e)}'}), 500
+        logger.error(f"Error in add_camera route: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'error': f'Unknown error: {str(e)}'
+        }), 400
 
 @camera_bp.route('/cameras/add', methods=['POST'])
 @login_required(user_manager)
