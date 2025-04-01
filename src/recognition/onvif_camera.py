@@ -11,7 +11,7 @@ import time
 import socket
 import logging
 import asyncio
-from onvif.client import ONVIFCamera
+from onvif_zeep.client import ONVIFCamera
 from urllib.parse import urlparse
 from src.utils.security import CredentialManager
 import cv2
