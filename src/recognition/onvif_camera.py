@@ -55,6 +55,15 @@ class ONVIFCameraManager:
         
         logger.info("ONVIF camera manager initialized")
     
+    def get_all_cameras(self):
+        """
+        Get all registered cameras.
+        
+        Returns:
+            dict: Dictionary of all registered cameras with their information
+        """
+        return self.cameras
+    
     async def discover_cameras(self, timeout=2):
         """
         Discover ONVIF cameras on the network using WS-Discovery.
