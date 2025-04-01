@@ -22,6 +22,7 @@ Werkzeug==2.0.3
 fastapi==0.103.2
 uvicorn==0.23.2
 nest-asyncio==1.5.8
+redis==5.0.1
 
 # Use specific versions of packages that have pre-built wheels available for ARM64
 # aiohttp may fail to build on some platforms, so we use a platform-specific conditional
