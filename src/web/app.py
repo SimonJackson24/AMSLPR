@@ -76,7 +76,7 @@ def create_app(config, db_manager, detector, barrier_controller=None, paxton_int
     app = Flask(__name__)
     
     # Configure Flask app
-    app.config['SECRET_KEY'] = os.urandom(24)
+    app.config['SECRET_KEY'] = config.get('web', {}).get('secret_key', os.urandom(24))
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload size
     app.config['DETECTOR_AVAILABLE'] = detector is not None
     
@@ -96,9 +96,11 @@ def create_app(config, db_manager, detector, barrier_controller=None, paxton_int
     
     # Configure CSRF protection
     app.config['WTF_CSRF_ENABLED'] = True
-    app.config['WTF_CSRF_SECRET_KEY'] = os.urandom(24)
+    app.config['WTF_CSRF_SECRET_KEY'] = config.get('web', {}).get('csrf_secret_key', os.urandom(24))
     app.config['WTF_CSRF_SSL_STRICT'] = True
     app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour in seconds
+    app.config['WTF_CSRF_CHECK_DEFAULT'] = True
+    app.config['WTF_CSRF_METHODS'] = ['POST', 'PUT', 'PATCH', 'DELETE']
     
     # Initialize CSRF protection
     csrf = CSRFProtect()

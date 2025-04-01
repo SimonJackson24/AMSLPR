@@ -17,7 +17,13 @@
         "host": "0.0.0.0",
         "port": 5050,
         "debug": true,
-        "secret_key": "your-secret-key-here"
+        "secret_key": "your-secret-key-here",
+        "csrf_secret_key": "your-csrf-secret-key-here",
+        "ssl": {
+            "enabled": false,
+            "certificate": "config/ssl/cert.pem",
+            "key": "config/ssl/key.pem"
+        }
     },
     "notifications": {
         "email": {
@@ -50,7 +56,7 @@
         "discovery_enabled": true,
         "discovery_interval": 60,
         "default_username": "admin",
-        "default_password": "Aut0mate2048",
+        "default_password": "admin",
         "cameras": [
             {
                 "id": "entrance",
