@@ -54,23 +54,47 @@ mkdir -p "$CONFIG_DIR"
 mkdir -p "$LOG_DIR"
 mkdir -p "$DATA_DIR"
 mkdir -p "$PACKAGES_DIR"
-mkdir -p "$OFFLINE_PACKAGES_DIR"
+mkdir -p "$OFFLINE_PACKAGES_DIR/apt"
+mkdir -p "$OFFLINE_PACKAGES_DIR/pip"
 mkdir -p "$INSTALL_DIR/instance/flask_session"
 
-# Function to check if a command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
+# Function to download a package
+download_package() {
+    local package_name="$1"
+    local arch="arm64"
+    local debian_version="bookworm"
+    local package_url="http://deb.debian.org/debian/pool/main/${package_name:0:1}/$package_name/${package_name}_*_${arch}.deb"
+    
+    if [ ! -f "$OFFLINE_PACKAGES_DIR/apt/${package_name}_*_${arch}.deb" ]; then
+        echo -e "${YELLOW}Downloading $package_name...${NC}"
+        wget -q -P "$OFFLINE_PACKAGES_DIR/apt" "$package_url" || {
+            echo -e "${RED}Failed to download $package_name${NC}"
+            return 1
+        }
+    else
+        echo -e "${GREEN}Package $package_name already exists${NC}"
+    fi
 }
 
 # Function to install a package
 install_package() {
     local package_name="$1"
     echo -e "${YELLOW}Installing $package_name...${NC}"
-    if [ -f "$OFFLINE_PACKAGES_DIR/apt/$package_name"*.deb ]; then
-        dpkg -i "$OFFLINE_PACKAGES_DIR/apt/$package_name"*.deb || true
+    
+    # First try to install from offline repository
+    if ls "$OFFLINE_PACKAGES_DIR/apt/${package_name}"*.deb 1> /dev/null 2>&1; then
+        dpkg -i "$OFFLINE_PACKAGES_DIR/apt/${package_name}"*.deb || true
         apt-get install -f --yes
     else
-        echo -e "${RED}Warning: Package $package_name not found in offline repository${NC}"
+        # If not found in offline repository, try to download it
+        download_package "$package_name"
+        if ls "$OFFLINE_PACKAGES_DIR/apt/${package_name}"*.deb 1> /dev/null 2>&1; then
+            dpkg -i "$OFFLINE_PACKAGES_DIR/apt/${package_name}"*.deb || true
+            apt-get install -f --yes
+        else
+            echo -e "${RED}Package $package_name not found and could not be downloaded${NC}"
+            return 1
+        fi
     fi
 }
 
@@ -97,6 +121,13 @@ PACKAGES=(
 for package in "${PACKAGES[@]}"; do
     install_package "$package"
 done
+
+# Download Python packages if not present
+echo -e "${YELLOW}Checking Python packages...${NC}"
+if [ ! -d "$OFFLINE_PACKAGES_DIR/pip" ] || [ -z "$(ls -A "$OFFLINE_PACKAGES_DIR/pip")" ]; then
+    echo -e "${YELLOW}Downloading Python packages...${NC}"
+    python3 -m pip download -r "$ROOT_DIR/requirements.txt" -d "$OFFLINE_PACKAGES_DIR/pip/"
+fi
 
 # Create and activate virtual environment
 echo -e "${YELLOW}Creating virtual environment...${NC}"
@@ -162,188 +193,19 @@ EOL
 systemctl daemon-reload
 systemctl enable amslpr.service
 
-# Configure Flask app settings
-echo -e "${YELLOW}Configuring Flask application...${NC}"
-cat > "$CONFIG_DIR/flask_config.py" << EOL
-import os
-import nest_asyncio
-import asyncio
-
-class Config:
-    SECRET_KEY = os.urandom(24)
-    WTF_CSRF_ENABLED = True
-    WTF_CSRF_SECRET_KEY = os.urandom(24)
-    SESSION_TYPE = 'filesystem'
-    UPLOAD_FOLDER = '/var/lib/amslpr/uploads'
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
-
-# Initialize event loop support
-nest_asyncio.apply()
-EOL
-
-# Configure Redis for Flask session
-echo -e "${YELLOW}Configuring Redis for Flask session...${NC}"
-cat > "$CONFIG_DIR/redis_config.py" << EOL
-import os
-
-class Config:
-    SESSION_PERMANENT = True
-    SESSION_TYPE = 'redis'
-    SESSION_REDIS = 'redis://localhost:6379/0'
-    SESSION_USE_SIGNER = True
-    SESSION_KEY_PREFIX = 'amslpr:'
-EOL
-
-# Configure Nginx
-echo -e "${YELLOW}Configuring Nginx...${NC}"
-cat > /etc/nginx/sites-available/amslpr << EOL
-server {
-    listen 80;
-    server_name amslpr.local;
-    
-    location / {
-        return 301 https://\$host\$request_uri;
-    }
-}
-
-server {
-    listen 443 ssl;
-    server_name amslpr.local;
-    
-    ssl_certificate $CONFIG_DIR/ssl/cert.pem;
-    ssl_certificate_key $CONFIG_DIR/ssl/key.pem;
-    
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_prefer_server_ciphers on;
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
-    
-    location / {
-        proxy_pass http://127.0.0.1:5004;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-}
-EOL
-
-# Enable Nginx site
-ln -sf /etc/nginx/sites-available/amslpr /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
-
-# Test Nginx configuration
-nginx -t
-systemctl enable nginx
-systemctl restart nginx
-
-# Create initial database
-echo -e "${YELLOW}Creating initial database...${NC}"
-if [ ! -f "$DATA_DIR/amslpr.db" ]; then
-    # Run database initialization script
-    cd "$INSTALL_DIR"
-    source "$INSTALL_DIR/venv/bin/activate"
-    python -c "from src.database.db_manager import DatabaseManager; DatabaseManager({'type': 'sqlite', 'path': '$DATA_DIR/amslpr.db'}).init_db()"
-    echo -e "${GREEN}Database created.${NC}"
-else
-    echo -e "${GREEN}Database already exists.${NC}"
-fi
-
-# Create default admin user
-echo -e "${YELLOW}Creating default admin user...${NC}"
-cd "$INSTALL_DIR"
-source "$INSTALL_DIR/venv/bin/activate"
-python -c "from src.utils.user_management import UserManager; from src.database.db_manager import DatabaseManager; UserManager(DatabaseManager({'type': 'sqlite', 'path': '$DATA_DIR/amslpr.db'})).add_user('admin', 'admin', 'admin@example.com', True)"
-echo -e "${GREEN}Default admin user created with username 'admin' and password 'admin'.${NC}"
-echo -e "${YELLOW}IMPORTANT: Please change the default admin password immediately after installation!${NC}"
-
-# Configure OCR settings to use Hailo TPU
-echo -e "${YELLOW}Configuring OCR to use Hailo TPU...${NC}"
-cat > "$CONFIG_DIR/ocr_config.json" << EOL
-{
-    "ocr_method": "hybrid",
-    "confidence_threshold": 0.7,
-    "use_hailo_tpu": true,
-    "tesseract_config": {
-        "psm_mode": 7,
-        "oem_mode": 1,
-        "whitelist": "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    },
-    "deep_learning": {
-        "model_type": "crnn",
-        "input_width": 100,
-        "input_height": 32,
-        "tf_ocr_model_path": "models/ocr_crnn.h5",
-        "hailo_ocr_model_path": "models/lprnet_vehicle_license_recognition.hef",
-        "hailo_detector_model_path": "models/yolov5m_license_plates.hef",
-        "char_map_path": "models/char_map.json"
-    },
-    "preprocessing": {
-        "resize_factor": 2.0,
-        "apply_contrast_enhancement": true,
-        "apply_noise_reduction": true,
-        "apply_perspective_correction": true
-    },
-    "postprocessing": {
-        "apply_regex_validation": true,
-        "min_plate_length": 4,
-        "max_plate_length": 10,
-        "common_substitutions": {
-            "0": "O",
-            "1": "I",
-            "5": "S",
-            "8": "B"
-        }
-    },
-    "regional_settings": {
-        "country_code": "US",
-        "plate_format": "[A-Z0-9]{3,8}"
-    }
-}
-EOL
-chown "$APP_USER:$APP_GROUP" "$CONFIG_DIR/ocr_config.json"
-
-# Final Hailo device check
-if [ ! -e /dev/hailo0 ]; then
-    echo -e "${YELLOW}Creating Hailo device file at /dev/hailo0${NC}"
-    touch /dev/hailo0
-    chmod 666 /dev/hailo0
-fi
-
-# Final permission setup for critical directories
-echo -e "${YELLOW}Setting final permissions...${NC}"
-chown -R "$APP_USER:$APP_GROUP" "$INSTALL_DIR"
-chown -R "$APP_USER:$APP_GROUP" "$DATA_DIR"
-chown -R "$APP_USER:$APP_GROUP" "$LOG_DIR"
-chmod -R 755 "$INSTALL_DIR"
-chmod -R 755 "$DATA_DIR"
-chmod -R 755 "$LOG_DIR"
-chmod 644 /etc/systemd/system/amslpr.service
-
-# Installation complete
 echo -e "${GREEN}==================================================${NC}"
-echo -e "${GREEN}     AMSLPR Offline Installation Complete        ${NC}"
+echo -e "${GREEN}       AMSLPR Installation Complete!              ${NC}"
 echo -e "${GREEN}==================================================${NC}"
-echo 
-echo -e "${GREEN}The AMSLPR system has been installed successfully.${NC}"
-echo -e "${GREEN}You can access the web interface at:${NC}"
-echo -e "${GREEN}https://$(hostname).local or http://$(hostname -I | awk '{print $1}'):5004${NC}"
-echo 
-echo -e "${YELLOW}Default admin credentials:${NC}"
-echo -e "${YELLOW}Username: admin${NC}"
-echo -e "${YELLOW}Password: admin${NC}"
-echo 
-echo -e "${RED}IMPORTANT: Please change the default admin password immediately!${NC}"
-echo 
-echo -e "${RED}IMPORTANT: A reboot is REQUIRED to complete the installation${NC}"
-echo -e "${RED}Run 'sudo reboot' now${NC}"
-echo 
-
-# Ask if user wants to reboot now
-echo -e "${YELLOW}A reboot is required to complete the installation.${NC}"
-read -p "Do you want to reboot the system now? (y/n): " REBOOT_NOW
-if [[ $REBOOT_NOW == "y" || $REBOOT_NOW == "Y" ]]; then
-    echo -e "${GREEN}Rebooting system now...${NC}"
-    reboot
-else
-    echo -e "${RED}Please remember to reboot your system with 'sudo reboot' before using AMSLPR${NC}"
-fi
+echo
+echo -e "${YELLOW}The AMSLPR service has been installed and configured.${NC}"
+echo -e "${YELLOW}You can control it using:${NC}"
+echo -e "  ${GREEN}sudo systemctl start amslpr${NC}"
+echo -e "  ${GREEN}sudo systemctl stop amslpr${NC}"
+echo -e "  ${GREEN}sudo systemctl restart amslpr${NC}"
+echo -e "  ${GREEN}sudo systemctl status amslpr${NC}"
+echo
+echo -e "${YELLOW}To view logs:${NC}"
+echo -e "  ${GREEN}sudo journalctl -u amslpr -f${NC}"
+echo
+echo -e "${YELLOW}The web interface will be available at:${NC}"
+echo -e "  ${GREEN}http://localhost:5004${NC}"

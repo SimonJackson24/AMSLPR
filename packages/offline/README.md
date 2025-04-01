@@ -1,6 +1,6 @@
 # AMSLPR Offline Wheel Packages
 
-This directory contains pre-built Python wheel packages for ARM architecture (Raspberry Pi) to enable true offline installation of the AMSLPR system with Hailo TPU support.
+This directory contains pre-built Python wheel packages and APT packages for ARM architecture (Raspberry Pi) to enable true offline installation of the AMSLPR system with Hailo TPU support.
 
 ## Included Wheel Files
 
@@ -14,47 +14,49 @@ The following wheel files are included for offline installation:
 6. **OpenCV**: opencv_python_headless-4.8.0.74-cp311-cp311-linux_armv7l.whl - Computer vision library
 7. **Hailo Platform**: hailo_platform-4.20.0-py3-none-any.whl - Hailo TPU integration
 8. **Hailort**: hailort-4.20.0-py3-none-any.whl - Hailo runtime library
+9. **nest-asyncio**: nest-asyncio-1.5.8-py3-none-any.whl - Async event loop support
 
-## Hailo TPU Integration
+## Included APT Packages
 
-The Hailo TPU wheels provide integration with the Hailo hardware accelerator. These packages have the following features:
+The following APT packages are included in the `apt` directory:
 
-1. **Real hardware detection** - Attempts to detect and use real Hailo hardware if present
-2. **Graceful fallback** - Falls back to mock implementations if hardware is not available
-3. **Diagnostic capabilities** - Provides diagnostic functions to verify TPU functionality
-4. **Environment variable control** - Can be controlled via the `HAILO_ENABLED` environment variable
-5. **Hardware-accelerated inference** - When hardware is present, provides accelerated inference
+1. python3
+2. python3-pip
+3. python3-venv
+4. redis-server
+5. libgl1-mesa-glx
+6. libglib2.0-0
+7. tesseract-ocr
+8. libsm6
+9. libxext6
+10. libxrender1
+11. libfontconfig1
 
 ## Installation
 
-These wheel files are automatically used by the offline installation script (`scripts/offline_install.sh`). The script will:
+These packages are automatically used by the offline installation script (`scripts/offline_install.sh`). The script will:
 
 1. Create the necessary directories
-2. Copy the wheel files to the appropriate location
-3. Install the wheels in the correct order with proper dependencies
-4. Create any necessary configuration files
-5. Set up the TPU environment
+2. Install APT packages from the offline repository
+3. Create and configure Python virtual environment
+4. Install Python wheels in the correct order with proper dependencies
+5. Configure Redis for Flask sessions
+6. Set up the TPU environment
+7. Configure systemd service
 
-## Testing Hailo TPU Integration
+## Testing Installation
 
-After installation, you can test the Hailo TPU integration with:
+After installation, you can verify the setup with:
 
-```python
-import hailo_platform
-print(hailo_platform.get_status())  # Shows TPU status
-print(hailo_platform.diagnose())    # Run full diagnostics
+```bash
+# Check service status
+sudo systemctl status amslpr
 
-# Initialize device
-device = hailo_platform.Device()
-print(f"Device ID: {device.device_id}")
+# View logs
+sudo journalctl -u amslpr -f
+
+# Test web interface
+curl http://localhost:5004
 ```
 
-## Updating Wheels
-
-To update these wheels with newer versions:
-
-1. Download the appropriate ARM-compatible wheels from piwheels.org
-2. Replace the existing wheel files in this directory
-3. Test the installation on a Raspberry Pi
-
-For the Hailo TPU wheels, you may need to repackage the updated modules if there are changes to the API.
+The web interface will be available at `http://<pi-ip>:5004`
