@@ -138,7 +138,7 @@ def add_camera():
             
         try:
             data = request.get_json()
-            logger.debug(f"Received camera add request with data: {data}")
+            logger.info(f"Received camera add request with data: {data}")
             
             required_fields = ['ip', 'username', 'password']
             
@@ -154,21 +154,39 @@ def add_camera():
             port = int(data.get('port', 80))
             
             try:
-                # Try to connect with provided credentials
-                wsdl_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'recognition/wsdl')
-                logger.debug(f"Using WSDL path: {wsdl_path}")
+                # Initialize camera manager if not already initialized
+                global onvif_camera_manager
+                if not onvif_camera_manager:
+                    from src.recognition.onvif_camera import ONVIFCameraManager
+                    onvif_camera_manager = ONVIFCameraManager()
+                    logger.info("Initialized ONVIF camera manager")
                 
-                camera = ONVIFCamera(
-                    data['ip'], 
-                    port,
-                    data['username'], 
-                    data['password'], 
-                    wsdl_path
-                )
+                # Add camera to manager first
+                camera_info = {
+                    'ip': data['ip'],
+                    'port': port,
+                    'username': data['username'],
+                    'password': data['password']
+                }
+                
+                success = onvif_camera_manager.add_camera(camera_info)
+                if not success:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Failed to add camera to manager'
+                    }), 400
+                
+                # Get the camera object back from the manager
+                camera = onvif_camera_manager.cameras.get(data['ip'])
+                if not camera:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Camera was added but could not be retrieved'
+                    }), 500
                 
                 # Get camera info
-                device_info = camera.devicemgmt.GetDeviceInformation()
-                media_service = camera.create_media_service()
+                device_info = camera['camera'].devicemgmt.GetDeviceInformation()
+                media_service = camera['camera'].create_media_service()
                 profiles = media_service.GetProfiles()
                 
                 if profiles:
@@ -189,11 +207,8 @@ def add_camera():
                     # Get stream URI
                     stream_uri = media_service.GetStreamUri(request)
                     
-                    camera_info = {
-                        'ip': data['ip'],
-                        'port': port,
-                        'username': data['username'],
-                        'password': data['password'],
+                    # Update camera info
+                    camera['info'].update({
                         'profiles': [{'token': p.token, 'name': p.Name} for p in profiles],
                         'manufacturer': device_info.Manufacturer,
                         'model': device_info.Model,
@@ -201,20 +216,11 @@ def add_camera():
                         'serial': device_info.SerialNumber,
                         'stream_uri': stream_uri.Uri,
                         'status': 'connected'
-                    }
+                    })
                     
-                    # Add to camera manager
-                    if onvif_camera_manager:
-                        success = onvif_camera_manager.add_camera(camera_info)
-                        if not success:
-                            return jsonify({
-                                'success': False,
-                                'error': 'Failed to add camera to manager'
-                            }), 400
-                            
                     return jsonify({
                         'success': True,
-                        'camera': camera_info,
+                        'camera': camera['info'],
                         'message': 'Camera added successfully'
                     }), 200
                 else:
