@@ -3,7 +3,7 @@
 # AMSLPR - Offline Installation Script
 # This script installs the AMSLPR system with Hailo TPU support 
 # using pre-built packages and compatibility fallbacks
-# Version: 1.0.0
+# Version: 1.1.0
 
 set -e
 
@@ -46,64 +46,16 @@ echo -e "${GREEN}Root directory: $ROOT_DIR${NC}"
 echo -e "${GREEN}Installation directory: $INSTALL_DIR${NC}"
 echo -e "${GREEN}Packages directory: $PACKAGES_DIR${NC}"
 echo -e "${GREEN}Offline packages directory: $OFFLINE_PACKAGES_DIR${NC}"
-if [ -z "$OFFLINE_PACKAGES_DIR" ]; then
-    echo -e "${RED}WARNING: OFFLINE_PACKAGES_DIR is empty!${NC}"
-    OFFLINE_PACKAGES_DIR="/opt/amslpr/packages/offline"
-    echo -e "${YELLOW}Setting default value: $OFFLINE_PACKAGES_DIR${NC}"
-fi
-echo -e "${GREEN}=======================${NC}"
 
-# Get the user who executed sudo (the actual user, not root)
-if [ -n "$SUDO_USER" ]; then
-    APP_USER="$SUDO_USER"
-else
-    # If not run with sudo, try to get the current user
-    APP_USER=$(logname 2>/dev/null || echo "pi")
-    # If logname fails, check for common users on Raspberry Pi
-    if [ "$APP_USER" = "pi" ] && ! id -u pi &>/dev/null; then
-        # Try to find an existing user
-        for user in $(ls /home); do
-            if id -u "$user" &>/dev/null; then
-                APP_USER="$user"
-                break
-            fi
-        done
-    fi
-fi
-APP_GROUP="$(id -gn $APP_USER 2>/dev/null || echo $APP_USER)"
-
-echo -e "${GREEN}Installing for user: $APP_USER:$APP_GROUP${NC}"
-
-# Detect system architecture
-ARCH=$(uname -m)
-if [[ "$ARCH" == "aarch64" || "$ARCH" == "armv7l" ]]; then
-    IS_RASPBERRY_PI=true
-    echo -e "${GREEN}Detected Raspberry Pi ($ARCH)${NC}"
-    
-    # Check if it's Raspberry Pi 5
-    if grep -q "Raspberry Pi 5" /proc/device-tree/model 2>/dev/null; then
-        IS_RPI5=true
-        echo -e "${GREEN}Detected Raspberry Pi 5${NC}"
-    else
-        IS_RPI5=false
-        echo -e "${YELLOW}Detected older Raspberry Pi model${NC}"
-        echo -e "${YELLOW}Some features may not work optimally${NC}"
-    fi
-else
-    IS_RASPBERRY_PI=false
-    IS_RPI5=false
-    echo -e "${YELLOW}This system is not a Raspberry Pi ($ARCH)${NC}"
-    echo -e "${YELLOW}Running in development/testing mode${NC}"
-    echo -e "${YELLOW}Hailo TPU features will be mocked${NC}"
-    
-    # Confirm continuation
-    read -p "Continue with installation? (y/n) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo -e "${RED}Installation aborted.${NC}"
-        exit 1
-    fi
-fi
+# Create required directories
+echo -e "${YELLOW}Creating required directories...${NC}"
+mkdir -p "$INSTALL_DIR"
+mkdir -p "$CONFIG_DIR"
+mkdir -p "$LOG_DIR"
+mkdir -p "$DATA_DIR"
+mkdir -p "$PACKAGES_DIR"
+mkdir -p "$OFFLINE_PACKAGES_DIR"
+mkdir -p "$INSTALL_DIR/instance/flask_session"
 
 # Function to check if a command exists
 command_exists() {
@@ -112,12 +64,13 @@ command_exists() {
 
 # Function to install a package
 install_package() {
-    local package=$1
-    if ! dpkg -l | grep -q "$package"; then
-        echo -e "${YELLOW}Installing $package...${NC}"
-        apt-get install -y "$package"
+    local package_name="$1"
+    echo -e "${YELLOW}Installing $package_name...${NC}"
+    if [ -f "$OFFLINE_PACKAGES_DIR/apt/$package_name"*.deb ]; then
+        dpkg -i "$OFFLINE_PACKAGES_DIR/apt/$package_name"*.deb || true
+        apt-get install -f --yes
     else
-        echo -e "${GREEN}$package is already installed.${NC}"
+        echo -e "${RED}Warning: Package $package_name not found in offline repository${NC}"
     fi
 }
 
@@ -125,180 +78,89 @@ install_package() {
 echo -e "${YELLOW}Updating package lists...${NC}"
 apt-get update
 
-# Install required packages
-echo -e "${YELLOW}Installing required packages...${NC}"
+# Install system dependencies
+echo -e "${YELLOW}Installing system dependencies...${NC}"
+PACKAGES=(
+    "python3"
+    "python3-pip"
+    "python3-venv"
+    "redis-server"
+    "libgl1-mesa-glx"
+    "libglib2.0-0"
+    "tesseract-ocr"
+    "libsm6"
+    "libxext6"
+    "libxrender1"
+    "libfontconfig1"
+)
 
-# First, install libcap2-bin since we need it for setcap
-echo -e "${YELLOW}Installing libcap2-bin for network capabilities...${NC}"
-apt-get install -y libcap2-bin
-
-# Then install other required packages
-required_packages=("python3" "python3-pip" "python3-venv" "python3-dev" "git" "tesseract-ocr"
-                   "libtesseract-dev" "libsm6" "libxext6" "libxrender-dev" "libgl1-mesa-glx" 
-                   "build-essential" "libjpeg-dev" "zlib1g-dev" "libfreetype6-dev" "liblcms2-dev" 
-                   "libopenjp2-7-dev" "libtiff5-dev" "libwebp-dev" "nginx" "openssl" "supervisor"
-                   "dkms" "python3-wheel" "python3-setuptools" "python3-distutils")
-
-for package in "${required_packages[@]}"; do
-    # Skip packages with wildcards as they might not exist
-    if [[ "$package" == *"*"* ]]; then
-        echo -e "${YELLOW}Skipping wildcard package: $package${NC}"
-        # Try to install without the wildcard
-        base_package=$(echo "$package" | cut -d'*' -f1)
-        apt-get install -y "$base_package" || echo -e "${YELLOW}Could not install $base_package${NC}"
-    else
-        install_package "$package"
-    fi
+for package in "${PACKAGES[@]}"; do
+    install_package "$package"
 done
 
-# Create installation directories
-echo -e "${YELLOW}Creating installation directories...${NC}"
-mkdir -p "$INSTALL_DIR"
-mkdir -p "$CONFIG_DIR"
-mkdir -p "$CONFIG_DIR/ssl"
-mkdir -p "$LOG_DIR"
-mkdir -p "$LOG_DIR/errors"
-mkdir -p "$DATA_DIR"
-mkdir -p "$DATA_DIR/images"
-mkdir -p "$DATA_DIR/metrics"
-mkdir -p "$DATA_DIR/reports"
-mkdir -p "$INSTALL_DIR/models"
-mkdir -p "$OFFLINE_PACKAGES_DIR"
-chown -R "$APP_USER:$APP_GROUP" "$INSTALL_DIR"
-chown -R "$APP_USER:$APP_GROUP" "$CONFIG_DIR"
-chown -R "$APP_USER:$APP_GROUP" "$LOG_DIR"
-chown -R "$APP_USER:$APP_GROUP" "$DATA_DIR"
+# Create and activate virtual environment
+echo -e "${YELLOW}Creating virtual environment...${NC}"
+python3 -m venv "$INSTALL_DIR/venv"
+source "$INSTALL_DIR/venv/bin/activate"
+
+# Install Python dependencies from offline packages
+echo -e "${YELLOW}Installing Python dependencies...${NC}"
+if [ -d "$OFFLINE_PACKAGES_DIR/pip" ]; then
+    pip3 install --no-index --find-links "$OFFLINE_PACKAGES_DIR/pip" -r "$ROOT_DIR/requirements.txt"
+else
+    echo -e "${RED}Error: Offline pip packages not found${NC}"
+    exit 1
+fi
 
 # Copy application files
 echo -e "${YELLOW}Copying application files...${NC}"
-cp -r "$ROOT_DIR/src" "$INSTALL_DIR/"
-cp -r "$ROOT_DIR/scripts" "$INSTALL_DIR/"
-if [ -d "$ROOT_DIR/docs" ]; then cp -r "$ROOT_DIR/docs" "$INSTALL_DIR/"; fi
-if [ -d "$ROOT_DIR/tests" ]; then cp -r "$ROOT_DIR/tests" "$INSTALL_DIR/"; fi
-if [ -f "$ROOT_DIR/run_server.py" ]; then cp "$ROOT_DIR/run_server.py" "$INSTALL_DIR/"; fi
-if [ -f "$ROOT_DIR/run_tests.py" ]; then cp "$ROOT_DIR/run_tests.py" "$INSTALL_DIR/"; fi
-if [ -f "$ROOT_DIR/requirements.txt" ]; then cp "$ROOT_DIR/requirements.txt" "$INSTALL_DIR/"; fi
-if [ -f "$ROOT_DIR/requirements_minimal.txt" ]; then cp "$ROOT_DIR/requirements_minimal.txt" "$INSTALL_DIR/"; fi
+cp -r "$ROOT_DIR"/* "$INSTALL_DIR/"
 
-# Copy package files with special handling for offline wheels
-echo -e "${YELLOW}Copying package files...${NC}"
-if [ -d "$ROOT_DIR/packages" ]; then
-    # Create destination directories with explicit path verification
-    echo -e "${YELLOW}Creating package directories: $PACKAGES_DIR and $OFFLINE_PACKAGES_DIR${NC}"
-    
-    # Verify PACKAGES_DIR is not empty
-    if [ -z "$PACKAGES_DIR" ]; then
-        echo -e "${RED}ERROR: PACKAGES_DIR variable is empty!${NC}"
-        PACKAGES_DIR="/opt/amslpr/packages"
-        echo -e "${YELLOW}Setting default value: $PACKAGES_DIR${NC}"
-    fi
-    
-    # Verify OFFLINE_PACKAGES_DIR is not empty
-    if [ -z "$OFFLINE_PACKAGES_DIR" ]; then
-        echo -e "${RED}ERROR: OFFLINE_PACKAGES_DIR variable is empty!${NC}"
-        OFFLINE_PACKAGES_DIR="/opt/amslpr/packages/offline"
-        echo -e "${YELLOW}Setting default value: $OFFLINE_PACKAGES_DIR${NC}"
-    fi
-    
-    # Create directories with error handling
-    mkdir -p "$PACKAGES_DIR" || { echo -e "${RED}ERROR: Could not create $PACKAGES_DIR${NC}"; exit 1; }
-    mkdir -p "$OFFLINE_PACKAGES_DIR" || { echo -e "${RED}ERROR: Could not create $OFFLINE_PACKAGES_DIR${NC}"; exit 1; }
-    
-    # Set directory permissions
-    chmod 775 "$PACKAGES_DIR"
-    chmod 775 "$OFFLINE_PACKAGES_DIR"
-    
-    # Copy entire packages directory with clear status
-    echo -e "${YELLOW}Copying all packages from $ROOT_DIR/packages/ to $PACKAGES_DIR/${NC}"
-    cp -rv "$ROOT_DIR/packages"/* "$PACKAGES_DIR/" || echo -e "${RED}Error copying packages directory${NC}"
-    
-    # Check if we have offline wheel packages and ensure they're properly copied
-    if [ -d "$ROOT_DIR/packages/offline" ]; then
-        echo -e "${YELLOW}Checking for offline wheels in $ROOT_DIR/packages/offline/...${NC}"
-        ls -la "$ROOT_DIR/packages/offline/"
-        
-        if ls $ROOT_DIR/packages/offline/*.whl >/dev/null 2>&1; then
-            echo -e "${GREEN}Found pre-packaged offline wheels${NC}"
-            echo -e "${YELLOW}Copying wheels from $ROOT_DIR/packages/offline/ to $OFFLINE_PACKAGES_DIR/${NC}"
-            
-            # Double-check directory exists and has proper permissions
-            echo -e "${YELLOW}Ensuring offline packages directory exists at $OFFLINE_PACKAGES_DIR${NC}"
-            mkdir -p "$OFFLINE_PACKAGES_DIR"
-            chmod 775 "$OFFLINE_PACKAGES_DIR"
-            
-            # Copy with verbose output to see what's happening
-            echo -e "${YELLOW}Copying wheels with verbose output:${NC}"
-            cp -v "$ROOT_DIR/packages/offline"/*.whl "$OFFLINE_PACKAGES_DIR/" || 
-                echo -e "${RED}Error copying wheel files${NC}"
-            
-            # Make sure files are owned by the right user
-            chown -R "$APP_USER:$APP_GROUP" "$OFFLINE_PACKAGES_DIR"
-            
-            # Verify the wheels were copied
-            echo -e "${YELLOW}Verifying copied wheels:${NC}"
-            ls -la "$OFFLINE_PACKAGES_DIR/"
-        else
-            echo -e "${YELLOW}No pre-packaged offline wheels found in source repository${NC}"
-            echo -e "${YELLOW}Creating placeholder in offline directory to ensure it exists${NC}"
-            touch "$OFFLINE_PACKAGES_DIR/.placeholder"
-            echo -e "${YELLOW}Installation may fail if internet connection is not available${NC}"
-        fi
-    else
-        echo -e "${YELLOW}No offline packages directory found in source${NC}"
-        echo -e "${YELLOW}Creating offline packages directory anyway: $OFFLINE_PACKAGES_DIR${NC}"
-        mkdir -p "$OFFLINE_PACKAGES_DIR"
-        chmod 775 "$OFFLINE_PACKAGES_DIR"
-        touch "$OFFLINE_PACKAGES_DIR/.placeholder"
-        echo -e "${YELLOW}Installation may fail if internet connection is not available${NC}"
-    fi
-else
-    echo -e "${RED}No packages directory found in $ROOT_DIR${NC}"
-    echo -e "${YELLOW}Creating required directories anyway${NC}"
-    mkdir -p "$PACKAGES_DIR"
-    mkdir -p "$OFFLINE_PACKAGES_DIR"
-    chmod 775 "$PACKAGES_DIR"
-    chmod 775 "$OFFLINE_PACKAGES_DIR"
-    touch "$OFFLINE_PACKAGES_DIR/.placeholder"
-    echo -e "${RED}This is an incomplete distribution and may not work correctly${NC}"
-fi
+# Set correct permissions
+echo -e "${YELLOW}Setting permissions...${NC}"
+chown -R automate:automate "$INSTALL_DIR"
+chown -R automate:automate "$CONFIG_DIR"
+chown -R automate:automate "$LOG_DIR"
+chown -R automate:automate "$DATA_DIR"
+chmod -R 755 "$INSTALL_DIR"
+chmod -R 755 "$CONFIG_DIR"
+chmod -R 755 "$LOG_DIR"
+chmod -R 755 "$DATA_DIR"
 
-chown -R "$APP_USER:$APP_GROUP" "$INSTALL_DIR"
-
-# Create Python virtual environment
-echo -e "${YELLOW}Creating Python virtual environment...${NC}"
-if [ ! -d "$INSTALL_DIR/venv" ]; then
-    # Check Python version
-    PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
-    PYTHON_MAJOR=$(echo $PYTHON_VERSION | cut -d. -f1)
-    PYTHON_MINOR=$(echo $PYTHON_VERSION | cut -d. -f2)
-    
-    echo -e "${GREEN}Using Python $PYTHON_VERSION${NC}"
-    
-    python3 -m venv "$INSTALL_DIR/venv"
-    chown -R "$APP_USER:$APP_GROUP" "$INSTALL_DIR/venv"
-    echo -e "${GREEN}Virtual environment created.${NC}"
-else
-    echo -e "${GREEN}Virtual environment already exists.${NC}"
-fi
-
-# Activate virtual environment
-source "$INSTALL_DIR/venv/bin/activate"
-
-# Install Python dependencies
-echo -e "${YELLOW}Installing Python dependencies...${NC}"
-pip install --upgrade pip
-
-echo -e "${YELLOW}Installing Python packages...${NC}"
-pip3 install --no-index --find-links "$INSTALL_DIR/packages" -r "$INSTALL_DIR/requirements.txt"
-
-echo -e "${YELLOW}Setting Python network capabilities...${NC}"
 # Give Python permission to bind to privileged ports for ONVIF discovery
-PYTHON_PATH=$(readlink -f $(which python3))
-echo -e "${YELLOW}Setting capabilities for Python at: $PYTHON_PATH${NC}"
-setcap 'cap_net_bind_service,cap_net_raw+ep' "$PYTHON_PATH" || {
-    echo -e "${RED}Failed to set Python capabilities. This may affect ONVIF camera discovery.${NC}"
-    echo -e "${RED}Error details: $?${NC}"
-}
+echo -e "${YELLOW}Setting Python network capabilities...${NC}"
+PYTHON_PATH=$(readlink -f "$INSTALL_DIR/venv/bin/python3")
+setcap 'cap_net_bind_service=+ep' "$PYTHON_PATH"
+
+# Start Redis server
+echo -e "${YELLOW}Starting Redis server...${NC}"
+systemctl enable redis-server
+systemctl start redis-server
+
+# Create systemd service
+echo -e "${YELLOW}Creating systemd service...${NC}"
+cat > /etc/systemd/system/amslpr.service << EOL
+[Unit]
+Description=AMSLPR License Plate Recognition System
+After=network.target redis-server.service
+
+[Service]
+Type=simple
+User=automate
+Group=automate
+WorkingDirectory=/opt/amslpr
+Environment=PYTHONPATH=/opt/amslpr:/opt/amslpr/venv/lib/python3.11/site-packages
+ExecStart=/opt/amslpr/venv/bin/python3 run_server.py --port 5004
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+EOL
+
+# Reload systemd and enable service
+systemctl daemon-reload
+systemctl enable amslpr.service
 
 # Configure Flask app settings
 echo -e "${YELLOW}Configuring Flask application...${NC}"
@@ -319,50 +181,18 @@ class Config:
 nest_asyncio.apply()
 EOL
 
-# Create systemd service
-echo -e "${YELLOW}Creating systemd service...${NC}"
-cat > /etc/systemd/system/amslpr.service << EOL
-[Unit]
-Description=AMSLPR License Plate Recognition Service
-After=network.target multi-user.target
+# Configure Redis for Flask session
+echo -e "${YELLOW}Configuring Redis for Flask session...${NC}"
+cat > "$CONFIG_DIR/redis_config.py" << EOL
+import os
 
-[Service]
-Type=simple
-User=$APP_USER
-Group=$APP_GROUP
-WorkingDirectory=$INSTALL_DIR
-Environment="PATH=$INSTALL_DIR/venv/bin:/usr/local/bin:/usr/bin:/bin"
-Environment="PYTHONPATH=$INSTALL_DIR:$SITE_PACKAGES_DIR"
-Environment="HAILO_ENABLED=true"
-Environment="PYTHONDONTWRITEBYTECODE=1"
-ExecStart=$INSTALL_DIR/venv/bin/python3 $INSTALL_DIR/run_server.py --port 5001
-Restart=always
-RestartSec=10
-TimeoutStartSec=60
-TimeoutStopSec=30
-StandardOutput=append:/var/log/amslpr/server.log
-StandardError=append:/var/log/amslpr/error.log
-
-[Install]
-WantedBy=multi-user.target
+class Config:
+    SESSION_PERMANENT = True
+    SESSION_TYPE = 'redis'
+    SESSION_REDIS = 'redis://localhost:6379/0'
+    SESSION_USE_SIGNER = True
+    SESSION_KEY_PREFIX = 'amslpr:'
 EOL
-
-# Set proper permissions
-chmod 644 /etc/systemd/system/amslpr.service
-
-# Create log directory if it doesn't exist
-mkdir -p /var/log/amslpr
-chown -R $APP_USER:$APP_GROUP /var/log/amslpr
-
-# Reload systemd and enable/start service
-echo -e "${YELLOW}Enabling and starting AMSLPR service...${NC}"
-systemctl daemon-reload
-systemctl enable amslpr.service
-systemctl start amslpr.service
-
-# Check service status
-echo -e "${YELLOW}Checking service status...${NC}"
-systemctl status amslpr.service
 
 # Configure Nginx
 echo -e "${YELLOW}Configuring Nginx...${NC}"
@@ -388,7 +218,7 @@ server {
     ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
     
     location / {
-        proxy_pass http://127.0.0.1:5001;
+        proxy_pass http://127.0.0.1:5004;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -496,7 +326,7 @@ echo -e "${GREEN}==================================================${NC}"
 echo 
 echo -e "${GREEN}The AMSLPR system has been installed successfully.${NC}"
 echo -e "${GREEN}You can access the web interface at:${NC}"
-echo -e "${GREEN}https://$(hostname).local or http://$(hostname -I | awk '{print $1}'):5001${NC}"
+echo -e "${GREEN}https://$(hostname).local or http://$(hostname -I | awk '{print $1}'):5004${NC}"
 echo 
 echo -e "${YELLOW}Default admin credentials:${NC}"
 echo -e "${YELLOW}Username: admin${NC}"
