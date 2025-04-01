@@ -9,102 +9,144 @@ THIS DOCUMENT IS PROVIDED "AS IS," AND THE CORPORATION AND ITS MEMBERS AND THEIR
 IN NO EVENT WILL THE CORPORATION OR ITS MEMBERS OR THEIR AFFILIATES BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL, INCIDENTAL, PUNITIVE OR CONSEQUENTIAL DAMAGES, ARISING OUT OF OR RELATING TO ANY USE OR DISTRIBUTION OF THIS DOCUMENT, WHETHER OR NOT (1) THE CORPORATION, MEMBERS OR THEIR AFFILIATES HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES, OR (2) SUCH DAMAGES WERE REASONABLY FORESEEABLE, AND ARISING OUT OF OR RELATING TO ANY USE OR DISTRIBUTION OF THIS DOCUMENT.  THE FOREGOING DISCLAIMER AND LIMITATION ON LIABILITY DO NOT APPLY TO, INVALIDATE, OR LIMIT REPRESENTATIONS AND WARRANTIES MADE BY THE MEMBERS AND THEIR RESPECTIVE AFFILIATES TO THE CORPORATION AND OTHER MEMBERS IN CERTAIN WRITTEN POLICIES OF THE CORPORATION.
 -->
 <wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tds="http://www.onvif.org/ver10/device/wsdl" xmlns:tt="http://www.onvif.org/ver10/schema" targetNamespace="http://www.onvif.org/ver10/device/wsdl">
-	<wsdl:types>
-		<xs:schema targetNamespace="http://www.onvif.org/ver10/device/wsdl" xmlns:tt="http://www.onvif.org/ver10/schema" xmlns:tds="http://www.onvif.org/ver10/device/wsdl" elementFormDefault="qualified">
-			<xs:import namespace="http://www.onvif.org/ver10/schema" schemaLocation="onvif.xsd"/>
-			<!--  Message Request/Responses elements  -->
-			<!--===============================-->
-			<xs:element name="GetServices">
-				<xs:complexType>
-					<xs:sequence>
-						<xs:element name="IncludeCapability" type="xs:boolean"/>
-					</xs:sequence>
-				</xs:complexType>
-			</xs:element>
-			<xs:element name="GetServicesResponse">
-				<xs:complexType>
-					<xs:sequence>
-						<xs:element name="Service" type="tds:Service" maxOccurs="unbounded"/>
-					</xs:sequence>
-				</xs:complexType>
-			</xs:element>
-			<!--===============================-->
-			<xs:complexType name="Service">
-				<xs:sequence>
-					<xs:element name="Namespace" type="xs:anyURI"/>
-					<xs:element name="XAddr" type="xs:anyURI"/>
-					<xs:element name="Capabilities" minOccurs="0">
-						<xs:complexType>
-							<xs:sequence>
-								<xs:any namespace="##any" processContents="lax"/>
-							</xs:sequence>
-						</xs:complexType>
-					</xs:element>
-					<xs:element name="Version" type="tt:OnvifVersion"/>
-				</xs:sequence>
-			</xs:complexType>
-			<!--===============================-->
-			<xs:element name="GetDeviceInformation">
-				<xs:complexType>
-					<xs:sequence/>
-				</xs:complexType>
-			</xs:element>
-			<xs:element name="GetDeviceInformationResponse">
-				<xs:complexType>
-					<xs:sequence>
-						<xs:element name="Manufacturer" type="xs:string"/>
-						<xs:element name="Model" type="xs:string"/>
-						<xs:element name="FirmwareVersion" type="xs:string"/>
-						<xs:element name="SerialNumber" type="xs:string"/>
-						<xs:element name="HardwareId" type="xs:string"/>
-					</xs:sequence>
-				</xs:complexType>
-			</xs:element>
-		</xs:schema>
-	</wsdl:types>
-	<wsdl:message name="GetServicesRequest">
-		<wsdl:part name="parameters" element="tds:GetServices"/>
-	</wsdl:message>
-	<wsdl:message name="GetServicesResponse">
-		<wsdl:part name="parameters" element="tds:GetServicesResponse"/>
-	</wsdl:message>
-	<wsdl:message name="GetDeviceInformationRequest">
-		<wsdl:part name="parameters" element="tds:GetDeviceInformation"/>
-	</wsdl:message>
-	<wsdl:message name="GetDeviceInformationResponse">
-		<wsdl:part name="parameters" element="tds:GetDeviceInformationResponse"/>
-	</wsdl:message>
-	<wsdl:portType name="Device">
-		<wsdl:operation name="GetServices">
-			<wsdl:documentation>Returns information about services on the device.</wsdl:documentation>
-			<wsdl:input message="tds:GetServicesRequest"/>
-			<wsdl:output message="tds:GetServicesResponse"/>
-		</wsdl:operation>
-		<wsdl:operation name="GetDeviceInformation">
-			<wsdl:documentation>Get the device information.</wsdl:documentation>
-			<wsdl:input message="tds:GetDeviceInformationRequest"/>
-			<wsdl:output message="tds:GetDeviceInformationResponse"/>
-		</wsdl:operation>
-	</wsdl:portType>
-	<wsdl:binding name="DeviceBinding" type="tds:Device">
-		<soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
-		<wsdl:operation name="GetServices">
-			<soap:operation soapAction="http://www.onvif.org/ver10/device/wsdl/GetServices"/>
-			<wsdl:input>
-				<soap:body use="literal"/>
-			</wsdl:input>
-			<wsdl:output>
-				<soap:body use="literal"/>
-			</wsdl:output>
-		</wsdl:operation>
-		<wsdl:operation name="GetDeviceInformation">
-			<soap:operation soapAction="http://www.onvif.org/ver10/device/wsdl/GetDeviceInformation"/>
-			<wsdl:input>
-				<soap:body use="literal"/>
-			</wsdl:input>
-			<wsdl:output>
-				<soap:body use="literal"/>
-			</wsdl:output>
-		</wsdl:operation>
-	</wsdl:binding>
+    <wsdl:types>
+        <xs:schema targetNamespace="http://www.onvif.org/ver10/device/wsdl" xmlns:tt="http://www.onvif.org/ver10/schema" xmlns:tds="http://www.onvif.org/ver10/device/wsdl" elementFormDefault="qualified">
+            <xs:import namespace="http://www.onvif.org/ver10/schema" schemaLocation="onvif.xsd"/>
+            
+            <!-- GetCapabilities -->
+            <xs:element name="GetCapabilities">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="Category" type="tt:CapabilityCategory" minOccurs="0" maxOccurs="unbounded"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="GetCapabilitiesResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="Capabilities" type="tt:Capabilities"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+
+            <!-- GetServices -->
+            <xs:element name="GetServices">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="IncludeCapability" type="xs:boolean"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="GetServicesResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="Service" type="tds:Service" maxOccurs="unbounded"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:complexType name="Service">
+                <xs:sequence>
+                    <xs:element name="Namespace" type="xs:anyURI"/>
+                    <xs:element name="XAddr" type="xs:anyURI"/>
+                    <xs:element name="Capabilities" minOccurs="0">
+                        <xs:complexType>
+                            <xs:sequence>
+                                <xs:any namespace="##any" processContents="lax"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+                    <xs:element name="Version" type="tt:OnvifVersion"/>
+                </xs:sequence>
+            </xs:complexType>
+
+            <!-- GetDeviceInformation -->
+            <xs:element name="GetDeviceInformation">
+                <xs:complexType>
+                    <xs:sequence/>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="GetDeviceInformationResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="Manufacturer" type="xs:string"/>
+                        <xs:element name="Model" type="xs:string"/>
+                        <xs:element name="FirmwareVersion" type="xs:string"/>
+                        <xs:element name="SerialNumber" type="xs:string"/>
+                        <xs:element name="HardwareId" type="xs:string"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:schema>
+    </wsdl:types>
+
+    <!-- Messages -->
+    <wsdl:message name="GetCapabilitiesRequest">
+        <wsdl:part name="parameters" element="tds:GetCapabilities"/>
+    </wsdl:message>
+    <wsdl:message name="GetCapabilitiesResponse">
+        <wsdl:part name="parameters" element="tds:GetCapabilitiesResponse"/>
+    </wsdl:message>
+    <wsdl:message name="GetServicesRequest">
+        <wsdl:part name="parameters" element="tds:GetServices"/>
+    </wsdl:message>
+    <wsdl:message name="GetServicesResponse">
+        <wsdl:part name="parameters" element="tds:GetServicesResponse"/>
+    </wsdl:message>
+    <wsdl:message name="GetDeviceInformationRequest">
+        <wsdl:part name="parameters" element="tds:GetDeviceInformation"/>
+    </wsdl:message>
+    <wsdl:message name="GetDeviceInformationResponse">
+        <wsdl:part name="parameters" element="tds:GetDeviceInformationResponse"/>
+    </wsdl:message>
+
+    <!-- Port Types -->
+    <wsdl:portType name="Device">
+        <wsdl:operation name="GetCapabilities">
+            <wsdl:documentation>Returns the capabilities of the device service.</wsdl:documentation>
+            <wsdl:input message="tds:GetCapabilitiesRequest"/>
+            <wsdl:output message="tds:GetCapabilitiesResponse"/>
+        </wsdl:operation>
+        <wsdl:operation name="GetServices">
+            <wsdl:documentation>Returns information about services on the device.</wsdl:documentation>
+            <wsdl:input message="tds:GetServicesRequest"/>
+            <wsdl:output message="tds:GetServicesResponse"/>
+        </wsdl:operation>
+        <wsdl:operation name="GetDeviceInformation">
+            <wsdl:documentation>Get the device information.</wsdl:documentation>
+            <wsdl:input message="tds:GetDeviceInformationRequest"/>
+            <wsdl:output message="tds:GetDeviceInformationResponse"/>
+        </wsdl:operation>
+    </wsdl:portType>
+
+    <!-- Bindings -->
+    <wsdl:binding name="DeviceBinding" type="tds:Device">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <wsdl:operation name="GetCapabilities">
+            <soap:operation soapAction="http://www.onvif.org/ver10/device/wsdl/GetCapabilities"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="GetServices">
+            <soap:operation soapAction="http://www.onvif.org/ver10/device/wsdl/GetServices"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="GetDeviceInformation">
+            <soap:operation soapAction="http://www.onvif.org/ver10/device/wsdl/GetDeviceInformation"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+    </wsdl:binding>
 </wsdl:definitions>

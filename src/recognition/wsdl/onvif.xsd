@@ -8,24 +8,102 @@ THIS DOCUMENT IS PROVIDED "AS IS," AND THE CORPORATION AND ITS MEMBERS AND THEIR
 IN NO EVENT WILL THE CORPORATION OR ITS MEMBERS OR THEIR AFFILIATES BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL, INCIDENTAL, PUNITIVE OR CONSEQUENTIAL DAMAGES, ARISING OUT OF OR RELATING TO ANY USE OR DISTRIBUTION OF THIS DOCUMENT, WHETHER OR NOT (1) THE CORPORATION, MEMBERS OR THEIR AFFILIATES HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES, OR (2) SUCH DAMAGES WERE REASONABLY FORESEEABLE, AND ARISING OUT OF OR RELATING TO ANY USE OR DISTRIBUTION OF THIS DOCUMENT.  THE FOREGOING DISCLAIMER AND LIMITATION ON LIABILITY DO NOT APPLY TO, INVALIDATE, OR LIMIT REPRESENTATIONS AND WARRANTIES MADE BY THE MEMBERS AND THEIR RESPECTIVE AFFILIATES TO THE CORPORATION AND OTHER MEMBERS IN CERTAIN WRITTEN POLICIES OF THE CORPORATION.
 -->
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tt="http://www.onvif.org/ver10/schema" targetNamespace="http://www.onvif.org/ver10/schema" elementFormDefault="qualified" version="19.12">
+
+    <!-- Simple Types -->
     <xs:simpleType name="ReferenceToken">
         <xs:restriction base="xs:string">
             <xs:maxLength value="64"/>
         </xs:restriction>
     </xs:simpleType>
+
     <xs:simpleType name="Name">
         <xs:restriction base="xs:string">
             <xs:maxLength value="64"/>
         </xs:restriction>
     </xs:simpleType>
-    <!--===============================-->
+
+    <!-- Capability Categories -->
+    <xs:simpleType name="CapabilityCategory">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="All"/>
+            <xs:enumeration value="Analytics"/>
+            <xs:enumeration value="Device"/>
+            <xs:enumeration value="Events"/>
+            <xs:enumeration value="Imaging"/>
+            <xs:enumeration value="Media"/>
+            <xs:enumeration value="PTZ"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Complex Types -->
     <xs:complexType name="OnvifVersion">
         <xs:sequence>
             <xs:element name="Major" type="xs:int"/>
             <xs:element name="Minor" type="xs:int"/>
         </xs:sequence>
     </xs:complexType>
-    <!--===============================-->
+
+    <xs:complexType name="Capabilities">
+        <xs:sequence>
+            <xs:element name="Analytics" type="tt:AnalyticsCapabilities" minOccurs="0"/>
+            <xs:element name="Device" type="tt:DeviceCapabilities" minOccurs="0"/>
+            <xs:element name="Events" type="tt:EventCapabilities" minOccurs="0"/>
+            <xs:element name="Imaging" type="tt:ImagingCapabilities" minOccurs="0"/>
+            <xs:element name="Media" type="tt:MediaCapabilities" minOccurs="0"/>
+            <xs:element name="PTZ" type="tt:PTZCapabilities" minOccurs="0"/>
+            <xs:any namespace="##any" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:anyAttribute namespace="##any" processContents="lax"/>
+    </xs:complexType>
+
+    <xs:complexType name="DeviceCapabilities">
+        <xs:sequence>
+            <xs:element name="XAddr" type="xs:anyURI"/>
+            <xs:any namespace="##any" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:anyAttribute namespace="##any" processContents="lax"/>
+    </xs:complexType>
+
+    <xs:complexType name="MediaCapabilities">
+        <xs:sequence>
+            <xs:element name="XAddr" type="xs:anyURI"/>
+            <xs:any namespace="##any" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:anyAttribute namespace="##any" processContents="lax"/>
+    </xs:complexType>
+
+    <xs:complexType name="PTZCapabilities">
+        <xs:sequence>
+            <xs:element name="XAddr" type="xs:anyURI"/>
+            <xs:any namespace="##any" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:anyAttribute namespace="##any" processContents="lax"/>
+    </xs:complexType>
+
+    <xs:complexType name="ImagingCapabilities">
+        <xs:sequence>
+            <xs:element name="XAddr" type="xs:anyURI"/>
+            <xs:any namespace="##any" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:anyAttribute namespace="##any" processContents="lax"/>
+    </xs:complexType>
+
+    <xs:complexType name="EventCapabilities">
+        <xs:sequence>
+            <xs:element name="XAddr" type="xs:anyURI"/>
+            <xs:any namespace="##any" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:anyAttribute namespace="##any" processContents="lax"/>
+    </xs:complexType>
+
+    <xs:complexType name="AnalyticsCapabilities">
+        <xs:sequence>
+            <xs:element name="XAddr" type="xs:anyURI"/>
+            <xs:any namespace="##any" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:anyAttribute namespace="##any" processContents="lax"/>
+    </xs:complexType>
+
     <xs:complexType name="Profile">
         <xs:sequence>
             <xs:element name="Name" type="tt:Name"/>
@@ -35,7 +113,7 @@ IN NO EVENT WILL THE CORPORATION OR ITS MEMBERS OR THEIR AFFILIATES BE LIABLE FO
         </xs:sequence>
         <xs:anyAttribute namespace="##any" processContents="lax"/>
     </xs:complexType>
-    <!--===============================-->
+
     <xs:complexType name="StreamSetup">
         <xs:sequence>
             <xs:element name="Stream" type="xs:string"/>
@@ -44,7 +122,7 @@ IN NO EVENT WILL THE CORPORATION OR ITS MEMBERS OR THEIR AFFILIATES BE LIABLE FO
         </xs:sequence>
         <xs:anyAttribute namespace="##any" processContents="lax"/>
     </xs:complexType>
-    <!--===============================-->
+
     <xs:complexType name="Transport">
         <xs:sequence>
             <xs:element name="Protocol" type="xs:string"/>
@@ -52,7 +130,7 @@ IN NO EVENT WILL THE CORPORATION OR ITS MEMBERS OR THEIR AFFILIATES BE LIABLE FO
         </xs:sequence>
         <xs:anyAttribute namespace="##any" processContents="lax"/>
     </xs:complexType>
-    <!--===============================-->
+
     <xs:complexType name="MediaUri">
         <xs:sequence>
             <xs:element name="Uri" type="xs:anyURI"/>
@@ -63,4 +141,5 @@ IN NO EVENT WILL THE CORPORATION OR ITS MEMBERS OR THEIR AFFILIATES BE LIABLE FO
         </xs:sequence>
         <xs:anyAttribute namespace="##any" processContents="lax"/>
     </xs:complexType>
+
 </xs:schema>
