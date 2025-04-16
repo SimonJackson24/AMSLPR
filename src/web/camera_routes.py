@@ -897,7 +897,7 @@ def save_camera_settings(camera_id):
     
     return redirect(url_for('camera.camera_settings_index'))
 
-@camera_bp.route('/cameras/stream/<camera_id>')
+@camera_bp.route('/camera/stream/<camera_id>')
 @login_required(user_manager)
 def camera_stream(camera_id):
     """Stream camera feed."""
