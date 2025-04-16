@@ -326,10 +326,7 @@
             liveui: true,
             responsive: true,
             techOrder: ['html5'],
-            sources: [{
-                src: '/camera/stream/{{ camera.id }}',
-                type: 'application/x-mpegURL'
-            }]
+            // Don't set initial sources, we'll set them after getting the HLS stream URL
         });
         
         // Show overlay during initialization
@@ -349,9 +346,6 @@
             }
         }
             
-            // Start the HLS stream conversion
-            startHLSStream();
-            
             // Handle player errors
             player.on('error', function() {
                 console.error('Video player error:', player.error());
@@ -359,7 +353,7 @@
                 showStreamError('Stream playback error');
             });
             
-            // Start the HLS stream after player is ready
+            // Start the HLS stream after player is ready - only start once
             player.ready(function() {
                 startHLSStream();
             });
