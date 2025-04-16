@@ -988,6 +988,14 @@ def ensure_hls_dir(camera_id):
 
 def start_ffmpeg_stream(camera_id, rtsp_url):
     """Start FFmpeg process to convert RTSP to HLS."""
+    logger.info(f"Starting FFmpeg for camera {camera_id} with RTSP URL: {rtsp_url}")
+    
+    # Validate RTSP URL
+    if not rtsp_url or not rtsp_url.startswith('rtsp://'):
+        logger.error(f"Invalid RTSP URL for camera {camera_id}: {rtsp_url}")
+        return False
+        
+    # Check if process is already running
     if camera_id in ffmpeg_processes:
         # Check if process is still running
         if ffmpeg_processes[camera_id].poll() is None:
@@ -996,36 +1004,33 @@ def start_ffmpeg_stream(camera_id, rtsp_url):
         else:
             logger.info(f"FFmpeg process for camera {camera_id} has ended, restarting")
     
-    # Ensure HLS directory exists
-    hls_dir = ensure_hls_dir(camera_id)
-    
-    # FFmpeg command to convert RTSP to HLS
-    # -y: Overwrite output files without asking
-    # -loglevel error: Only show errors in FFmpeg output
-    # -i: Input URL
-    # -c:v copy: Copy video stream without re-encoding (if possible)
-    # -c:a copy: Copy audio stream without re-encoding (if possible)
-    # -f hls: Output format is HLS
-    # -hls_time 2: Each segment is 2 seconds
-    # -hls_list_size 3: Keep 3 segments in the playlist
-    # -hls_flags delete_segments: Delete old segments
-    # -method DIRECT: Direct file output (no sub-requests)
-    cmd = [
-        'ffmpeg',
-        '-y',
-        '-loglevel', 'error',
-        '-i', rtsp_url,
-        '-c:v', 'copy',
-        '-c:a', 'copy',
-        '-f', 'hls',
-        '-hls_time', '2',
-        '-hls_list_size', '3',
-        '-hls_flags', 'delete_segments',
-        '-method', 'DIRECT',
-        os.path.join(hls_dir, 'stream.m3u8')
-    ]
-    
     try:
+        # Ensure HLS directory exists
+        hls_dir = ensure_hls_dir(camera_id)
+        logger.info(f"Using HLS directory: {hls_dir}")
+        
+        # FFmpeg command to convert RTSP to HLS
+        # Use more basic settings that are more likely to work with different cameras
+        cmd = [
+            'ffmpeg',
+            '-y',                  # Overwrite output files without asking
+            '-loglevel', 'warning',  # Show warnings and errors
+            '-rtsp_transport', 'tcp',  # Use TCP for RTSP (more reliable than UDP)
+            '-i', rtsp_url,        # Input URL
+            '-c:v', 'copy',        # Copy video stream without re-encoding (if possible)
+            '-c:a', 'aac',         # Convert audio to AAC (more compatible)
+            '-ac', '2',            # 2 audio channels
+            '-b:a', '128k',        # Audio bitrate
+            '-f', 'hls',           # Output format is HLS
+            '-hls_time', '2',      # Each segment is 2 seconds
+            '-hls_list_size', '3', # Keep 3 segments in the playlist
+            '-hls_flags', 'delete_segments+append_list',  # Delete old segments and append to list
+            '-hls_segment_type', 'mpegts',  # Use MPEG-TS segments (most compatible)
+            os.path.join(hls_dir, 'stream.m3u8')
+        ]
+        
+        logger.info(f"FFmpeg command: {' '.join(cmd)}")
+        
         # Start FFmpeg process
         process = subprocess.Popen(
             cmd,
@@ -1093,13 +1098,30 @@ def hls_stream(camera_id):
             }), 404
             
         camera_info = onvif_camera_manager.cameras[camera_id]
-        if isinstance(camera_info, dict) and 'info' in camera_info:
-            camera_info = camera_info['info']
-            
+        logger.info(f"Camera info type: {type(camera_info)}")
+        logger.info(f"Camera info content: {camera_info}")
+        
+        # Extract stream URL based on data structure
+        stream_url = ''
+        
         if isinstance(camera_info, dict):
-            stream_url = camera_info.get('stream_uri', '')
+            # If camera_info is a dictionary
+            if 'info' in camera_info:
+                sub_info = camera_info['info']
+                if isinstance(sub_info, dict):
+                    stream_url = sub_info.get('stream_uri', '')
+                    logger.info(f"Got stream_uri from info dictionary: {stream_url}")
+                else:
+                    stream_url = getattr(sub_info, 'stream_uri', '')
+                    logger.info(f"Got stream_uri from info object: {stream_url}")
+            else:
+                # Direct access in the dictionary
+                stream_url = camera_info.get('stream_uri', '')
+                logger.info(f"Got stream_uri directly from dictionary: {stream_url}")
         else:
+            # If camera_info is an object
             stream_url = getattr(camera_info, 'stream_uri', '')
+            logger.info(f"Got stream_uri from object attribute: {stream_url}")
             
         if not stream_url:
             logger.warning(f"Stream URL not available for camera: {camera_id}")
