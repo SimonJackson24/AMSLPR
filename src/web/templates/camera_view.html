@@ -206,6 +206,9 @@
 
 {% block scripts %}
 <script>
+    // Global variable for the video player
+    var player;
+    
     // Function to start the HLS stream
     function startHLSStream() {
         // Show loading state
@@ -315,7 +318,7 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize video.js player
-        var player = videojs('camera-video', {
+        player = videojs('camera-video', {
             autoplay: true,
             controls: true,
             fluid: true,
