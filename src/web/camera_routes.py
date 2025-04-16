@@ -124,55 +124,12 @@ def init_camera_manager(config):
             onvif_camera_manager = ONVIFCameraManager()
             logger.info(f"ONVIFCameraManager initialized: {onvif_camera_manager}")
             
-            # Load cameras from database
+            # Load cameras from database using the reload function
             if db_manager:
                 try:
-                    logger.info("Loading cameras from database")
-                    cameras = db_manager.get_all_cameras()
-                    logger.info(f"Found {len(cameras)} cameras in database")
-                    
-                    # Add each camera to the manager
-                    for camera in cameras:
-                        try:
-                            logger.info(f"Adding camera from database: {camera}")
-                            camera_info = {
-                                'ip': camera['ip'],
-                                'port': camera['port'],
-                                'username': camera['username'],
-                                'password': camera['password']
-                            }
-                            
-                            # Check if this is an RTSP camera (stored with rtsp- prefix)
-                            if camera['ip'].startswith('rtsp-'):
-                                logger.info(f"Found RTSP camera: {camera['ip']}")
-                                camera_id = camera['ip']
-                                rtsp_url = camera['stream_uri']
-                                
-                                # Add directly to cameras dict
-                                onvif_camera_manager.cameras[camera_id] = {
-                                    'camera': None,  # No ONVIF camera object
-                                    'info': {
-                                        'id': camera_id,
-                                        'name': camera['name'],
-                                        'location': camera['location'],
-                                        'status': 'connected',
-                                        'stream_uri': rtsp_url,
-                                        'rtsp_url': rtsp_url,
-                                        'manufacturer': camera['manufacturer'],
-                                        'model': camera['model']
-                                    },
-                                    'stream': None
-                                }
-                                logger.info(f"Added RTSP camera to manager: {camera_id}")
-                            else:
-                                # Regular ONVIF camera
-                                if 'stream_uri' in camera and camera['stream_uri']:
-                                    camera_info['rtsp_url'] = camera['stream_uri']
-                                
-                                logger.info(f"Adding ONVIF camera to manager: {camera_info}")
-                                onvif_camera_manager.add_camera(camera_info)
-                        except Exception as e:
-                            logger.error(f"Failed to add camera {camera['ip']}: {str(e)}")
+                    logger.info("Loading cameras from database using reload_cameras_from_database()")
+                    # Call the dedicated function to load cameras consistently
+                    reload_cameras_from_database()
                 except Exception as e:
                     logger.error(f"Failed to load cameras from database: {str(e)}")
         except ImportError as e:
