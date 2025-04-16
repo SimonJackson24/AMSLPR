@@ -251,39 +251,67 @@
                         statusBadge.innerText = 'Connected';
                     }
                     
-                    // Hide overlay
-                    if (overlay) {
-                        overlay.classList.add('d-none');
+                    // Use a more direct approach to load the HLS stream
+                    if (Hls.isSupported()) {
+                        // Use HLS.js for better browser support
+                        const hls = new Hls({
+                            debug: true,
+                            enableWorker: true,
+                            lowLatencyMode: true,
+                            backBufferLength: 30,
+                            maxBufferLength: 30
+                        });
+                        
+                        // Add error handling
+                        hls.on(Hls.Events.ERROR, function(event, data) {
+                            console.error('HLS detailed error:', data);
+                            if (data.fatal) {
+                                switch(data.type) {
+                                    case Hls.ErrorTypes.NETWORK_ERROR:
+                                        // Try to recover network error
+                                        console.log('Fatal network error encountered, trying to recover');
+                                        hls.startLoad();
+                                        break;
+                                    case Hls.ErrorTypes.MEDIA_ERROR:
+                                        console.log('Fatal media error encountered, trying to recover');
+                                        hls.recoverMediaError();
+                                        break;
+                                    default:
+                                        // Cannot recover
+                                        showStreamError('Fatal streaming error');
+                                        break;
+                                }
+                            }
+                        });
+                        
+                        // Load the source and attach to video element
+                        hls.loadSource(playlistUrl);
+                        hls.attachMedia(document.getElementById('camera-video'));
+                        
+                        hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                            console.log('HLS manifest parsed, starting playback');
+                            player.play();
+                            document.getElementById('camera-overlay').classList.add('d-none');
+                        });
+                    } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
+                        // For Safari with native HLS support
+                        player.src({
+                            src: playlistUrl,
+                            type: 'application/x-mpegURL'
+                        });
+                        player.play();
+                        document.getElementById('camera-overlay').classList.add('d-none');
+                    } else {
+                        showStreamError('Your browser does not support HLS streaming');
                     }
-                    
-                    // Set the player source to the HLS playlist with full URL path
-                    // We need to construct the complete URL with the server's host
-                    const baseUrl = window.location.origin;  // Get the server's base URL (e.g., http://192.168.1.183:8080)
-                    const fullPlaylistUrl = `${baseUrl}${data.playlist_url}`;
-                    console.log('Loading HLS playlist from:', fullPlaylistUrl);
-                    
-                    // Debug URLs to diagnose loading issues
-                    console.log('API endpoint URL:', `${baseUrl}/camera/hls-stream/{{ camera.id }}`);
-                    console.log('Actual m3u8 file should be at:', fullPlaylistUrl);
-                    
-                    player.src({
-                        src: fullPlaylistUrl,
-                        type: 'application/x-mpegURL'
-                    });
-                    
-                    // Start playing
-                    player.play().catch(e => {
-                        console.error('Error playing video:', e);
-                        showStreamError('Failed to play video stream');
-                    });
                 } else {
-                    // Show error
-                    showStreamError(data.message || 'Failed to start video stream');
+                    // Show error if stream URL not available
+                    showStreamError(data.message || 'Failed to get stream URL');
                 }
             })
             .catch(error => {
-                console.error('Error starting HLS stream:', error);
-                showStreamError('Connection failed');
+                console.error('Error fetching stream URL:', error);
+                showStreamError('Failed to connect to camera stream');
             });
     }
     
