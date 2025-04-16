@@ -1024,8 +1024,7 @@ def start_ffmpeg_stream(camera_id, rtsp_url):
             '-f', 'hls',           # Output format is HLS
             '-hls_time', '2',      # Each segment is 2 seconds
             '-hls_list_size', '3', # Keep 3 segments in the playlist
-            '-hls_flags', 'delete_segments+append_list',  # Delete old segments and append to list
-            '-hls_segment_type', 'mpegts',  # Use MPEG-TS segments (most compatible)
+            '-hls_flags', 'delete_segments',  # Delete old segments
             os.path.join(hls_dir, 'stream.m3u8')
         ]
         
