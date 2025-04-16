@@ -18,7 +18,7 @@ import logging
 import asyncio
 import numpy as np
 from datetime import datetime
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, Response, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, Response, current_app, send_file
 from functools import wraps
 
 from src.utils.security import CredentialManager
@@ -939,21 +939,144 @@ def camera_view_stream(camera_id):
         logger.error(f"Error rendering camera view: {str(e)}")
         return "Error rendering camera view", 500
 
+# FFmpeg process management for HLS streaming
+import subprocess
+import tempfile
+import os
+import threading
+import time
+import atexit
+import signal
+
+# Store active FFmpeg processes
+ffmpeg_processes = {}
+
+# Store HLS segment directories
+hls_dirs = {}
+
+# Clean up FFmpeg processes on exit
+def cleanup_ffmpeg():
+    for proc in ffmpeg_processes.values():
+        try:
+            if proc.poll() is None:
+                proc.terminate()
+                proc.wait(timeout=5)
+        except Exception as e:
+            logger.error(f"Error terminating FFmpeg process: {str(e)}")
+
+# Register cleanup handler
+atexit.register(cleanup_ffmpeg)
+
+# Handle SIGTERM signal for graceful shutdown
+def handle_sigterm(signum, frame):
+    cleanup_ffmpeg()
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, handle_sigterm)
+
+def ensure_hls_dir(camera_id):
+    """Create and return the HLS directory for a camera."""
+    if camera_id in hls_dirs and os.path.exists(hls_dirs[camera_id]):
+        return hls_dirs[camera_id]
+    
+    # Create a new temporary directory
+    hls_dir = tempfile.mkdtemp(prefix=f"amslpr_hls_{camera_id}")
+    hls_dirs[camera_id] = hls_dir
+    logger.info(f"Created HLS directory: {hls_dir}")
+    return hls_dir
+
+def start_ffmpeg_stream(camera_id, rtsp_url):
+    """Start FFmpeg process to convert RTSP to HLS."""
+    if camera_id in ffmpeg_processes:
+        # Check if process is still running
+        if ffmpeg_processes[camera_id].poll() is None:
+            logger.info(f"FFmpeg process for camera {camera_id} already running")
+            return True
+        else:
+            logger.info(f"FFmpeg process for camera {camera_id} has ended, restarting")
+    
+    # Ensure HLS directory exists
+    hls_dir = ensure_hls_dir(camera_id)
+    
+    # FFmpeg command to convert RTSP to HLS
+    # -y: Overwrite output files without asking
+    # -loglevel error: Only show errors in FFmpeg output
+    # -i: Input URL
+    # -c:v copy: Copy video stream without re-encoding (if possible)
+    # -c:a copy: Copy audio stream without re-encoding (if possible)
+    # -f hls: Output format is HLS
+    # -hls_time 2: Each segment is 2 seconds
+    # -hls_list_size 3: Keep 3 segments in the playlist
+    # -hls_flags delete_segments: Delete old segments
+    # -method DIRECT: Direct file output (no sub-requests)
+    cmd = [
+        'ffmpeg',
+        '-y',
+        '-loglevel', 'error',
+        '-i', rtsp_url,
+        '-c:v', 'copy',
+        '-c:a', 'copy',
+        '-f', 'hls',
+        '-hls_time', '2',
+        '-hls_list_size', '3',
+        '-hls_flags', 'delete_segments',
+        '-method', 'DIRECT',
+        os.path.join(hls_dir, 'stream.m3u8')
+    ]
+    
+    try:
+        # Start FFmpeg process
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True
+        )
+        
+        ffmpeg_processes[camera_id] = process
+        logger.info(f"Started FFmpeg process for camera {camera_id}")
+        
+        # Start thread to monitor the process
+        def monitor_process():
+            for line in process.stderr:
+                if line.strip():
+                    logger.error(f"FFmpeg [{camera_id}]: {line.strip()}")
+            
+            if process.poll() is not None:
+                logger.warning(f"FFmpeg process for camera {camera_id} ended with code {process.returncode}")
+                if camera_id in ffmpeg_processes:
+                    del ffmpeg_processes[camera_id]
+        
+        monitor_thread = threading.Thread(target=monitor_process)
+        monitor_thread.daemon = True
+        monitor_thread.start()
+        
+        # Wait a short time to ensure FFmpeg has started
+        time.sleep(1)
+        
+        # Check if process is still running
+        if process.poll() is None:
+            return True
+        else:
+            logger.error(f"FFmpeg process for camera {camera_id} failed to start")
+            return False
+    
+    except Exception as e:
+        logger.error(f"Error starting FFmpeg process: {str(e)}")
+        return False
+
 @camera_bp.route('/camera/hls-stream/<camera_id>')
 @login_required(user_manager)
 def hls_stream(camera_id):
     """
     Convert RTSP stream to HLS stream for web playback.
     
-    This is a placeholder for a proper streaming implementation.
-    To fully implement this, you'll need to:
-    1. Install FFmpeg on the server
-    2. Use a streaming library like Flask-FFmpeg or implement a custom solution
-    
-    For now, this returns an informative message.
+    This endpoint doesn't return the HLS playlist directly, but starts
+    the FFmpeg process to generate it and serves the static directory
+    containing the playlist and segments.
     """
     try:
-        # Check if camera exists and get stream URL (similar to camera_stream function)
+        # Check if camera exists and get stream URL
         if not onvif_camera_manager:
             logger.error("Camera manager not available")
             return "Camera manager not available", 500
@@ -975,17 +1098,60 @@ def hls_stream(camera_id):
             logger.warning(f"Stream URL not available for camera: {camera_id}")
             return "Stream not available", 404
             
-        # Here is where we would implement the actual RTSP to HLS conversion
-        # using FFmpeg or a similar tool. For now, return an explanatory message.
-        logger.warning(f"HLS streaming not fully implemented. RTSP URL: {stream_url}")
+        # Start FFmpeg process for this camera if not already running
+        if not start_ffmpeg_stream(camera_id, stream_url):
+            logger.error(f"Failed to start FFmpeg process for camera {camera_id}")
+            return "Failed to start streaming", 500
         
-        message = {
-            'error': 'Not Implemented',
-            'message': 'HLS streaming conversion is not yet implemented. You need to install FFmpeg and implement the conversion.',
-            'rtsp_url': stream_url
-        }
+        # Get the HLS directory for this camera
+        hls_dir = hls_dirs.get(camera_id)
+        if not hls_dir or not os.path.exists(hls_dir):
+            logger.error(f"HLS directory for camera {camera_id} not found")
+            return "Stream directory not found", 500
         
-        return jsonify(message), 501  # 501 Not Implemented
+        # Return the HLS playlist URL
+        playlist_url = f"/camera/hls-segments/{camera_id}/stream.m3u8"
+        
+        return jsonify({
+            'success': True,
+            'playlist_url': playlist_url,
+            'camera_id': camera_id,
+            'message': 'HLS stream started successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in HLS streaming: {str(e)}")
+        return "Error processing stream", 500
+
+# Route to serve HLS segments
+@camera_bp.route('/camera/hls-segments/<camera_id>/<path:filename>')
+@login_required(user_manager)
+def hls_segments(camera_id, filename):
+    """Serve HLS playlist and segments."""
+    try:
+        # Get the HLS directory for this camera
+        hls_dir = hls_dirs.get(camera_id)
+        if not hls_dir or not os.path.exists(hls_dir):
+            logger.error(f"HLS directory for camera {camera_id} not found")
+            return "Stream directory not found", 404
+        
+        # Construct the full path to the requested file
+        file_path = os.path.join(hls_dir, filename)
+        
+        # Check if the file exists
+        if not os.path.exists(file_path):
+            logger.warning(f"Requested HLS file not found: {file_path}")
+            return "File not found", 404
+        
+        # Determine the correct MIME type
+        mime_type = 'application/vnd.apple.mpegurl' if filename.endswith('.m3u8') else 'video/mp2t'
+        
+        # Return the file with the appropriate MIME type
+        return send_file(file_path, mimetype=mime_type)
+        
+    except Exception as e:
+        logger.error(f"Error serving HLS segment: {str(e)}")
+        return "Error serving stream file", 500
         
     except Exception as e:
         logger.error(f"Error in HLS streaming: {str(e)}")

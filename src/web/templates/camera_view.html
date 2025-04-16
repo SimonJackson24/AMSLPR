@@ -38,7 +38,7 @@
                     <!-- Using a video.js player to handle RTSP streams -->
                     <div id="camera-player" class="w-100" style="height: 480px; background-color: #000;">
                         <video id="camera-video" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto" width="100%" height="100%" poster="/static/img/camera-placeholder.jpg" data-setup='{"techOrder": ["html5"]}'>
-                            <source src="/camera/stream/{{ camera.id }}" type="application/x-mpegURL">
+                            <!-- We'll set the source via JavaScript after starting the HLS stream -->
                             <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that supports HTML5 video</p>
                         </video>
                     </div>
@@ -208,6 +208,55 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize video.js player
+        // Start the HLS stream conversion and set up the player
+        function startHLSStream() {
+            // Show loading state
+            const statusBadge = document.getElementById('status-badge');
+            if (statusBadge) {
+                statusBadge.className = 'badge bg-warning me-2';
+                statusBadge.innerText = 'Starting stream...';
+            }
+            
+            // Make an AJAX request to start the HLS stream conversion
+            fetch('/camera/hls-stream/{{ camera.id }}')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.playlist_url) {
+                        // Update status badge
+                        if (statusBadge) {
+                            statusBadge.className = 'badge bg-success me-2';
+                            statusBadge.innerText = 'Connected';
+                        }
+                        
+                        // Set the player source to the HLS playlist
+                        player.src({
+                            src: data.playlist_url,
+                            type: 'application/x-mpegURL'
+                        });
+                        
+                        // Start playing
+                        player.play();
+                    } else {
+                        // Show error in status badge
+                        if (statusBadge) {
+                            statusBadge.className = 'badge bg-danger me-2';
+                            statusBadge.innerText = 'Stream Error';
+                        }
+                        
+                        console.error('Failed to start HLS stream:', data);
+                    }
+                })
+                .catch(error => {
+                    // Show error in status badge
+                    if (statusBadge) {
+                        statusBadge.className = 'badge bg-danger me-2';
+                        statusBadge.innerText = 'Connection Failed';
+                    }
+                    
+                    console.error('Error starting HLS stream:', error);
+                });
+        }
+
         var player = videojs('camera-video', {
             autoplay: true,
             controls: true,
@@ -226,6 +275,11 @@
         player.on('error', function() {
             console.error('Video player error:', player.error());
             document.getElementById('camera-overlay').classList.remove('d-none');
+        });
+        
+        // Start the HLS stream after player is ready
+        player.ready(function() {
+            startHLSStream();
         });
         
         // Simulate connection monitoring
