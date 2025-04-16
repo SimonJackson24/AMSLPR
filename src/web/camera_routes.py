@@ -893,14 +893,67 @@ def camera_stream(camera_id):
             logger.warning(f"Stream URL not available for camera: {camera_id}")
             return "Stream not available", 404
         
-        logger.info(f"Returning stream URL for camera {camera_id}: {stream_url}")
+        logger.info(f"Processing stream URL for camera {camera_id}: {stream_url}")
         
-        # Return a response that redirects to the actual RTSP stream
-        # This allows the browser to handle the stream with appropriate plugins
-        return redirect(stream_url)
+        # Instead of redirecting to RTSP (which browsers can't handle directly),
+        # return a response that includes the stream URL in a template
+        # that can use JavaScript to handle the stream properly
+        return render_template('camera_stream.html', camera_id=camera_id, stream_url=stream_url)
     except Exception as e:
         logger.error(f"Error streaming camera feed: {str(e)}")
         return "Error streaming camera feed", 500
+
+@camera_bp.route('/camera/hls-stream/<camera_id>')
+@login_required(user_manager)
+def hls_stream(camera_id):
+    """
+    Convert RTSP stream to HLS stream for web playback.
+    
+    This is a placeholder for a proper streaming implementation.
+    To fully implement this, you'll need to:
+    1. Install FFmpeg on the server
+    2. Use a streaming library like Flask-FFmpeg or implement a custom solution
+    
+    For now, this returns an informative message.
+    """
+    try:
+        # Check if camera exists and get stream URL (similar to camera_stream function)
+        if not onvif_camera_manager:
+            logger.error("Camera manager not available")
+            return "Camera manager not available", 500
+            
+        if camera_id not in onvif_camera_manager.cameras:
+            logger.warning(f"Camera not found: {camera_id}")
+            return "Camera not found", 404
+            
+        camera_info = onvif_camera_manager.cameras[camera_id]
+        if isinstance(camera_info, dict) and 'info' in camera_info:
+            camera_info = camera_info['info']
+            
+        if isinstance(camera_info, dict):
+            stream_url = camera_info.get('stream_uri', '')
+        else:
+            stream_url = getattr(camera_info, 'stream_uri', '')
+            
+        if not stream_url:
+            logger.warning(f"Stream URL not available for camera: {camera_id}")
+            return "Stream not available", 404
+            
+        # Here is where we would implement the actual RTSP to HLS conversion
+        # using FFmpeg or a similar tool. For now, return an explanatory message.
+        logger.warning(f"HLS streaming not fully implemented. RTSP URL: {stream_url}")
+        
+        message = {
+            'error': 'Not Implemented',
+            'message': 'HLS streaming conversion is not yet implemented. You need to install FFmpeg and implement the conversion.',
+            'rtsp_url': stream_url
+        }
+        
+        return jsonify(message), 501  # 501 Not Implemented
+        
+    except Exception as e:
+        logger.error(f"Error in HLS streaming: {str(e)}")
+        return "Error processing stream", 500
 
 @camera_bp.route('/camera/health')
 @login_required(user_manager)
