@@ -59,10 +59,26 @@
                 // For HLS streams
                 const hls = new Hls();
                 
-                // Create a web-compatible URL - this is a placeholder that needs to be implemented server-side
-                const webStreamUrl = '/camera/hls-stream/' + encodeURIComponent('{{ camera_id }}');
-                
-                hls.loadSource(webStreamUrl);
+                // First fetch the API endpoint to get the actual playlist URL
+                fetch('/camera/hls-stream/' + encodeURIComponent('{{ camera_id }}'))
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.playlist_url) {
+                            // Construct the complete playlist URL
+                            const baseUrl = window.location.origin;
+                            const fullPlaylistUrl = `${baseUrl}${data.playlist_url}`;
+                            console.log('Loading HLS playlist from:', fullPlaylistUrl);
+                            
+                            // Load the actual playlist file
+                            hls.loadSource(fullPlaylistUrl);
+                        } else {
+                            throw new Error(data.message || 'Failed to get playlist URL');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error getting playlist URL:', error);
+                        displayStreamError('Failed to get stream URL: ' + error.message);
+                    });
                 hls.attachMedia(videoElement);
                 
                 hls.on(Hls.Events.MANIFEST_PARSED, function() {
