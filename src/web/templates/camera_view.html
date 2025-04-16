@@ -346,11 +346,27 @@
             }
         }
             
-            // Handle player errors
+            // Add event listeners for troubleshooting
             player.on('error', function() {
-                console.error('Video player error:', player.error());
+                let errorDetails = player.error() || {};
+                console.error('Video player error:', errorDetails);
                 document.getElementById('camera-overlay').classList.remove('d-none');
-                showStreamError('Stream playback error');
+                showStreamError(`Stream error: ${errorDetails.message || 'Unknown error'}`);
+            });
+            
+            // Log when segments are loaded
+            player.on('progress', function() {
+                console.log('Loading video segments...');
+            });
+            
+            // Log when playing starts
+            player.on('playing', function() {
+                console.log('Video started playing');
+            });
+            
+            // Show warning if waiting for too long
+            player.on('waiting', function() {
+                console.log('Video is waiting for data');
             });
             
             // Start the HLS stream after player is ready - only start once

@@ -1222,8 +1222,16 @@ def hls_segments(camera_id, filename):
         # Determine the correct MIME type
         mime_type = 'application/vnd.apple.mpegurl' if filename.endswith('.m3u8') else 'video/mp2t'
         
-        # Return the file with the appropriate MIME type
-        return send_file(file_path, mimetype=mime_type)
+        # Create response with appropriate MIME type
+        response = send_file(file_path, mimetype=mime_type)
+        
+        # Add CORS headers to allow cross-origin requests
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        response.headers['Cache-Control'] = 'no-cache'  # Ensure fresh content
+        
+        return response
         
     except Exception as e:
         logger.error(f"Error serving HLS segment: {str(e)}")
