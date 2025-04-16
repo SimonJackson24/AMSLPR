@@ -2,7 +2,7 @@
 
 <!-- Main Navigation -->
 <li class="{% if request.path == '/dashboard' %}active{% endif %}">
-    <a href="{{ url_for('main.dashboard') }}">
+    <a href="/dashboard">
         <i class="bi bi-speedometer2"></i>
         <span>Dashboard</span>
     </a>
@@ -10,7 +10,7 @@
 
 <!-- Vehicle Management - Always visible -->
 <li class="{% if '/vehicles' in request.path %}active{% endif %}">
-    <a href="{{ url_for('vehicle.vehicles') }}">
+    <a href="/vehicles">
         <i class="bi bi-car-front"></i>
         <span>Vehicles</span>
     </a>
@@ -18,7 +18,7 @@
 
 <!-- Access Logs - Always visible -->
 <li class="{% if '/logs' in request.path %}active{% endif %}">
-    <a href="{{ url_for('main.logs') }}">
+    <a href="/logs">
         <i class="bi bi-list-check"></i>
         <span>Access Logs</span>
     </a>
@@ -26,7 +26,7 @@
 
 <!-- Statistics - Always visible -->
 <li class="{% if '/statistics' in request.path %}active{% endif %}">
-    <a href="{{ url_for('main.statistics') }}">
+    <a href="/statistics">
         <i class="bi bi-graph-up"></i>
         <span>Statistics</span>
     </a>
@@ -143,7 +143,7 @@
             </a>
         </li>
         <li class="{% if '/ocr/settings' in request.path %}active{% endif %}">
-            <a href="{{ url_for('user.ocr_settings_redirect') }}">
+            <a href="/ocr/settings">
                 <i class="bi bi-camera"></i>
                 <span>OCR Settings</span>
             </a>

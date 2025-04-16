@@ -22,7 +22,7 @@
                 <div class="stats-label">Total Vehicles</div>
             </div>
             <div class="card-footer text-center">
-                <a class="btn btn-sm btn-primary" href="{{ url_for('vehicle.vehicles') }}">
+                <a class="btn btn-sm btn-primary" href="/vehicles">
                     View Details <i class="bi bi-angle-right ms-1"></i>
                 </a>
             </div>
@@ -36,7 +36,7 @@
                 <div class="stats-label">Authorized</div>
             </div>
             <div class="card-footer text-center">
-                <a class="btn btn-sm btn-primary" href="{{ url_for('vehicle.vehicles') }}?authorized=true">
+                <a class="btn btn-sm btn-primary" href="/vehicles?authorized=true">
                     View Details <i class="bi bi-angle-right ms-1"></i>
                 </a>
             </div>
@@ -50,7 +50,7 @@
                 <div class="stats-label">Unauthorized</div>
             </div>
             <div class="card-footer text-center">
-                <a class="btn btn-sm btn-primary" href="{{ url_for('vehicle.vehicles') }}?authorized=false">
+                <a class="btn btn-sm btn-primary" href="/vehicles?authorized=false">
                     View Details <i class="bi bi-angle-right ms-1"></i>
                 </a>
             </div>
@@ -82,17 +82,17 @@
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-md-3">
-                        <a href="{{ url_for('vehicle.add_vehicle') }}" class="btn btn-primary w-100 d-flex align-items-center justify-content-center">
+                        <a href="/vehicles/add" class="btn btn-primary w-100 d-flex align-items-center justify-content-center">
                             <i class="bi bi-plus-circle me-2"></i> Add Vehicle
                         </a>
                     </div>
                     <div class="col-md-3">
-                        <a href="{{ url_for('main.logs') }}" class="btn btn-info w-100 d-flex align-items-center justify-content-center">
+                        <a href="/logs" class="btn btn-info w-100 d-flex align-items-center justify-content-center">
                             <i class="bi bi-list-ul me-2"></i> View Logs
                         </a>
                     </div>
                     <div class="col-md-3">
-                        <a href="{{ url_for('main.statistics') }}" class="btn btn-success w-100 d-flex align-items-center justify-content-center">
+                        <a href="/statistics" class="btn btn-success w-100 d-flex align-items-center justify-content-center">
                             <i class="bi bi-graph-up me-2"></i> View Statistics
                         </a>
                     </div>
@@ -143,7 +143,7 @@
                     </div>
                 </div>
                 <div class="mt-4 text-center">
-                    <a href="{{ url_for('system.system_status') }}" class="btn btn-primary">
+                    <a href="/system/status" class="btn btn-primary">
                         <i class="bi bi-gear me-1"></i> System Details
                     </a>
                 </div>

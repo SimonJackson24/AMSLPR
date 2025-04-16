@@ -148,10 +148,10 @@
                         </td>
                         <td>
                             <div class="btn-group">
-                                <a href="{{ url_for('camera.view_camera', camera_id=camera.id) }}" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="View Camera">
+                                <a href="/camera/view/{{ camera.id }}" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="View Camera">
                                     <i class="bi bi-eye"></i>
                                 </a>
-                                <a href="{{ url_for('camera.camera_settings', camera_id=camera.id) }}" class="btn btn-sm btn-info" data-bs-toggle="tooltip" title="Camera Settings">
+                                <a href="/camera/settings/{{ camera.id }}" class="btn btn-sm btn-info" data-bs-toggle="tooltip" title="Camera Settings">
                                     <i class="bi bi-gear"></i>
                                 </a>
                                 <button type="button" class="btn btn-sm btn-warning restart-camera" data-camera-id="{{ camera.id }}" data-bs-toggle="tooltip" title="Restart Camera">

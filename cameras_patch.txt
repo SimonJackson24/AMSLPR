@@ -1,0 +1,27 @@
+@camera_bp.route('/cameras')
+@login_required(user_manager)
+def cameras():
+    """Camera management page."""
+    global onvif_camera_manager
+    if onvif_camera_manager is None:
+        init_camera_manager(current_app.config)
+    
+    # Get cameras with safe error handling
+    cameras = {}
+    if onvif_camera_manager:
+        try:
+            cameras = onvif_camera_manager.get_all_cameras()
+        except Exception as e:
+            logger.error(f"Error getting cameras: {str(e)}")
+            cameras = {}
+    
+    # Calculate camera stats
+    stats = {
+        'total': len(cameras),
+        'online': sum(1 for c in cameras.values() if c.get('status') == 'online'),
+        'offline': sum(1 for c in cameras.values() if c.get('status') == 'offline'),
+        'issues': sum(1 for c in cameras.values() if c.get('status') not in ['online', 'offline']),
+        'avg_fps': '24.5'  # Default value
+    }
+    
+    return render_template('cameras.html', cameras=cameras, stats=stats)

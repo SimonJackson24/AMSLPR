@@ -1,4 +1,3 @@
-
 # AMSLPR - Automate Systems License Plate Recognition
 # Copyright (c) 2025 Automate Systems. All rights reserved.
 #
@@ -816,3 +815,21 @@ def export_data():
     except Exception as e:
         logger.error(f"Error in export data: {str(e)}")
         return render_template('error.html', error=f"Error exporting data: {str(e)}")
+
+def register_routes(app, database_manager=None):
+    """
+    Register parking routes with the Flask app.
+    
+    Args:
+        app: Flask application instance
+        database_manager: Database manager instance (not used for parking routes)
+        
+    Returns:
+        Flask: The Flask application instance
+    """
+    # Register blueprint
+    app.register_blueprint(parking_bp)
+    
+    logger.info("Parking routes registered")
+    
+    return app

@@ -312,7 +312,7 @@ def register_vehicle_routes(app, database_manager):
     # Initialize routes with database manager
     init_vehicle_routes(database_manager)
     
-    # Register blueprint with a unique name
-    app.register_blueprint(vehicle_bp, name='vehicle_routes')
+    # Register blueprint with the correct name to match template references
+    app.register_blueprint(vehicle_bp)
     
     return app

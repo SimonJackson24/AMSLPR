@@ -1,4 +1,3 @@
-
 # AMSLPR - Automate Systems License Plate Recognition
 # Copyright (c) 2025 Automate Systems. All rights reserved.
 #
@@ -138,6 +137,17 @@ class DatabaseManager:
                     last_used DATETIME,
                     is_active BOOLEAN NOT NULL DEFAULT 1,
                     permissions TEXT
+                )
+            ''')
+            
+            # Create cameras table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS cameras (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ip TEXT NOT NULL,
+                    description TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
             
@@ -1654,3 +1664,41 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Error getting payment transactions: {e}")
             return []
+
+    def delete_camera(self, camera_id):
+        """
+        Delete a camera from the database.
+        
+        Args:
+            camera_id (str): ID of the camera to delete
+            
+        Returns:
+            bool: True if camera was deleted successfully, False otherwise
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Check if cameras table exists
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='cameras'")
+            if not cursor.fetchone():
+                logger.warning("Cameras table does not exist")
+                return False
+                
+            # Delete camera from database
+            cursor.execute("DELETE FROM cameras WHERE ip = ?", (camera_id,))
+            conn.commit()
+            
+            affected_rows = cursor.rowcount
+            conn.close()
+            
+            if affected_rows > 0:
+                logger.info(f"Camera {camera_id} deleted from database")
+                return True
+            else:
+                logger.warning(f"Camera {camera_id} not found in database")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error deleting camera from database: {str(e)}")
+            return False

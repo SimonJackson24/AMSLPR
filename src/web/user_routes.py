@@ -1,4 +1,3 @@
-
 # AMSLPR - Automate Systems License Plate Recognition
 # Copyright (c) 2025 Automate Systems. All rights reserved.
 #
@@ -13,12 +12,24 @@ This module provides routes for user management.
 """
 
 import logging
-from flask import Blueprint, redirect, url_for
+from flask import Blueprint, redirect, url_for, render_template, session
+from src.utils.user_management import login_required, UserManager
 
 logger = logging.getLogger('AMSLPR.web.user')
 
 # Create blueprint
-user_bp = Blueprint('user', __name__, url_prefix='/system')
+user_bp = Blueprint('user', __name__, url_prefix='/user')
+
+# Initialize user manager
+user_manager = UserManager()
+
+@user_bp.route('/profile')
+@login_required(user_manager)
+def profile():
+    """
+    User profile page.
+    """
+    return render_template('user/profile.html')
 
 @user_bp.route('/users')
 def users_redirect():

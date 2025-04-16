@@ -133,7 +133,14 @@
             <div class="card-img-top p-2">
                 <div class="camera-thumbnail">
                     {% if camera.status != 'offline' %}
+                    {% if camera.thumbnail is defined %}
                     <img src="{{ url_for('static', filename='img/camera_thumbnails/' + camera.thumbnail) }}" class="img-fluid" alt="{{ camera.name }}">
+                    {% else %}
+                    <div class="camera-icon-placeholder">
+                        <i class="bi bi-camera-video fa-3x"></i>
+                        <p>Camera View</p>
+                    </div>
+                    {% endif %}
                     {% else %}
                     <div class="offline-placeholder">
                         <i class="bi bi-camera-video-slash fa-3x"></i>
@@ -222,7 +229,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveCamera('{{ camera.id }}')">Save Changes</button>
+                    <button type="submit" form="editCameraForm{{ camera.id }}" class="btn btn-primary">Save Changes</button>
                 </div>
             </div>
         </div>
@@ -263,6 +270,18 @@
     {% endfor %}
 </div>
 
+<!-- Toast container for notifications -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="toastContainer" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="bi bi-check-circle-fill text-success me-2"></i>
+            <strong class="me-auto">Success</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toastMessage"></div>
+    </div>
+</div>
+
 <!-- Discovery Results Modal -->
 <div class="modal fade" id="discoveryModal" tabindex="-1" aria-labelledby="discoveryModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -272,6 +291,58 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <!-- Traffic Light System -->
+                <div class="discovery-status mb-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="stage-indicator" id="stage1-indicator">
+                            <div class="traffic-light-container">
+                                <div class="spinner-border text-primary traffic-spinner" id="stage1-spinner" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <div class="traffic-light" id="stage1-light"></div>
+                            </div>
+                            <div class="stage-label">Network Scan</div>
+                        </div>
+                        <div class="stage-indicator" id="stage2-indicator">
+                            <div class="traffic-light-container">
+                                <div class="spinner-border text-primary traffic-spinner" id="stage2-spinner" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <div class="traffic-light" id="stage2-light"></div>
+                            </div>
+                            <div class="stage-label">Device Discovery</div>
+                        </div>
+                        <div class="stage-indicator" id="stage3-indicator">
+                            <div class="traffic-light-container">
+                                <div class="spinner-border text-primary traffic-spinner" id="stage3-spinner" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <div class="traffic-light" id="stage3-light"></div>
+                            </div>
+                            <div class="stage-label">Camera Info</div>
+                        </div>
+                        <div class="stage-indicator" id="stage4-indicator">
+                            <div class="traffic-light-container">
+                                <div class="spinner-border text-primary traffic-spinner" id="stage4-spinner" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <div class="traffic-light" id="stage4-light"></div>
+                            </div>
+                            <div class="stage-label">Completed</div>
+                        </div>
+                    </div>
+                    <div class="progress-container mt-3">
+                        <div class="progress">
+                            <div class="progress-bar" id="discovery-progress" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="progress-markers">
+                            <div class="progress-marker" style="left: 12.5%"></div>
+                            <div class="progress-marker" style="left: 37.5%"></div>
+                            <div class="progress-marker" style="left: 62.5%"></div>
+                            <div class="progress-marker" style="left: 87.5%"></div>
+                        </div>
+                    </div>
+                </div>
                 <div id="discoveryResults">
                     <!-- Results will be populated by JavaScript -->
                 </div>
@@ -292,6 +363,9 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <!-- Error container for displaying validation errors -->
+                <div id="addCameraErrors" class="alert alert-danger" style="display: none;"></div>
+                
                 <form id="addCameraForm" action="{{ url_for('camera.add_camera') }}" method="post">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="row">
@@ -299,7 +373,7 @@
                             <h6 class="mb-3">Camera Information</h6>
                             <div class="mb-3">
                                 <label for="camera_id" class="form-label">Camera ID</label>
-                                <input type="text" class="form-control" id="camera_id" name="camera_id" placeholder="e.g. entrance_cam" required>
+                                <input type="text" class="form-control" id="camera_id" name="camera_id" placeholder="e.g. entrance_cam">
                                 <div class="form-text">Unique identifier for this camera</div>
                             </div>
                             <div class="mb-3">
@@ -315,17 +389,18 @@
                             <h6 class="mb-3">Connection Settings</h6>
                             <div class="mb-3">
                                 <label for="ip" class="form-label">IP Address</label>
-                                <input type="text" class="form-control" id="ip" name="ip" placeholder="e.g. 192.168.1.100" required>
+                                <input type="text" class="form-control" id="ip" name="ip" placeholder="e.g. 192.168.1.100">
+                                <div class="form-text">Optional when RTSP URL is provided</div>
                             </div>
                             <div class="mb-3">
                                 <label for="port" class="form-label">Port</label>
                                 <input type="number" class="form-control" id="port" name="port" value="80" min="1" max="65535">
-                                <div class="form-text">Default ONVIF port is 80</div>
+                                <div class="form-text">Default ONVIF port is 80, not needed for RTSP</div>
                             </div>
                             <div class="mb-3">
                                 <label for="rtsp_url" class="form-label">RTSP URL</label>
                                 <input type="text" class="form-control" id="rtsp_url" name="rtsp_url" placeholder="e.g. rtsp://192.168.1.100:554/stream1">
-                                <div class="form-text">Optional: Direct RTSP stream URL if ONVIF is not available</div>
+                                <div class="form-text">Direct RTSP stream URL. If provided, IP and port are optional.</div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
@@ -432,6 +507,117 @@
     .stats-icon i {
         font-size: 1.5rem;
     }
+    
+    .discovery-status {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stage-indicator {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        flex: 1;
+        padding: 10px;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+    }
+    
+    .stage-indicator.highlighted {
+        background-color: rgba(13, 110, 253, 0.1);
+    }
+    
+    .stage-indicator.highlighted .stage-label {
+        color: #0d6efd;
+        font-weight: 600;
+    }
+    
+    .traffic-light-container {
+        position: relative;
+        width: 40px;
+        height: 40px;
+        margin: 0 auto 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .traffic-light {
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        background-color: #ccc;
+        border: 2px solid #ddd;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+        position: absolute;
+        z-index: 2;
+    }
+    
+    .traffic-spinner {
+        position: absolute;
+        width: 40px;
+        height: 40px;
+        z-index: 1;
+        display: none;
+        border-width: 3px;
+    }
+    
+    .stage-label {
+        font-size: 0.85rem;
+        color: #555;
+        font-weight: 500;
+    }
+    
+    #stage1-light {
+        background-color: #ccc;
+    }
+    
+    #stage2-light {
+        background-color: #ccc;
+    }
+    
+    #stage3-light {
+        background-color: #ccc;
+    }
+    
+    #stage4-light {
+        background-color: #ccc;
+    }
+    
+    .progress-container {
+        position: relative;
+        margin-top: 15px;
+    }
+    
+    .progress {
+        height: 8px;
+        border-radius: 4px;
+        overflow: visible;
+    }
+    
+    .progress-bar {
+        transition: width 0.5s ease-in-out;
+    }
+    
+    .progress-markers {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+    
+    .progress-marker {
+        position: absolute;
+        top: -4px;
+        width: 4px;
+        height: 16px;
+        background-color: #dee2e6;
+        border-radius: 2px;
+    }
 </style>
 <!-- Add our camera management JavaScript -->
 <script src="{{ url_for('static', filename='js/cameras.js') }}"></script>
@@ -439,93 +625,96 @@
 
 {% block scripts %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Filter functionality
-        document.getElementById('applyFilters').addEventListener('click', function() {
-            const statusFilter = document.getElementById('statusFilter').value;
-            const locationFilter = document.getElementById('locationFilter').value;
-            const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
+    // Toast notification function
+    function showToast(message, type = 'success') {
+        const toastContainer = document.getElementById('toastContainer');
+        const toastMessage = document.getElementById('toastMessage');
+        
+        if (toastContainer && toastMessage) {
+            // Set message
+            toastMessage.textContent = message;
             
-            // In a real app, you'd send these filters to the server and reload the data
-            // For demo purposes, we'll just show a toast message
-            showToast(`Filters applied: Status=${statusFilter}, Location=${locationFilter}, Search="${searchFilter}"`, 'info');
+            // Set header style based on type
+            const toastHeader = toastContainer.querySelector('.toast-header');
+            if (toastHeader) {
+                // Reset classes
+                toastHeader.className = 'toast-header';
+                
+                // Add appropriate class and icon
+                if (type === 'success') {
+                    toastHeader.classList.add('bg-success', 'text-white');
+                    toastHeader.innerHTML = '<i class="bi bi-check-circle-fill text-white me-2"></i><strong class="me-auto">Success</strong><button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>';
+                } else if (type === 'error') {
+                    toastHeader.classList.add('bg-danger', 'text-white');
+                    toastHeader.innerHTML = '<i class="bi bi-exclamation-circle-fill text-white me-2"></i><strong class="me-auto">Error</strong><button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>';
+                } else if (type === 'warning') {
+                    toastHeader.classList.add('bg-warning');
+                    toastHeader.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i><strong class="me-auto">Warning</strong><button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>';
+                } else if (type === 'info') {
+                    toastHeader.classList.add('bg-info', 'text-white');
+                    toastHeader.innerHTML = '<i class="bi bi-info-circle-fill text-white me-2"></i><strong class="me-auto">Information</strong><button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>';
+                }
+            }
+            
+            // Show toast
+            const toast = new bootstrap.Toast(toastContainer);
+            toast.show();
+        } else {
+            console.error('Toast container or message element not found');
+        }
+    }
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Bootstrap toasts
+        const toastElList = document.querySelectorAll('.toast');
+        toastElList.forEach(toastEl => {
+            new bootstrap.Toast(toastEl, { autohide: true, delay: 5000 });
         });
         
-        // Discovery button handler
-        document.getElementById('discoverCameras').addEventListener('click', async function() {
-            const modal = new bootstrap.Modal(document.getElementById('discoveryModal'));
+        // Toast notification function
+        window.showToast = function(message, type = 'success') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toastMessage = document.getElementById('toastMessage');
             
-            // Reset modal state
-            document.getElementById('discoveryResults').innerHTML = '';
-            
-            // Show modal and wait for it to be fully shown
-            modal.show();
-            await new Promise(resolve => {
-                document.getElementById('discoveryModal').addEventListener('shown.bs.modal', resolve, { once: true });
-            });
-            
-            try {
-                const response = await fetch('/cameras/discover', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': '{{ csrf_token() }}'
+            if (toastContainer && toastMessage) {
+                // Set message
+                toastMessage.textContent = message;
+                
+                // Set header style based on type
+                const toastHeader = toastContainer.querySelector('.toast-header');
+                if (toastHeader) {
+                    // Reset classes
+                    toastHeader.className = 'toast-header';
+                    
+                    // Add appropriate class and icon
+                    if (type === 'success') {
+                        toastHeader.classList.add('bg-success', 'text-white');
+                        toastHeader.innerHTML = '<i class="bi bi-check-circle-fill text-white me-2"></i><strong class="me-auto">Success</strong><button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>';
+                    } else if (type === 'error') {
+                        toastHeader.classList.add('bg-danger', 'text-white');
+                        toastHeader.innerHTML = '<i class="bi bi-exclamation-circle-fill text-white me-2"></i><strong class="me-auto">Error</strong><button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>';
+                    } else if (type === 'warning') {
+                        toastHeader.classList.add('bg-warning');
+                        toastHeader.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i><strong class="me-auto">Warning</strong><button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>';
+                    } else if (type === 'info') {
+                        toastHeader.classList.add('bg-info', 'text-white');
+                        toastHeader.innerHTML = '<i class="bi bi-info-circle-fill text-white me-2"></i><strong class="me-auto">Information</strong><button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>';
                     }
-                });
-                
-                const data = await response.json();
-                console.log('Discovery response:', data);  // Debug log
-                
-                if (!response.ok || !data.success) {
-                    throw new Error(data.error || 'Failed to start camera discovery');
                 }
                 
-                // Populate results table
-                const tbody = document.getElementById('discoveryResults');
-                data.cameras.forEach(camera => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${camera.name || `${camera.manufacturer} ${camera.model}`}</td>
-                        <td>${camera.ip}</td>
-                        <td>${camera.manufacturer}</td>
-                        <td>${camera.model}</td>
-                        <td>
-                            <button type="button" class="btn btn-sm btn-primary" 
-                                    onclick="addDiscoveredCamera('${camera.ip}', '${camera.name || `${camera.manufacturer} ${camera.model}`}', '${camera.manufacturer}', '${camera.model}')">
-                                Add Camera
-                            </button>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-                
-                if (data.cameras.length === 0) {
-                    tbody.innerHTML = `
-                        <tr>
-                            <td colspan="5" class="text-center py-4">
-                                <i class="bi bi-camera-video-slash fa-2x mb-3 d-block text-muted"></i>
-                                No ONVIF cameras found on your network
-                            </td>
-                        </tr>
-                    `;
-                }
-                
-            } catch (error) {
-                console.error('Discovery error:', error);  // Debug log
-                // Show error
-                document.getElementById('discoveryResults').innerHTML = `
-                    <tr>
-                        <td colspan="5" class="text-center py-4">
-                            <i class="bi bi-exclamation-triangle fa-2x mb-3 d-block text-danger"></i>
-                            ${error.message}
-                        </td>
-                    </tr>
-                `;
+                // Show toast
+                const toast = new bootstrap.Toast(toastContainer);
+                toast.show();
+            } else {
+                console.error('Toast container or message element not found');
             }
-        });
+        };
     });
-    
-    // Save Camera Changes
+</script>
+
+<script>
     function saveCamera(id) {
         // In a real app, you'd validate the form and submit it to the server
         // For now, we'll just show a success message and close the modal
@@ -550,44 +739,521 @@
         }, 1500);
     }
     
-    // Delete Camera
     function deleteCamera(id) {
-        // In a real app, you'd send a delete request to the server
-        // For now, we'll just show a success message and close the modal
-        
         // Show loading state
         const deleteBtn = document.querySelector(`#deleteCameraModal${id} .btn-danger`);
         deleteBtn.disabled = true;
         deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Deleting...';
         
-        // Simulate API call
-        setTimeout(() => {
+        // Get CSRF token
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+        
+        // Send delete request to server
+        fetch(`/cameras/delete/${id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
             // Close modal
             const modal = bootstrap.Modal.getInstance(document.getElementById(`deleteCameraModal${id}`));
             modal.hide();
             
-            // Show success message
-            showToast('Camera deleted successfully!', 'success');
+            if (data.success) {
+                // Show success message
+                showToast(data.message || 'Camera deleted successfully!', 'success');
+                
+                // Reload the page after a short delay
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                // Show error message
+                showToast(data.error || 'Failed to delete camera', 'danger');
+                
+                // Reset button
+                deleteBtn.disabled = false;
+                deleteBtn.innerHTML = 'Delete';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('An error occurred while deleting the camera', 'danger');
             
-            // In a real app, you'd remove the camera from the DOM or reload the page
-            // For demo purposes, we'll just reload the page after a delay
-            setTimeout(() => {
-                location.reload();
-            }, 1000);
-        }, 1500);
+            // Reset button
+            deleteBtn.disabled = false;
+            deleteBtn.innerHTML = 'Delete';
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById(`deleteCameraModal${id}`));
+            modal.hide();
+        });
     }
     
-    // Add discovered camera
     function addDiscoveredCamera(ip, name, manufacturer, model) {
         // Pre-fill the add camera form with discovered camera info
         document.getElementById('camera_id').value = ip.replace(/\./g, '_');
-        document.getElementById('name').value = name;
+        document.getElementById('name').value = name || `${manufacturer} ${model}` || ip;
         document.getElementById('location').value = 'Auto Discovered';
         document.getElementById('ip').value = ip;
+        
+        // Clear username and password fields to ensure they're entered fresh
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
         
         // Close discovery modal and open add camera modal
         bootstrap.Modal.getInstance(document.getElementById('discoveryModal')).hide();
         new bootstrap.Modal(document.getElementById('addCameraModal')).show();
     }
+    
+    // Helper functions for traffic light system
+    function resetTrafficLights() {
+        for (let i = 1; i <= 4; i++) {
+            document.getElementById(`stage${i}-light`).style.backgroundColor = '#ccc';
+            document.getElementById(`stage${i}-spinner`).style.display = 'none';
+        }
+        document.getElementById('discovery-progress').style.width = '0%';
+        document.getElementById('discovery-progress').ariaValueNow = 0;
+    }
+    
+    function updateTrafficLight(stage, color) {
+        document.getElementById(`stage${stage}-light`).style.backgroundColor = color;
+        
+        // Hide spinner when complete or error
+        if (color === 'green' || color === 'red') {
+            document.getElementById(`stage${stage}-spinner`).style.display = 'none';
+        }
+    }
+    
+    function startSpinner(stage) {
+        document.getElementById(`stage${stage}-spinner`).style.display = 'block';
+    }
+    
+    function updateProgress(progress) {
+        document.getElementById('discovery-progress').style.width = `${progress}%`;
+        document.getElementById('discovery-progress').ariaValueNow = progress;
+    }
+    
+    function highlightStage(stage) {
+        for (let i = 1; i <= 4; i++) {
+            document.getElementById(`stage${i}-indicator`).classList.remove('highlighted');
+        }
+        document.getElementById(`stage${stage}-indicator`).classList.add('highlighted');
+    }
+    
+    // Discovery button handler
+    document.getElementById('discoverCameras').addEventListener('click', async function() {
+        const modal = new bootstrap.Modal(document.getElementById('discoveryModal'));
+        
+        // Reset modal state
+        document.getElementById('discoveryResults').innerHTML = '';
+        
+        // Reset traffic lights
+        resetTrafficLights();
+        
+        // Show modal and wait for it to be fully shown
+        modal.show();
+        await new Promise(resolve => {
+            document.getElementById('discoveryModal').addEventListener('shown.bs.modal', resolve, { once: true });
+        });
+        
+        try {
+            // Stage 1: Network Scan - Start
+            startSpinner(1);
+            highlightStage(1);
+            updateProgress(12.5);
+            
+            // Simulate delay for network scan (in real app, this would be the actual API call)
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            // Stage 1: Network Scan - Complete
+            updateTrafficLight(1, 'green');
+            
+            // Stage 2: Device Discovery - Start
+            startSpinner(2);
+            highlightStage(2);
+            updateProgress(37.5);
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            // Make the actual API call
+            const response = await fetch('/cameras/discover', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            }).catch(error => {
+                throw new Error('Network error: Unable to connect to the server. Please check your connection.');
+            });
+            
+            // Stage 2: Device Discovery - Complete
+            updateTrafficLight(2, 'green');
+            
+            // Stage 3: Retrieving Camera Info - Start
+            startSpinner(3);
+            highlightStage(3);
+            updateProgress(62.5);
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            const data = await response.json().catch(error => {
+                throw new Error('Invalid response from server: Unable to parse camera data.');
+            });
+            
+            console.log('Discovery response:', data);  // Debug log
+            
+            if (!response.ok) {
+                let errorMessage = 'Server error: ';
+                if (data && data.error) {
+                    errorMessage += data.error;
+                } else if (response.status === 404) {
+                    errorMessage += 'Discovery endpoint not found. Please check server configuration.';
+                } else if (response.status === 403) {
+                    errorMessage += 'Permission denied. Please check your authentication.';
+                } else if (response.status === 500) {
+                    errorMessage += data.error || 'Internal server error. Please check server logs.';
+                } else {
+                    errorMessage += `HTTP error ${response.status}`;
+                }
+                throw new Error(errorMessage);
+            }
+            
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to discover cameras. No specific error provided.');
+            }
+            
+            // Stage 3: Retrieving Camera Info - Complete
+            updateTrafficLight(3, 'green');
+            
+            // Stage 4: Processing Results - Start
+            startSpinner(4);
+            highlightStage(4);
+            updateProgress(87.5);
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            // Stage 4: Processing Results - Complete
+            updateTrafficLight(4, 'green');
+            updateProgress(100);
+            
+            // Populate results in the accordion-style list instead of creating a new table
+            const discoveryResults = document.getElementById('discoveryResults');
+            
+            // Create results container
+            if (data.cameras && data.cameras.length > 0) {
+                // Create accordion for discovered cameras
+                const accordion = document.createElement('div');
+                accordion.className = 'accordion mt-3';
+                accordion.id = 'discoveredCamerasAccordion';
+                
+                // Add header
+                discoveryResults.innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="bi bi-camera-video me-2"></i>
+                        <strong>${data.cameras.length} cameras found</strong>
+                    </div>
+                `;
+                
+                // Add each camera to the accordion
+                data.cameras.forEach((camera, index) => {
+                    const cameraId = `discovered-camera-${index}`;
+                    const cameraName = camera.name || `${camera.manufacturer} ${camera.model}` || camera.ip;
+                    const item = document.createElement('div');
+                    item.className = 'accordion-item';
+                    item.innerHTML = `
+                        <h2 class="accordion-header" id="heading-${cameraId}">
+                            <button class="accordion-button ${index > 0 ? 'collapsed' : ''}" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#collapse-${cameraId}" aria-expanded="${index === 0 ? 'true' : 'false'}" 
+                                    aria-controls="collapse-${cameraId}">
+                                <div class="d-flex justify-content-between align-items-center w-100 me-3">
+                                    <span><i class="bi bi-camera-video me-2"></i> ${cameraName}</span>
+                                    <span class="badge bg-primary">${camera.ip}</span>
+                                </div>
+                            </button>
+                        </h2>
+                        <div id="collapse-${cameraId}" class="accordion-collapse collapse ${index === 0 ? 'show' : ''}" 
+                            aria-labelledby="heading-${cameraId}" data-bs-parent="#discoveredCamerasAccordion">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <table class="table table-sm">
+                                            <tbody>
+                                                <tr>
+                                                    <th>IP Address:</th>
+                                                    <td>${camera.ip}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Manufacturer:</th>
+                                                    <td>${camera.manufacturer || 'Unknown'}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Model:</th>
+                                                    <td>${camera.model || 'Unknown'}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Port:</th>
+                                                    <td>${camera.port || '80'}</td>
+                                                </tr>
+                                                ${camera.firmware ? `
+                                                <tr>
+                                                    <th>Firmware:</th>
+                                                    <td>${camera.firmware}</td>
+                                                </tr>` : ''}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="col-md-4 d-flex flex-column align-items-center justify-content-center">
+                                        <form class="mb-3 w-100">
+                                            <div class="mb-2">
+                                                <label for="username-${cameraId}" class="form-label">Username</label>
+                                                <input type="text" class="form-control" id="username-${cameraId}" placeholder="admin">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="password-${cameraId}" class="form-label">Password</label>
+                                                <input type="password" class="form-control" id="password-${cameraId}" placeholder="password">
+                                            </div>
+                                        </form>
+                                        <button type="button" class="btn btn-primary w-100" 
+                                                onclick="addDiscoveredCamera('${camera.ip}', '${cameraName}', '${camera.manufacturer || ''}', '${camera.model || ''}'); document.getElementById('username').value = document.getElementById('username-${cameraId}').value; document.getElementById('password').value = document.getElementById('password-${cameraId}').value;">
+                                            <i class="bi bi-plus-circle me-2"></i> Add Camera
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    accordion.appendChild(item);
+                });
+                
+                discoveryResults.appendChild(accordion);
+            } else {
+                discoveryResults.innerHTML = `
+                    <div class="alert alert-info">
+                        <i class="bi bi-camera-video-slash me-2"></i>
+                        <strong>No cameras found</strong>
+                        <p class="text-muted">No ONVIF cameras were found on your network. Possible reasons:</p>
+                        <ul class="mt-2 mb-0">
+                            <li>Cameras are not powered on</li>
+                            <li>Cameras are not connected to the network</li>
+                            <li>Cameras are not ONVIF-compatible</li>
+                            <li>Cameras are on a different subnet</li>
+                            <li>Firewall is blocking discovery</li>
+                        </ul>
+                    </div>
+                `;
+            }
+            
+        } catch (error) {
+            console.error('Discovery error:', error);  // Debug log
+            
+            // Mark all remaining stages as red (error)
+            for (let i = 1; i <= 4; i++) {
+                if (document.getElementById(`stage${i}-light`).style.backgroundColor !== 'green') {
+                    updateTrafficLight(i, 'red');
+                }
+            }
+            
+            // Show detailed error with troubleshooting steps
+            document.getElementById('discoveryResults').innerHTML = `
+                <div class="alert alert-danger">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-exclamation-triangle-fill fs-3 me-3"></i>
+                        <div>
+                            <h5 class="mb-1">Camera Discovery Failed</h5>
+                            <div>${error.message}</div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <p class="mb-2"><strong>Troubleshooting steps:</strong></p>
+                        <ul class="mb-0">
+                            <li>Check that all cameras are powered on and connected to the network</li>
+                            <li>Verify that cameras support ONVIF protocol</li>
+                            <li>Ensure the server has network access to the camera subnet</li>
+                            <li>Check firewall settings to allow ONVIF discovery (port 3702)</li>
+                            <li>Verify camera credentials if authentication is required</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const addCameraForm = document.getElementById('addCameraForm');
+        if (addCameraForm) {
+            addCameraForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                
+                try {
+                    // Show loading state
+                    const addCameraBtn = addCameraForm.querySelector('button[type="submit"]');
+                    let originalBtnText = 'Add Camera'; // Default text if button not found
+                    
+                    if (addCameraBtn) {
+                        originalBtnText = addCameraBtn.innerHTML;
+                        addCameraBtn.disabled = true;
+                        addCameraBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...';
+                    }
+                    
+                    // Clear previous errors
+                    const errorContainer = document.getElementById('addCameraErrors');
+                    if (errorContainer) {
+                        errorContainer.style.display = 'none';
+                        errorContainer.innerHTML = '';
+                    }
+                    
+                    // Validate form data
+                    const formData = new FormData(addCameraForm);
+                    const formDataObj = {};
+                    formData.forEach((value, key) => {
+                        formDataObj[key] = value;
+                    });
+                    
+                    console.log('Form data:', formDataObj); // Log the form data
+                    
+                    // Validate required fields
+                    const name = formDataObj.name;
+                    const ip = formDataObj.ip;
+                    const rtspUrl = formDataObj.rtsp_url;
+                    
+                    if (!name) {
+                        throw new Error('Camera Name is a required field.');
+                    }
+                    
+                    // If no RTSP URL is provided, IP is required
+                    if (!rtspUrl && !ip) {
+                        throw new Error('Either IP Address or RTSP URL must be provided.');
+                    }
+                    
+                    // Validate IP if provided
+                    const ipRegex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+                    if (ip && !rtspUrl && !ipRegex.test(ip)) {
+                        throw new Error('Invalid IP address format. Please enter a valid IPv4 address.');
+                    }
+                    
+                    // Submit the form as JSON
+                    const response = await fetch(addCameraForm.action, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': formDataObj.csrf_token
+                        },
+                        body: JSON.stringify(formDataObj)
+                    }).catch(error => {
+                        console.error('Fetch error:', error);
+                        throw new Error('Network error: Unable to connect to the server. Please check your connection.');
+                    });
+                    
+                    console.log('Response status:', response.status);
+                    
+                    const data = await response.json().catch(error => {
+                        console.error('JSON parse error:', error);
+                        throw new Error('Invalid response from server: Unable to parse response data.');
+                    });
+                    
+                    console.log('Response data:', data);
+                    
+                    if (!response.ok) {
+                        let errorMessage = 'Server error: ';
+                        if (data && data.error) {
+                            errorMessage += data.error;
+                        } else if (response.status === 404) {
+                            errorMessage += 'Add camera endpoint not found. Please check server configuration.';
+                        } else if (response.status === 403) {
+                            errorMessage += 'Permission denied. Please check your authentication.';
+                        } else if (response.status === 500) {
+                            errorMessage += data.error || 'Internal server error. Please check server logs.';
+                        } else {
+                            errorMessage += `HTTP error ${response.status}`;
+                        }
+                        throw new Error(errorMessage);
+                    }
+                    
+                    if (!data.success) {
+                        throw new Error(data.error || 'Failed to add camera. No specific error provided.');
+                    }
+                    
+                    // Success - close modal and show success message
+                    try {
+                        const addCameraModal = document.getElementById('addCameraModal');
+                        if (addCameraModal) {
+                            const modalInstance = bootstrap.Modal.getInstance(addCameraModal);
+                            if (modalInstance) {
+                                modalInstance.hide();
+                            }
+                        }
+                    } catch (modalError) {
+                        console.error('Error closing modal:', modalError);
+                    }
+                    
+                    // Show success toast
+                    showToast('Camera added successfully!', 'success');
+                    
+                    // Reload the page after a short delay to show the new camera
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                    
+                } catch (error) {
+                    console.error('Add camera error:', error);  // Debug log
+                    
+                    // Display error message
+                    let errorContainer = document.getElementById('addCameraErrors');
+                    
+                    if (!errorContainer) {
+                        // Create error container if it doesn't exist
+                        try {
+                            const modalBody = addCameraForm.closest('.modal-body');
+                            if (modalBody) {
+                                const errorDiv = document.createElement('div');
+                                errorDiv.id = 'addCameraErrors';
+                                errorDiv.className = 'alert alert-danger';
+                                modalBody.insertBefore(errorDiv, modalBody.firstChild);
+                                errorContainer = errorDiv;
+                            } else {
+                                // Fallback if we can't find the modal body
+                                errorContainer = document.createElement('div');
+                                errorContainer.id = 'addCameraErrors';
+                                errorContainer.className = 'alert alert-danger';
+                                addCameraForm.prepend(errorContainer);
+                            }
+                        } catch (containerError) {
+                            console.error('Error creating error container:', containerError);
+                        }
+                    }
+                    
+                    if (errorContainer) {
+                        errorContainer.style.display = 'block';
+                        errorContainer.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i>${error.message}`;
+                    }
+                    
+                    // Reset button
+                    try {
+                        const addCameraBtn = addCameraForm.querySelector('button[type="submit"]');
+                        if (addCameraBtn) {
+                            addCameraBtn.disabled = false;
+                            addCameraBtn.innerHTML = 'Add Camera';
+                        }
+                    } catch (buttonError) {
+                        console.error('Error resetting button:', buttonError);
+                    }
+                }
+            });
+        }
+    });
+    
+    // Filter functionality
+    document.getElementById('applyFilters').addEventListener('click', function() {
+        const statusFilter = document.getElementById('statusFilter').value;
+        const locationFilter = document.getElementById('locationFilter').value;
+        const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
+        
+        // In a real app, you'd send these filters to the server and reload the data
+        // For demo purposes, we'll just show a toast message
+        showToast(`Filters applied: Status=${statusFilter}, Location=${locationFilter}, Search="${searchFilter}"`, 'info');
+    });
 </script>
 {% endblock %}

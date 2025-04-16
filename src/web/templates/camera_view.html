@@ -12,10 +12,10 @@
     </div>
     <div class="col-auto">
         <div class="btn-group">
-            <a href="{{ url_for('camera.cameras') }}" class="btn btn-outline-primary">
+            <a href="/cameras" class="btn btn-outline-primary">
                 <i class="bi bi-arrow-left me-2"></i> Back to Cameras
             </a>
-            <a href="{{ url_for('camera.camera_settings', camera_id=camera.id) }}" class="btn btn-outline-secondary">
+            <a href="/camera/settings/{{ camera.id }}" class="btn btn-outline-secondary">
                 <i class="bi bi-gear me-2"></i> Settings
             </a>
         </div>
@@ -35,7 +35,13 @@
             </div>
             <div class="card-body p-0">
                 <div class="camera-feed-container">
-                    <img src="{{ url_for('camera.stream', camera_id=camera.id) }}" id="camera-feed" class="img-fluid w-100" alt="Camera Feed">
+                    <!-- Using a video.js player to handle RTSP streams -->
+                    <div id="camera-player" class="w-100" style="height: 480px; background-color: #000;">
+                        <video id="camera-video" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto" width="100%" height="100%" poster="/static/img/camera-placeholder.jpg" data-setup='{"techOrder": ["html5"]}'>
+                            <source src="/camera/stream/{{ camera.id }}" type="application/x-mpegURL">
+                            <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that supports HTML5 video</p>
+                        </video>
+                    </div>
                     <div class="camera-overlay d-none" id="camera-overlay">
                         <div class="camera-overlay-content">
                             <i class="bi bi-exclamation-triangle fa-3x mb-3"></i>
@@ -121,7 +127,7 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0"><i class="bi bi-car-front me-2"></i> Recent Detections</h5>
-        <a href="{{ url_for('main.logs') }}?camera_id={{ camera.id }}" class="btn btn-sm btn-primary">
+        <a href="/logs?camera_id={{ camera.id }}" class="btn btn-sm btn-primary">
             View All <i class="bi bi-angle-right ms-1"></i>
         </a>
     </div>
@@ -131,7 +137,7 @@
             {% for detection in recent_detections %}
             <div class="col-md-3 mb-4">
                 <div class="card h-100">
-                    <img src="{{ url_for('static', filename='img/detections/' + detection.image) }}" class="card-img-top" alt="Detected plate">
+                    <img src="/static/img/detections/{{ detection.image }}" class="card-img-top" alt="Detected plate">
                     <div class="card-body">
                         <h5 class="card-title">{{ detection.plate_number }}</h5>
                         <p class="card-text text-muted">{{ detection.timestamp }}</p>
@@ -143,7 +149,7 @@
                         </div>
                     </div>
                     <div class="card-footer">
-                        <a href="{{ url_for('main.log_details', log_id=detection.id) }}" class="btn btn-sm btn-primary w-100">
+                        <a href="/log/{{ detection.id }}" class="btn btn-sm btn-primary w-100">
                             <i class="bi bi-eye me-1"></i> View Details
                         </a>
                     </div>
@@ -165,14 +171,8 @@
 <style>
     .camera-feed-container {
         position: relative;
+        width: 100%;
         background-color: #000;
-        min-height: 400px;
-    }
-    
-    #camera-feed {
-        display: block;
-        max-height: 70vh;
-        object-fit: contain;
     }
     
     .camera-overlay {
@@ -183,14 +183,23 @@
         height: 100%;
         background-color: rgba(0, 0, 0, 0.7);
         display: flex;
-        align-items: center;
         justify-content: center;
+        align-items: center;
         color: white;
         text-align: center;
     }
     
     .camera-overlay-content {
-        padding: 2rem;
+        padding: 20px;
+    }
+    
+    .detection-card {
+        transition: all 0.3s ease;
+    }
+    
+    .detection-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
     }
 </style>
 {% endblock %}
@@ -198,41 +207,49 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const cameraFeed = document.getElementById('camera-feed');
-        const cameraOverlay = document.getElementById('camera-overlay');
-        const statusBadge = document.getElementById('status-badge');
-        const fpsBadge = document.getElementById('fps-badge');
-        const qualitySelector = document.getElementById('quality-selector');
-        const snapshotBtn = document.getElementById('snapshot-btn');
-        const recordBtn = document.getElementById('record-btn');
-        const restartCameraBtn = document.getElementById('restart-camera-btn');
+        // Initialize video.js player
+        var player = videojs('camera-video', {
+            autoplay: true,
+            controls: true,
+            fluid: true,
+            preload: 'auto',
+            liveui: true,
+            responsive: true,
+            techOrder: ['html5'],
+            sources: [{
+                src: '/camera/stream/{{ camera.id }}',
+                type: 'application/x-mpegURL'
+            }]
+        });
         
-        let isRecording = false;
-        let connectionLost = false;
+        // Handle player errors
+        player.on('error', function() {
+            console.error('Video player error:', player.error());
+            document.getElementById('camera-overlay').classList.remove('d-none');
+        });
         
         // Simulate connection monitoring
         function checkConnection() {
-            // This is a simulation - in a real app, you'd check if the stream is active
-            if (Math.random() > 0.95 && !connectionLost) {
-                // Simulate connection loss (5% chance)
-                connectionLost = true;
+            // In a real app, you'd check if the stream is still active
+            // For demo purposes, we'll simulate a stable connection
+            const isConnected = Math.random() > 0.1; // 90% chance of being connected
+            
+            const statusBadge = document.getElementById('status-badge');
+            const cameraOverlay = document.getElementById('camera-overlay');
+            
+            if (isConnected) {
+                statusBadge.className = 'badge bg-success me-2';
+                statusBadge.textContent = 'Connected';
+                cameraOverlay.classList.add('d-none');
+            } else {
                 statusBadge.className = 'badge bg-danger me-2';
                 statusBadge.textContent = 'Disconnected';
                 cameraOverlay.classList.remove('d-none');
                 
                 // Attempt to reconnect after 3 seconds
                 setTimeout(() => {
-                    connectionLost = false;
-                    statusBadge.className = 'badge bg-success me-2';
-                    statusBadge.textContent = 'Connected';
-                    cameraOverlay.classList.add('d-none');
-                    
-                    // Show toast notification
-                    showToast('Camera connection restored', 'success');
+                    checkConnection();
                 }, 3000);
-                
-                // Show toast notification
-                showToast('Camera connection lost. Attempting to reconnect...', 'error');
             }
         }
         
@@ -240,72 +257,36 @@
         setInterval(checkConnection, 5000);
         
         // Quality selector
-        qualitySelector.addEventListener('change', function() {
+        document.getElementById('quality-selector').addEventListener('change', function() {
             const quality = this.value;
-            let resolution;
-            
-            switch (quality) {
-                case 'high':
-                    resolution = '1920x1080';
-                    break;
-                case 'medium':
-                    resolution = '1280x720';
-                    break;
-                case 'low':
-                    resolution = '640x480';
-                    break;
-            }
-            
-            // In a real app, you'd update the stream URL with the new resolution
-            showToast(`Quality changed to ${quality} (${resolution})`, 'info');
+            // In a real app, you'd change the stream quality
+            console.log('Quality changed to:', quality);
         });
         
         // Snapshot button
-        snapshotBtn.addEventListener('click', function() {
-            if (connectionLost) {
-                showToast('Cannot take snapshot: Camera disconnected', 'error');
-                return;
-            }
-            
-            // In a real app, you'd capture the current frame and save it
-            showToast('Snapshot saved', 'success');
+        document.getElementById('snapshot-btn').addEventListener('click', function() {
+            // In a real app, you'd capture a frame from the video
+            alert('Snapshot taken! (This is a demo feature)');
         });
         
         // Record button
+        let isRecording = false;
+        const recordBtn = document.getElementById('record-btn');
+        
         recordBtn.addEventListener('click', function() {
-            if (connectionLost) {
-                showToast('Cannot record: Camera disconnected', 'error');
-                return;
-            }
-            
             isRecording = !isRecording;
             
             if (isRecording) {
-                this.classList.remove('btn-outline-danger');
-                this.classList.add('btn-danger');
-                this.innerHTML = '<i class="bi bi-stop-circle me-1"></i> Stop';
-                showToast('Recording started', 'info');
+                recordBtn.innerHTML = '<i class="bi bi-stop-circle me-1"></i> Stop';
+                recordBtn.classList.remove('btn-outline-danger');
+                recordBtn.classList.add('btn-danger');
+                // In a real app, you'd start recording
             } else {
-                this.classList.remove('btn-danger');
-                this.classList.add('btn-outline-danger');
-                this.innerHTML = '<i class="bi bi-record-circle me-1"></i> Record';
-                showToast('Recording saved', 'success');
-            }
-        });
-        
-        // Restart camera button
-        restartCameraBtn.addEventListener('click', function() {
-            if (confirm('Are you sure you want to restart this camera?')) {
-                // Show loading state
-                this.disabled = true;
-                this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Restarting...';
-                
-                // Simulate restart process
-                setTimeout(() => {
-                    this.disabled = false;
-                    this.innerHTML = '<i class="bi bi-redo me-1"></i> Restart Camera';
-                    showToast('Camera restarted successfully', 'success');
-                }, 3000);
+                recordBtn.innerHTML = '<i class="bi bi-record-circle me-1"></i> Record';
+                recordBtn.classList.remove('btn-danger');
+                recordBtn.classList.add('btn-outline-danger');
+                // In a real app, you'd stop recording
+                alert('Recording saved! (This is a demo feature)');
             }
         });
     });

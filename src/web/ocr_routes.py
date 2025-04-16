@@ -1,4 +1,3 @@
-
 # AMSLPR - Automate Systems License Plate Recognition
 # Copyright (c) 2025 Automate Systems. All rights reserved.
 #
@@ -408,9 +407,13 @@ def api_status():
 
 def register_routes(app, detector):
     """Register OCR routes with the Flask app"""
-    setup_routes(app, detector)
+    global _detector, _app
+    _detector = detector
+    _app = app
+    
+    # Register blueprint
     app.register_blueprint(ocr_bp, url_prefix='/ocr')
     
-    # Add session import to avoid circular import
-    global session
-    from flask import session
+    logger.info("OCR routes registered")
+    
+    return app

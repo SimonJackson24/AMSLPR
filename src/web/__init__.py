@@ -8,6 +8,7 @@ import logging
 from flask import Flask, jsonify
 from flask_wtf.csrf import CSRFProtect
 from flask_session import Session
+from datetime import datetime
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -19,18 +20,47 @@ def create_app(config=None):
     # Load configuration
     if config:
         app.config.update(config)
+        
+    # Set secret key
+    app.config['SECRET_KEY'] = 'dev-secret-key-please-change-in-production'
     
     # Configure logging
     logging.basicConfig(level=logging.INFO)
+    
+    # Initialize database manager
+    from src.database.manager import DatabaseManager
+    db_manager = DatabaseManager()
+    
+    # Register custom Jinja2 filters
+    @app.template_filter('formatDateTime')
+    def format_datetime(value):
+        if value is None:
+            return ''
+        if isinstance(value, str):
+            try:
+                value = datetime.fromisoformat(value.replace('Z', '+00:00'))
+            except (ValueError, TypeError):
+                return value
+        return value.strftime('%Y-%m-%d %H:%M:%S')
     
     # Import and register blueprints
     from .camera_routes import camera_bp
     from .user_routes import user_bp
     from .system_routes import system_bp
+    from .main_routes import main_bp, init_main_routes
+    from .auth_routes import auth_bp
+    from .vehicle_routes import vehicle_bp, init_vehicle_routes
+    
+    # Initialize routes with database manager
+    init_main_routes(db_manager)
+    init_vehicle_routes(db_manager)
     
     app.register_blueprint(camera_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(system_bp)
+    app.register_blueprint(main_bp)
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(vehicle_bp)
     
     # Initialize CSRF protection
     csrf = CSRFProtect()

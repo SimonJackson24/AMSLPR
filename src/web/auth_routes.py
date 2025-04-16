@@ -14,6 +14,7 @@ This module provides routes for user authentication and management.
 import logging
 from flask import Blueprint, request, render_template, redirect, url_for, flash, session, current_app, jsonify
 from flask_wtf.csrf import CSRFProtect
+import traceback
 
 from src.utils.user_management import UserManager, login_required, permission_required, role_required
 
@@ -51,53 +52,66 @@ def login():
     """
     User login route.
     """
-    # Check if already logged in
-    if 'username' in session:
-        return redirect(url_for('main.index'))
-    
-    # Handle login form submission
-    if request.method == 'POST':
-        # Verify CSRF token
-        if not request.form.get('csrf_token'):
-            logger.error('CSRF token missing in login request')
-            flash('Security token missing. Please try again.', 'danger')
-            return render_template('login.html', current_year=datetime.now().year)
+    try:
+        logger.info("Login route accessed")
         
-        username = request.form.get('username')
-        password = request.form.get('password')
+        # Check if already logged in
+        if 'username' in session:
+            logger.info(f"User {session['username']} already logged in, redirecting to index")
+            return redirect(url_for('main.index'))
         
-        # Authenticate user
-        user = user_manager.authenticate(username, password)
-        
-        if user:
-            # Set session variables
-            session['username'] = user['username']
-            session['role'] = user['role']
-            session['name'] = user['name']
-            session['permissions'] = user['permissions']
-            session.modified = True
+        # Handle login form submission
+        if request.method == 'POST':
+            # Verify CSRF token
+            if not request.form.get('csrf_token'):
+                logger.error('CSRF token missing in login request')
+                flash('Security token missing. Please try again.', 'danger')
+                return render_template('login.html', current_year=datetime.now().year)
             
-            # Log successful login
-            logger.info(f"User {username} logged in successfully")
+            username = request.form.get('username')
+            password = request.form.get('password')
             
-            # Redirect to next page or index
-            next_page = request.args.get('next')
-            if next_page:
-                return redirect(next_page)
+            logger.info(f"Login attempt for user: {username}")
+            
+            # Authenticate user
+            user = user_manager.authenticate(username, password)
+            
+            if user:
+                # Set session variables
+                session['username'] = user['username']
+                session['role'] = user['role']
+                session['name'] = user['name']
+                session['permissions'] = user['permissions']
+                session.modified = True
+                
+                # Log successful login
+                logger.info(f"User {username} logged in successfully")
+                
+                # Redirect to next page or index
+                next_page = request.args.get('next')
+                if next_page:
+                    logger.info(f"Redirecting to: {next_page}")
+                    return redirect(next_page)
+                else:
+                    logger.info("Redirecting to dashboard")
+                    return redirect(url_for('main.dashboard'))
             else:
-                return redirect(url_for('main.dashboard'))
-        else:
-            flash('Invalid username or password', 'danger')
-            logger.warning(f"Failed login attempt for user {username}")
-    
-    # Pass current year to the template for copyright notice
-    from datetime import datetime
-    current_year = datetime.now().year
-    
-    # Get the next page from the query string
-    next_page = request.args.get('next', '')
-    
-    return render_template('login.html', current_year=current_year, next=next_page)
+                flash('Invalid username or password', 'danger')
+                logger.warning(f"Failed login attempt for user {username}")
+        
+        # Pass current year to the template for copyright notice
+        from datetime import datetime
+        current_year = datetime.now().year
+        
+        # Get the next page from the query string
+        next_page = request.args.get('next', '')
+        
+        logger.info("Rendering login template")
+        return render_template('login.html', current_year=current_year, next=next_page)
+    except Exception as e:
+        logger.error(f"Error in login route: {str(e)}")
+        logger.error(traceback.format_exc())
+        return f"Error: {str(e)}", 500
 
 @auth_bp.route('/logout')
 def logout():
@@ -326,8 +340,16 @@ def register_routes(app, database_manager=None):
     Args:
         app: Flask application instance
         database_manager: Database manager instance (not used for auth routes)
+        
+    Returns:
+        Flask: The Flask application instance
     """
     # Initialize user manager
     init_user_manager(app)
     
-    logger.info("User manager initialized")
+    # Register blueprint
+    app.register_blueprint(auth_bp)
+    
+    logger.info("Auth routes registered")
+    
+    return app

@@ -13,6 +13,9 @@
     <!-- Bootstrap Icons (Local) -->
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.css') }}">
     
+    <!-- Video.js CSS for camera streams -->
+    <link href="https://vjs.zencdn.net/7.20.3/video-js.css" rel="stylesheet">
+    
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     
@@ -24,7 +27,7 @@
         {% if session.username is defined %}
         <nav id="sidebar" class="sidebar">
             <div class="sidebar-header">
-                <a href="/dashboard" class="d-flex align-items-center justify-content-center logo-container">
+                <a href="{{ url_for('main.dashboard') }}" class="d-flex align-items-center justify-content-center logo-container">
                     <img src="{{ url_for('static', filename='img/logo.png') }}" alt="AMSLPR Logo" height="50">
                 </a>
                 <button type="button" id="sidebarCollapseBtn" class="btn btn-sm d-md-none">
@@ -45,15 +48,9 @@
                     </a>
                     <ul class="collapse list-unstyled" id="userSubmenu">
                         <li>
-                            <a href="/profile">
+                            <a href="{{ url_for('user.profile') }}">
                                 <i class="bi bi-person"></i>
                                 <span>My Profile</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="/notification/settings">
-                                <i class="bi bi-bell"></i>
-                                <span>Notifications</span>
                             </a>
                         </li>
                         <li>
@@ -100,16 +97,10 @@
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li>
-                                    <a class="dropdown-item" href="/profile">
+                                    <a class="dropdown-item" href="{{ url_for('user.profile') }}">
                                         <i class="bi bi-person"></i> My Profile
                                     </a>
                                 </li>
-                                <li>
-                                    <a class="dropdown-item" href="/notification/settings">
-                                        <i class="bi bi-bell"></i> Notifications
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
                                         <i class="bi bi-box-arrow-right"></i> Logout
@@ -157,6 +148,9 @@
     
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Video.js for camera streams -->
+    <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
     
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

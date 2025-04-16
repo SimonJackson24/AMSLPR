@@ -5,9 +5,11 @@
 # Unauthorized use, reproduction, or distribution is prohibited.
 
 #!/usr/bin/env python3
-from flask import Flask, session, g, redirect, url_for
+from flask import Flask, session, g, redirect, url_for, request
 import os
 import logging
+import traceback
+import sys
 from datetime import datetime
 from flask_session import Session
 from flask_wtf.csrf import CSRFProtect
@@ -15,6 +17,13 @@ import asyncio
 import nest_asyncio
 from functools import wraps
 import redis
+
+# Configure enhanced logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('AMSLPR')
 
 # Initialize event loop support
 nest_asyncio.apply()
@@ -36,9 +45,11 @@ try:
     from src.web.camera_routes import register_camera_routes
     from src.web.ocr_routes import register_routes as register_ocr_routes
     ROUTES_AVAILABLE = True
+    logger.info("Successfully imported camera and OCR routes")
 except ImportError as e:
-    logging.warning(f"Could not import routes: {e}")
-    logging.warning("Running in limited mode without OCR functionality")
+    logger.error(f"Could not import camera/OCR routes: {e}")
+    logger.error(traceback.format_exc())
+    logger.warning("Running in limited mode without OCR functionality")
     ROUTES_AVAILABLE = False
 
 # Import other routes
@@ -49,56 +60,187 @@ try:
     from src.web.api_routes import register_routes as register_api_routes
     from src.web.stats_routes import register_routes as register_stats_routes
     from src.web.system_routes import register_routes as register_system_routes
-    from src.web.auth_routes import register_routes as register_auth_routes, auth_bp
+    from src.web.auth_routes import register_routes as register_auth_routes
     from src.web.user_routes import register_routes as register_user_routes
-    from src.web.parking_routes import parking_bp
+    from src.web.parking_routes import register_routes as register_parking_routes
     OTHER_ROUTES_AVAILABLE = True
+    logger.info("Successfully imported all other routes")
 except ImportError as e:
-    logging.warning(f"Could not import other routes: {e}")
-    logging.warning("Running in limited mode without some functionality")
+    logger.error(f"Could not import other routes: {e}")
+    logger.error(traceback.format_exc())
+    logger.warning("Running in limited mode without some functionality")
     OTHER_ROUTES_AVAILABLE = False
 
 def create_app(config=None):
-    """
-    Create and configure the Flask application.
+    """Create and configure the Flask application."""
+    # Create Flask app
+    app = Flask(__name__)
     
-    Args:
-        config (dict): Application configuration
-        
-    Returns:
-        Flask: Configured Flask application
-    """
+    # Enable debug mode for more detailed error information
+    app.config['DEBUG'] = True
+    
+    # Log startup information
+    logger.info("Starting AMSLPR web application")
+    logger.info(f"Configuration: {config}")
+    
+    # Initialize CSRF protection
     try:
-        from src.web import create_app as flask_create_app
-        
-        # Create Flask app
-        app = flask_create_app(config)
-        
-        # Configure logging
-        logging.basicConfig(level=logging.INFO)
-        logger = logging.getLogger(__name__)
-        
-        # Log startup information
-        logger.info("Starting AMSLPR web application")
-        logger.info(f"Configuration: {config}")
-        
-        return app
-        
+        csrf = CSRFProtect(app)
+        logger.info("CSRF protection initialized")
     except Exception as e:
-        logger.error(f"Error creating Flask app: {str(e)}")
-        import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        raise
+        logger.error(f"Failed to initialize CSRF protection: {e}")
+        logger.error(traceback.format_exc())
+    
+    # Initialize session handling
+    try:
+        app.config['SESSION_TYPE'] = 'redis'
+        app.config['SESSION_REDIS'] = redis.from_url('redis://localhost:6379')
+        Session(app)
+        logger.info("Redis session initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize Redis session: {e}")
+        logger.error(traceback.format_exc())
+    
+    # Set secret key for session management
+    app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'your-secret-key-here')
+    
+    # Initialize database and detector
+    try:
+        from src.database.db_manager import DatabaseManager
+        from src.recognition.detector import LicensePlateDetector
+        
+        db_manager = DatabaseManager(config.get('database', {})) if config else None
+        detector = LicensePlateDetector(config.get('recognition', {})) if config else None
+        logger.info("Database and detector initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize database or detector: {e}")
+        logger.error(traceback.format_exc())
+        db_manager = None
+        detector = None
+    
+    # Register routes
+    if ROUTES_AVAILABLE:
+        try:
+            app = register_camera_routes(app, detector, db_manager)
+            app = register_ocr_routes(app, detector)
+            logger.info("Camera and OCR routes registered")
+        except Exception as e:
+            logger.error(f"Failed to register camera/OCR routes: {e}")
+            logger.error(traceback.format_exc())
+    
+    if OTHER_ROUTES_AVAILABLE:
+        # Initialize any additional controllers or integrations needed
+        barrier_controller = None
+        paxton_integration = None
+        nayax_integration = None
+        
+        try:
+            app = register_main_routes(app, db_manager, barrier_controller, paxton_integration, nayax_integration)
+            logger.info("Main routes registered")
+        except Exception as e:
+            logger.error(f"Failed to register main routes: {e}")
+            logger.error(traceback.format_exc())
+            
+        try:
+            app = register_vehicle_routes(app, db_manager)
+            logger.info("Vehicle routes registered")
+        except Exception as e:
+            logger.error(f"Failed to register vehicle routes: {e}")
+            logger.error(traceback.format_exc())
+            
+        try:
+            app = register_barrier_routes(app, db_manager)
+            logger.info("Barrier routes registered")
+        except Exception as e:
+            logger.error(f"Failed to register barrier routes: {e}")
+            logger.error(traceback.format_exc())
+            
+        try:
+            app = register_api_routes(app, db_manager)
+            logger.info("API routes registered")
+        except Exception as e:
+            logger.error(f"Failed to register API routes: {e}")
+            logger.error(traceback.format_exc())
+            
+        try:
+            app = register_stats_routes(app, db_manager)
+            logger.info("Stats routes registered")
+        except Exception as e:
+            logger.error(f"Failed to register stats routes: {e}")
+            logger.error(traceback.format_exc())
+            
+        try:
+            app = register_system_routes(app, db_manager)
+            logger.info("System routes registered")
+        except Exception as e:
+            logger.error(f"Failed to register system routes: {e}")
+            logger.error(traceback.format_exc())
+            
+        try:
+            app = register_auth_routes(app, db_manager)
+            logger.info("Auth routes registered")
+        except Exception as e:
+            logger.error(f"Failed to register auth routes: {e}")
+            logger.error(traceback.format_exc())
+            
+        try:
+            app = register_user_routes(app, db_manager)
+            logger.info("User routes registered")
+        except Exception as e:
+            logger.error(f"Failed to register user routes: {e}")
+            logger.error(traceback.format_exc())
+            
+        try:
+            app = register_parking_routes(app, db_manager)
+            logger.info("Parking routes registered")
+        except Exception as e:
+            logger.error(f"Failed to register parking routes: {e}")
+            logger.error(traceback.format_exc())
+    
+    # Add request logging
+    @app.before_request
+    def log_request():
+        logger.info(f"Request: {request.method} {request.path}")
+    
+    # Add enhanced error handling
+    @app.errorhandler(Exception)
+    def log_error(e):
+        logger.error(f"Error: {e}")
+        logger.error(traceback.format_exc())
+        
+        # In development mode, show detailed error information
+        if app.config.get('DEBUG', False):
+            error_details = traceback.format_exc()
+            return f"""<h1>Application Error</h1>
+<h2>{str(e)}</h2>
+<pre>{error_details}</pre>""", 500
+        # In production mode, show a user-friendly error page
+        else:
+            return render_template('error.html', 
+                                  error_title="Application Error",
+                                  error_message=str(e),
+                                  error_details=traceback.format_exc()), 500
+    
+    # Register custom template filters
+    @app.template_filter('formatDateTime')
+    def format_datetime(value, format='%Y-%m-%d %H:%M:%S'):
+        """Format a datetime object to a string."""
+        if value is None:
+            return ""
+        try:
+            if isinstance(value, str):
+                value = datetime.fromisoformat(value.replace('Z', '+00:00'))
+            return value.strftime(format)
+        except Exception as e:
+            logger.error(f"Error formatting datetime: {e}")
+            return str(value)
+    
+    return app
 
 # Load configuration and create app instance for uvicorn
 try:
     from src.utils.config import load_config
-    from src.recognition.detector import LicensePlateDetector
-    from src.database.db_manager import DatabaseManager
-
     config = load_config()
-    db_manager = DatabaseManager(config['database'])
-    detector = LicensePlateDetector(config['recognition'])
     app = create_app(config)
 
     # Add health check endpoint
@@ -111,7 +253,8 @@ try:
     asgi_app = WsgiToAsgi(app)
 
 except Exception as e:
-    logging.error(f"Failed to initialize application: {e}")
+    logger.error(f"Failed to initialize application: {e}")
+    logger.error(traceback.format_exc())
     raise
 
 if __name__ == '__main__':
@@ -124,9 +267,9 @@ if __name__ == '__main__':
         try:
             import uvloop
             asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-            logging.info("Using uvloop for improved async performance")
+            logger.info("Using uvloop for improved async performance")
         except ImportError:
-            logging.warning("uvloop not available, using standard asyncio event loop")
+            logger.warning("uvloop not available, using standard asyncio event loop")
             # Continue with the default event loop policy
     
     # Run with uvicorn for better async support

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile - AMSLPR{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="d-flex align-items-center">
+            <i class="bi bi-person-circle me-3 text-primary"></i> My Profile
+        </h2>
+        <p class="text-muted">View and manage your profile settings</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-person me-2"></i> Profile Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Username</label>
+                    <p class="form-control-static">{{ session.username }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Name</label>
+                    <p class="form-control-static">{{ session.name|default(session.username) }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Role</label>
+                    <p class="form-control-static">{{ session.role|default('User') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,4 +1,3 @@
-
 # AMSLPR - Automate Systems License Plate Recognition
 # Copyright (c) 2025 Automate Systems. All rights reserved.
 #
@@ -15,6 +14,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from functools import wraps
 from loguru import logger
 from src.utils.user_management import login_required, UserManager
+import traceback
 
 # Create blueprint
 main_bp = Blueprint('main', __name__, url_prefix='/')
@@ -58,45 +58,88 @@ def dashboard():
     """
     Dashboard page showing system overview.
     """
-    if 'username' not in session:
-        return redirect(url_for('auth.login'))
-    
-    # Get statistics for dashboard
-    stats = {}
-    if db_manager:
-        try:
-            # Get recent access logs
-            if hasattr(db_manager, 'get_access_logs'):
-                stats['recent_logs'] = db_manager.get_access_logs(limit=10)
-            else:
-                stats['recent_logs'] = []
-            
-            # Get vehicle counts
-            if hasattr(db_manager, 'get_vehicle_count'):
-                stats['total_vehicles'] = db_manager.get_vehicle_count()
-                stats['authorized_vehicles'] = db_manager.get_vehicle_count(authorized=True)
-            else:
-                stats['total_vehicles'] = 0
-                stats['authorized_vehicles'] = 0
-            
-            # Get access log counts
-            if hasattr(db_manager, 'get_access_log_count'):
-                stats['total_logs'] = db_manager.get_access_log_count()
-                stats['today_logs'] = db_manager.get_access_log_count(today_only=True)
-            else:
-                stats['total_logs'] = 0
-                stats['today_logs'] = 0
-        except Exception as e:
-            flash(f'Error loading dashboard data: {str(e)}', 'danger')
-            stats = {
-                'recent_logs': [],
-                'total_vehicles': 0,
-                'authorized_vehicles': 0,
-                'total_logs': 0,
-                'today_logs': 0
+    try:
+        logger.info("Dashboard route accessed")
+        
+        if 'username' not in session:
+            logger.warning("User not in session, redirecting to login")
+            return redirect(url_for('auth.login'))
+        
+        logger.info(f"Dashboard accessed by user: {session.get('username')}")
+        
+        # Initialize empty stats dictionary
+        stats = {
+            'recent_logs': [],
+            'total_vehicles': 0,
+            'authorized_vehicles': 0,
+            'total_logs': 0,
+            'today_logs': 0,
+            'system_status': {
+                'camera_status': 'Unknown',
+                'barrier_status': 'Unknown',
+                'database_status': 'Unknown'
             }
-    
-    return render_template('dashboard.html', stats=stats)
+        }
+        
+        # Get statistics for dashboard if db_manager is available
+        if db_manager:
+            try:
+                # Get recent access logs
+                if hasattr(db_manager, 'get_access_logs'):
+                    stats['recent_logs'] = db_manager.get_access_logs(limit=10)
+                
+                # Get vehicle counts
+                if hasattr(db_manager, 'get_vehicle_count'):
+                    stats['total_vehicles'] = db_manager.get_vehicle_count()
+                    stats['authorized_vehicles'] = db_manager.get_vehicle_count(authorized=True)
+                
+                # Get access log counts
+                if hasattr(db_manager, 'get_access_log_count'):
+                    stats['total_logs'] = db_manager.get_access_log_count()
+                    stats['today_logs'] = db_manager.get_access_log_count(today_only=True)
+                
+                # Set database status
+                stats['system_status']['database_status'] = 'Connected'
+            except Exception as e:
+                logger.error(f'Error loading dashboard data: {str(e)}')
+                import traceback
+                logger.error(traceback.format_exc())
+                flash(f'Error loading dashboard data: {str(e)}', 'danger')
+                stats['system_status']['database_status'] = 'Error'
+        
+        # Get camera status
+        try:
+            logger.info("Checking camera status")
+            from src.web.camera_routes import onvif_camera_manager
+            if onvif_camera_manager and hasattr(onvif_camera_manager, 'get_all_cameras'):
+                logger.info("Camera manager found and initialized")
+                stats['system_status']['camera_status'] = 'Connected'
+            else:
+                logger.warning("Camera manager not initialized")
+                stats['system_status']['camera_status'] = 'Not Connected'
+        except Exception as e:
+            logger.error(f'Error getting camera status: {str(e)}')
+            import traceback
+            logger.error(traceback.format_exc())
+            stats['system_status']['camera_status'] = 'Error'
+        
+        # Get barrier status if available
+        if barrier_controller:
+            try:
+                stats['system_status']['barrier_status'] = 'Connected' if barrier_controller.is_connected() else 'Not Connected'
+            except Exception as e:
+                logger.error(f'Error getting barrier status: {str(e)}')
+                import traceback
+                logger.error(traceback.format_exc())
+                stats['system_status']['barrier_status'] = 'Error'
+        
+        logger.info("Rendering dashboard template")
+        return render_template('dashboard.html', stats=stats)
+    except Exception as e:
+        logger.error(f"Unhandled exception in dashboard route: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return f"Error loading dashboard: {str(e)}", 500
 
 
 @main_bp.route('/logs')
@@ -300,6 +343,9 @@ def register_main_routes(app, database_manager, barrier_ctrl=None, paxton_integ=
         barrier_ctrl: Barrier controller instance
         paxton_integ: Paxton integration instance
         nayax_integ: Nayax integration instance
+        
+    Returns:
+        Flask: The Flask application instance
     """
     global db_manager, barrier_controller, paxton_integration, nayax_integration
     db_manager = database_manager
@@ -309,7 +355,10 @@ def register_main_routes(app, database_manager, barrier_ctrl=None, paxton_integ=
     
     # Register the blueprint
     app.register_blueprint(main_bp)
-
+    
+    logger.info("Main routes registered")
+    
+    return app
 
 # Legacy function for backward compatibility
 def init_main_routes(database_manager):
