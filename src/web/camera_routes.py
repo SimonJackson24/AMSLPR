@@ -1071,7 +1071,6 @@ def start_ffmpeg_stream(camera_id, rtsp_url):
         return False
 
 @camera_bp.route('/camera/hls-stream/<camera_id>')
-@login_required(user_manager)
 def hls_stream(camera_id):
     """
     Convert RTSP stream to HLS stream for web playback.
@@ -1188,7 +1187,6 @@ def hls_stream(camera_id):
 
 # Route to serve HLS segments
 @camera_bp.route('/camera/hls-segments/<camera_id>/<path:filename>')
-@login_required(user_manager)
 def hls_segments(camera_id, filename):
     """Serve HLS playlist and segments."""
     try:
