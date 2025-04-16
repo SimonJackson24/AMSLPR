@@ -939,7 +939,7 @@ def camera_view_stream(camera_id):
         logger.error(f"Error rendering camera view: {str(e)}")
         return "Error rendering camera view", 500
 
-# FFmpeg process management for HLS streaming
+# Standard library imports for FFmpeg process management
 import subprocess
 import tempfile
 import os
@@ -947,6 +947,7 @@ import threading
 import time
 import atexit
 import signal
+import sys
 
 # Store active FFmpeg processes
 ffmpeg_processes = {}
@@ -1079,11 +1080,17 @@ def hls_stream(camera_id):
         # Check if camera exists and get stream URL
         if not onvif_camera_manager:
             logger.error("Camera manager not available")
-            return "Camera manager not available", 500
+            return jsonify({
+                'success': False,
+                'message': 'Camera manager not available'
+            }), 500
             
         if camera_id not in onvif_camera_manager.cameras:
             logger.warning(f"Camera not found: {camera_id}")
-            return "Camera not found", 404
+            return jsonify({
+                'success': False,
+                'message': 'Camera not found'
+            }), 404
             
         camera_info = onvif_camera_manager.cameras[camera_id]
         if isinstance(camera_info, dict) and 'info' in camera_info:
@@ -1096,18 +1103,27 @@ def hls_stream(camera_id):
             
         if not stream_url:
             logger.warning(f"Stream URL not available for camera: {camera_id}")
-            return "Stream not available", 404
+            return jsonify({
+                'success': False,
+                'message': 'Stream URL not available'
+            }), 404
             
         # Start FFmpeg process for this camera if not already running
         if not start_ffmpeg_stream(camera_id, stream_url):
             logger.error(f"Failed to start FFmpeg process for camera {camera_id}")
-            return "Failed to start streaming", 500
+            return jsonify({
+                'success': False,
+                'message': 'Failed to start FFmpeg process'
+            }), 500
         
         # Get the HLS directory for this camera
         hls_dir = hls_dirs.get(camera_id)
         if not hls_dir or not os.path.exists(hls_dir):
             logger.error(f"HLS directory for camera {camera_id} not found")
-            return "Stream directory not found", 500
+            return jsonify({
+                'success': False,
+                'message': 'Stream directory not found'
+            }), 500
         
         # Return the HLS playlist URL
         playlist_url = f"/camera/hls-segments/{camera_id}/stream.m3u8"
@@ -1133,7 +1149,13 @@ def hls_segments(camera_id, filename):
         hls_dir = hls_dirs.get(camera_id)
         if not hls_dir or not os.path.exists(hls_dir):
             logger.error(f"HLS directory for camera {camera_id} not found")
-            return "Stream directory not found", 404
+            if filename.endswith('.m3u8'):
+                # Return an empty HLS playlist if the directory doesn't exist but we're requesting the playlist
+                # This prevents player errors and allows for better error handling on the client
+                empty_playlist = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-ENDLIST\n"
+                return Response(empty_playlist, mimetype='application/vnd.apple.mpegurl')
+            else:
+                return "Stream directory not found", 404
         
         # Construct the full path to the requested file
         file_path = os.path.join(hls_dir, filename)
@@ -1141,6 +1163,13 @@ def hls_segments(camera_id, filename):
         # Check if the file exists
         if not os.path.exists(file_path):
             logger.warning(f"Requested HLS file not found: {file_path}")
+            
+            # If the playlist is requested but not yet created (FFmpeg might still be starting up)
+            # return an empty playlist instead of 404
+            if filename.endswith('.m3u8'):
+                empty_playlist = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-ENDLIST\n"
+                return Response(empty_playlist, mimetype='application/vnd.apple.mpegurl')
+            
             return "File not found", 404
         
         # Determine the correct MIME type
