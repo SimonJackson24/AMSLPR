@@ -1014,15 +1014,20 @@ def start_ffmpeg_stream(camera_id, rtsp_url):
         hls_dir = ensure_hls_dir(camera_id)
         logger.info(f"Using HLS directory: {hls_dir}")
         
-        # FFmpeg command to convert RTSP to HLS
-        # Use more basic settings that are more likely to work with different cameras
+        # FFmpeg command to convert RTSP to HLS with browser-compatible video
+        # Instead of copy, re-encode to h264 which is more widely supported in browsers
         cmd = [
             'ffmpeg',
             '-y',                  # Overwrite output files without asking
             '-loglevel', 'warning',  # Show warnings and errors
             '-rtsp_transport', 'tcp',  # Use TCP for RTSP (more reliable than UDP)
             '-i', rtsp_url,        # Input URL
-            '-c:v', 'copy',        # Copy video stream without re-encoding (if possible)
+            '-c:v', 'libx264',     # Convert video to H.264 (widely supported)
+            '-preset', 'ultrafast', # Fastest encoding (lower quality but less CPU) 
+            '-tune', 'zerolatency', # Minimize latency
+            '-profile:v', 'baseline', # Most compatible H.264 profile
+            '-level', '3.0',        # Compatibility level
+            '-pix_fmt', 'yuv420p',  # Standard pixel format for browsers
             '-c:a', 'aac',         # Convert audio to AAC (more compatible)
             '-ac', '2',            # 2 audio channels
             '-b:a', '128k',        # Audio bitrate
