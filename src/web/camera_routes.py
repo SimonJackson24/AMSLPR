@@ -976,15 +976,20 @@ def handle_sigterm(signum, frame):
 signal.signal(signal.SIGTERM, handle_sigterm)
 
 def ensure_hls_dir(camera_id):
-    """Create and return the HLS directory for a camera."""
-    if camera_id in hls_dirs and os.path.exists(hls_dirs[camera_id]):
-        return hls_dirs[camera_id]
+    """Ensure HLS directory exists for camera and return its path."""
+    global hls_dirs
     
-    # Create a new temporary directory
-    hls_dir = tempfile.mkdtemp(prefix=f"amslpr_hls_{camera_id}")
-    hls_dirs[camera_id] = hls_dir
-    logger.info(f"Created HLS directory: {hls_dir}")
-    return hls_dir
+    # Use a consistent directory name without random suffixes
+    base_hls_dir = os.path.join(tempfile.gettempdir(), f"amslpr_hls_{camera_id}")
+    
+    # Create the directory if it doesn't exist
+    if not os.path.exists(base_hls_dir):
+        os.makedirs(base_hls_dir, exist_ok=True)
+        logger.info(f"Created HLS directory: {base_hls_dir}")
+    
+    # Store the directory in the global dict
+    hls_dirs[camera_id] = base_hls_dir
+    return base_hls_dir
 
 def start_ffmpeg_stream(camera_id, rtsp_url):
     """Start FFmpeg process to convert RTSP to HLS."""
