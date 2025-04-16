@@ -338,11 +338,26 @@
                 vhs: {
                     overrideNative: true,  // Override native HLS playback
                     enableLowInitialPlaylist: true,
-                    handleManifestRedirects: true
+                    handleManifestRedirects: true,
+                    limitRenditionByPlayerDimensions: false,
+                    withCredentials: false
                 }
             },
             // Explicitly prioritize HLS tech
             techOrder: ['html5']
+        });
+        
+        // Add debug events to see what's happening with the player
+        player.on('error', function(e) {
+            console.error('Player error:', player.error());
+        });
+        
+        player.on('waiting', function() {
+            console.log('Player is waiting for data');
+        });
+        
+        player.tech().on('retryplaylist', function() {
+            console.log('Player is retrying to load the playlist');
         });
         
         // Show overlay during initialization

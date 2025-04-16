@@ -56,8 +56,38 @@
         function setupStream() {
             // Check if HLS.js is supported
             if (Hls.isSupported()) {
-                // For HLS streams
-                const hls = new Hls();
+                // For HLS streams - use more robust configuration
+                const hls = new Hls({
+                    debug: true,
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                    backBufferLength: 90,
+                    startLevel: -1, // Start with auto level
+                    maxBufferLength: 30
+                });
+                
+                // Add more detailed error handling
+                hls.on(Hls.Events.ERROR, function(event, data) {
+                    console.error('HLS detailed error:', data);
+                    if (data.fatal) {
+                        switch(data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                // Try to recover network error
+                                console.log('Fatal network error encountered, trying to recover');
+                                hls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.log('Fatal media error encountered, trying to recover');
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                // Cannot recover
+                                console.error('Fatal error, cannot recover:', data);
+                                displayStreamError('Stream error: ' + data.type);
+                                break;
+                        }
+                    }
+                });
                 
                 // First fetch the API endpoint to get the actual playlist URL
                 fetch('/camera/hls-stream/' + encodeURIComponent('{{ camera_id }}'))
@@ -71,6 +101,7 @@
                             
                             // Load the actual playlist file
                             hls.loadSource(fullPlaylistUrl);
+                            hls.attachMedia(videoElement);
                         } else {
                             throw new Error(data.message || 'Failed to get playlist URL');
                         }
@@ -79,7 +110,6 @@
                         console.error('Error getting playlist URL:', error);
                         displayStreamError('Failed to get stream URL: ' + error.message);
                     });
-                hls.attachMedia(videoElement);
                 
                 hls.on(Hls.Events.MANIFEST_PARSED, function() {
                     videoElement.play();
