@@ -37,8 +37,8 @@
                 <div class="camera-feed-container">
                     <!-- Using a video.js player to handle RTSP streams -->
                     <div id="camera-player" class="w-100" style="height: 480px; background-color: #000;">
-                        <video id="camera-video" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto" width="100%" height="100%" poster="/static/img/camera_placeholder.jpg" data-setup='{"techOrder": ["html5"]}'>
-                            <!-- We'll set the source via JavaScript after starting the HLS stream -->
+                        <video id="camera-video" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto" width="100%" height="100%" poster="/static/img/camera_placeholder.jpg">
+                            <!-- We'll initialize the player and set the source entirely via JavaScript -->
                             <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that supports HTML5 video</p>
                         </video>
                     </div>
@@ -262,6 +262,10 @@
                     const fullPlaylistUrl = `${baseUrl}${data.playlist_url}`;
                     console.log('Loading HLS playlist from:', fullPlaylistUrl);
                     
+                    // Debug URLs to diagnose loading issues
+                    console.log('API endpoint URL:', `${baseUrl}/camera/hls-stream/{{ camera.id }}`);
+                    console.log('Actual m3u8 file should be at:', fullPlaylistUrl);
+                    
                     player.src({
                         src: fullPlaylistUrl,
                         type: 'application/x-mpegURL'
@@ -322,7 +326,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize video.js player
+        // Initialize video.js player with explicit HLS support
         player = videojs('camera-video', {
             autoplay: true,
             controls: true,
@@ -330,8 +334,15 @@
             preload: 'auto',
             liveui: true,
             responsive: true,
-            techOrder: ['html5'],
-            // Don't set initial sources, we'll set them after getting the HLS stream URL
+            html5: {
+                hls: {
+                    overrideNative: true,  // Override native HLS playback
+                    enableLowInitialPlaylist: true,
+                    handleManifestRedirects: true
+                }
+            },
+            // Explicitly prioritize HLS tech
+            techOrder: ['html5']
         });
         
         // Show overlay during initialization
