@@ -1137,7 +1137,10 @@ def hls_stream(camera_id):
         
     except Exception as e:
         logger.error(f"Error in HLS streaming: {str(e)}")
-        return "Error processing stream", 500
+        return jsonify({
+            'success': False,
+            'message': f'Error processing stream: {str(e)}'
+        }), 500
 
 # Route to serve HLS segments
 @camera_bp.route('/camera/hls-segments/<camera_id>/<path:filename>')
@@ -1180,11 +1183,7 @@ def hls_segments(camera_id, filename):
         
     except Exception as e:
         logger.error(f"Error serving HLS segment: {str(e)}")
-        return "Error serving stream file", 500
-        
-    except Exception as e:
-        logger.error(f"Error in HLS streaming: {str(e)}")
-        return "Error processing stream", 500
+        return jsonify({"success": False, "message": f"Error serving stream file: {str(e)}"}), 500
 
 @camera_bp.route('/camera/health')
 @login_required(user_manager)

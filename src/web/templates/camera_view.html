@@ -206,113 +206,115 @@
 
 {% block scripts %}
 <script>
+    // Function to start the HLS stream
+    function startHLSStream() {
+        // Show loading state
+        const statusBadge = document.getElementById('status-badge');
+        if (statusBadge) {
+            statusBadge.className = 'badge bg-warning me-2';
+            statusBadge.innerText = 'Starting stream...';
+        }
+        
+        // Show overlay during initialization
+        const overlay = document.getElementById('camera-overlay');
+        if (overlay) {
+            overlay.classList.remove('d-none');
+            const overlayContent = overlay.querySelector('.camera-overlay-content');
+            if (overlayContent) {
+                overlayContent.innerHTML = `
+                    <i class="bi bi-camera-video fa-3x mb-3"></i>
+                    <h4>Starting Camera Stream</h4>
+                    <p>Initializing video feed...</p>
+                    <div class="spinner-border text-light mt-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                `;
+            }
+        }
+        
+        // Make an AJAX request to start the HLS stream conversion
+        fetch('/camera/hls-stream/{{ camera.id }}')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success && data.playlist_url) {
+                    // Update status badge
+                    if (statusBadge) {
+                        statusBadge.className = 'badge bg-success me-2';
+                        statusBadge.innerText = 'Connected';
+                    }
+                    
+                    // Hide overlay
+                    if (overlay) {
+                        overlay.classList.add('d-none');
+                    }
+                    
+                    // Set the player source to the HLS playlist
+                    player.src({
+                        src: data.playlist_url,
+                        type: 'application/x-mpegURL'
+                    });
+                    
+                    // Start playing
+                    player.play().catch(e => {
+                        console.error('Error playing video:', e);
+                        showStreamError('Failed to play video stream');
+                    });
+                } else {
+                    // Show error
+                    showStreamError(data.message || 'Failed to start video stream');
+                }
+            })
+            .catch(error => {
+                console.error('Error starting HLS stream:', error);
+                showStreamError('Connection failed');
+            });
+    }
+    
+    // Function to show stream errors with retry button
+    function showStreamError(message) {
+        // Update status badge
+        const statusBadge = document.getElementById('status-badge');
+        if (statusBadge) {
+            statusBadge.className = 'badge bg-danger me-2';
+            statusBadge.innerText = 'Error';
+        }
+        
+        // Show overlay with error message
+        const overlay = document.getElementById('camera-overlay');
+        if (overlay) {
+            overlay.classList.remove('d-none');
+            const overlayContent = overlay.querySelector('.camera-overlay-content');
+            if (overlayContent) {
+                overlayContent.innerHTML = `
+                    <i class="bi bi-exclamation-triangle fa-3x mb-3"></i>
+                    <h4>Connection Error</h4>
+                    <p>${message}</p>
+                    <button class="btn btn-outline-light mt-3" onclick="retryStream()">
+                        <i class="bi bi-arrow-repeat me-2"></i>Retry
+                    </button>
+                `;
+            }
+        }
+    }
+    
+    // Function to retry loading the stream
+    function retryStream() {
+        // Clear any previous error
+        if (player) {
+            player.error(null);
+        }
+        
+        // Start the stream again
+        startHLSStream();
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize video.js player
-        // Start the HLS stream conversion and set up the player
-        function startHLSStream() {
-            // Show loading state
-            const statusBadge = document.getElementById('status-badge');
-            if (statusBadge) {
-                statusBadge.className = 'badge bg-warning me-2';
-                statusBadge.innerText = 'Starting stream...';
-            }
-            
-            // Show overlay during initialization
-            const overlay = document.getElementById('camera-overlay');
-            if (overlay) {
-                overlay.classList.remove('d-none');
-                const overlayContent = overlay.querySelector('.camera-overlay-content');
-                if (overlayContent) {
-                    overlayContent.innerHTML = `
-                        <i class="bi bi-camera-video fa-3x mb-3"></i>
-                        <h4>Starting Camera Stream</h4>
-                        <p>Initializing video feed...</p>
-                        <div class="spinner-border text-light mt-3" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                    `;
-                }
-            }
-            
-            // Make an AJAX request to start the HLS stream conversion
-            fetch('/camera/hls-stream/{{ camera.id }}')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success && data.playlist_url) {
-                        // Update status badge
-                        if (statusBadge) {
-                            statusBadge.className = 'badge bg-success me-2';
-                            statusBadge.innerText = 'Connected';
-                        }
-                        
-                        // Hide overlay
-                        if (overlay) {
-                            overlay.classList.add('d-none');
-                        }
-                        
-                        // Set the player source to the HLS playlist
-                        player.src({
-                            src: data.playlist_url,
-                            type: 'application/x-mpegURL'
-                        });
-                        
-                        // Start playing
-                        player.play().catch(e => {
-                            console.error('Error playing video:', e);
-                            showStreamError('Failed to play video stream');
-                        });
-                    } else {
-                        // Show error
-                        showStreamError(data.message || 'Failed to start video stream');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error starting HLS stream:', error);
-                    showStreamError('Connection failed');
-                });
-        }
-        
-        function showStreamError(message) {
-            // Update status badge
-            const statusBadge = document.getElementById('status-badge');
-            if (statusBadge) {
-                statusBadge.className = 'badge bg-danger me-2';
-                statusBadge.innerText = 'Error';
-            }
-            
-            // Show overlay with error message
-            const overlay = document.getElementById('camera-overlay');
-            if (overlay) {
-                overlay.classList.remove('d-none');
-                const overlayContent = overlay.querySelector('.camera-overlay-content');
-                if (overlayContent) {
-                    overlayContent.innerHTML = `
-                        <i class="bi bi-exclamation-triangle fa-3x mb-3"></i>
-                        <h4>Connection Error</h4>
-                        <p>${message}</p>
-                        <button class="btn btn-outline-light mt-3" onclick="retryStream()">
-                            <i class="bi bi-arrow-repeat me-2"></i>Retry
-                        </button>
-                    `;
-                }
-            }
-        }
-        
-        function retryStream() {
-            // Clear any previous error
-            if (player) {
-                player.error(null);
-            }
-            
-            // Start the stream again
-            startHLSStream();
-        }
-
         var player = videojs('camera-video', {
             autoplay: true,
             controls: true,
@@ -327,16 +329,37 @@
             }]
         });
         
-        // Handle player errors
-        player.on('error', function() {
-            console.error('Video player error:', player.error());
-            document.getElementById('camera-overlay').classList.remove('d-none');
-        });
-        
-        // Start the HLS stream after player is ready
-        player.ready(function() {
+        // Show overlay during initialization
+        const overlay = document.getElementById('camera-overlay');
+        if (overlay) {
+            overlay.classList.remove('d-none');
+            const overlayContent = overlay.querySelector('.camera-overlay-content');
+            if (overlayContent) {
+                overlayContent.innerHTML = `
+                    <i class="bi bi-camera-video fa-3x mb-3"></i>
+                    <h4>Starting Camera Stream</h4>
+                    <p>Initializing video feed...</p>
+                    <div class="spinner-border text-light mt-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                `;
+            }
+        }
+            
+            // Start the HLS stream conversion
             startHLSStream();
-        });
+            
+            // Handle player errors
+            player.on('error', function() {
+                console.error('Video player error:', player.error());
+                document.getElementById('camera-overlay').classList.remove('d-none');
+                showStreamError('Stream playback error');
+            });
+            
+            // Start the HLS stream after player is ready
+            player.ready(function() {
+                startHLSStream();
+            });
         
         // Simulate connection monitoring
         function checkConnection() {
