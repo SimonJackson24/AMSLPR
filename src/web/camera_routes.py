@@ -1100,8 +1100,10 @@ def hls_stream(camera_id):
         logger.info(f"Camera info type: {type(camera_info)}")
         logger.info(f"Camera info content: {camera_info}")
         
-        # Extract stream URL based on data structure
+        # Extract stream URL and credentials based on data structure
         stream_url = ''
+        username = ''
+        password = ''
         
         if isinstance(camera_info, dict):
             # If camera_info is a dictionary
@@ -1109,17 +1111,26 @@ def hls_stream(camera_id):
                 sub_info = camera_info['info']
                 if isinstance(sub_info, dict):
                     stream_url = sub_info.get('stream_uri', '')
+                    # Get stored credentials
+                    username = sub_info.get('username', '')
+                    password = sub_info.get('password', '')
                     logger.info(f"Got stream_uri from info dictionary: {stream_url}")
                 else:
                     stream_url = getattr(sub_info, 'stream_uri', '')
+                    username = getattr(sub_info, 'username', '')
+                    password = getattr(sub_info, 'password', '')
                     logger.info(f"Got stream_uri from info object: {stream_url}")
             else:
                 # Direct access in the dictionary
                 stream_url = camera_info.get('stream_uri', '')
+                username = camera_info.get('username', '')
+                password = camera_info.get('password', '')
                 logger.info(f"Got stream_uri directly from dictionary: {stream_url}")
         else:
             # If camera_info is an object
             stream_url = getattr(camera_info, 'stream_uri', '')
+            username = getattr(camera_info, 'username', '')
+            password = getattr(camera_info, 'password', '')
             logger.info(f"Got stream_uri from object attribute: {stream_url}")
             
         if not stream_url:
@@ -1129,6 +1140,18 @@ def hls_stream(camera_id):
                 'message': 'Stream URL not available'
             }), 404
             
+        # Construct correct RTSP URL with proper credentials if needed
+        if stream_url.startswith('rtsp://') and username and password:
+            # Check if URL already contains credentials
+            if not ('@' in stream_url and stream_url.index('@') < stream_url.index(':', 7)):
+                # Parse the URL parts
+                url_parts = stream_url.split('://', 1)
+                if len(url_parts) == 2:
+                    # Add credentials to URL
+                    auth_url = f"rtsp://{username}:{password}@{url_parts[1]}"
+                    logger.info(f"Added authentication to stream URL: {auth_url}")
+                    stream_url = auth_url
+        
         # Start FFmpeg process for this camera if not already running
         if not start_ffmpeg_stream(camera_id, stream_url):
             logger.error(f"Failed to start FFmpeg process for camera {camera_id}")
