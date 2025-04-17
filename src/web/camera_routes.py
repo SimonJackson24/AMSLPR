@@ -387,7 +387,7 @@ def cameras():
             stats = {
                 'online': online_count,
                 'offline': offline_count,
-                'unknown': unknown_count,
+                'issues': unknown_count,  # Changed from 'unknown' to 'issues' to match template
                 'total': len(cameras),
                 'avg_fps': '24.5'  # Default value
             }
@@ -396,7 +396,7 @@ def cameras():
             
             # Step 6: Render the template with the cameras and stats
             if not cameras:
-                return render_template('cameras.html', cameras=[], stats={'online': 0, 'offline': 0, 'unknown': 0, 'total': 0, 'avg_fps': 'N/A'})
+                return render_template('cameras.html', cameras=[], stats={'online': 0, 'offline': 0, 'issues': 0, 'total': 0, 'avg_fps': 'N/A'})
             else:
                 return render_template('cameras.html', cameras=cameras, stats=stats)
         except Exception as e:
@@ -1739,7 +1739,7 @@ def cameras():
             stats = {
                 'online': online_count,
                 'offline': offline_count,
-                'unknown': unknown_count,
+                'issues': unknown_count,  # Changed from 'unknown' to 'issues' to match template
                 'total': len(cameras),
                 'avg_fps': '24.5'  # Default value
             }
@@ -1748,7 +1748,7 @@ def cameras():
             
             # Step 6: Render the template with the cameras and stats
             if not cameras:
-                return render_template('cameras.html', cameras=[], stats={'online': 0, 'offline': 0, 'unknown': 0, 'total': 0, 'avg_fps': 'N/A'})
+                return render_template('cameras.html', cameras=[], stats={'online': 0, 'offline': 0, 'issues': 0, 'total': 0, 'avg_fps': 'N/A'})
             else:
                 return render_template('cameras.html', cameras=cameras, stats=stats)
         except Exception as e:
