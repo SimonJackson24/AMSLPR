@@ -298,14 +298,37 @@
                             }
                         });
                         
+                        // Clear any existing sources and reset player
+                        player.pause();
+                        player.src('');
+                        player.reset();
+                        
                         // Load the source and attach to video element
                         hls.loadSource(data.playlist_url);
                         hls.attachMedia(videoElement);
                         
                         hls.on(Hls.Events.MANIFEST_PARSED, function() {
                             console.log('HLS manifest parsed, starting playback');
-                            player.play();
-                            document.getElementById('camera-overlay').classList.add('d-none');
+                            
+                            // Make sure the player is not in an error state
+                            player.error(null);
+                            
+                            // Force play() after a slight delay to ensure HLS is ready
+                            setTimeout(function() {
+                                var playPromise = player.play();
+                                if (playPromise !== undefined) {
+                                    playPromise.then(function() {
+                                        console.log('Playback started successfully');
+                                    }).catch(function(error) {
+                                        console.error('Playback failed:', error);
+                                        // Try one more time after a short delay
+                                        setTimeout(function() {
+                                            player.play();
+                                        }, 1000);
+                                    });
+                                }
+                                document.getElementById('camera-overlay').classList.add('d-none');
+                            }, 500);
                         });
                     } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
                         // For Safari with native HLS support
@@ -371,11 +394,16 @@
     var playerInitialized = false;
     
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize video.js player with explicit HLS support
+        // Initialize video.js player only if not already initialized
         if (!playerInitialized) {
             playerInitialized = true;
+            // Destroy any existing player
+            if (player) {
+                player.dispose();
+            }
+            
             player = videojs('camera-video', {
-                autoplay: true,
+                autoplay: false, // Don't autoplay until HLS is attached
                 controls: true,
                 fluid: true,
                 preload: 'auto',
@@ -383,15 +411,20 @@
                 responsive: true,
                 html5: {
                     vhs: {
-                        overrideNative: true,  // Override native HLS playback
+                        overrideNative: true,
                         enableLowInitialPlaylist: true,
                         handleManifestRedirects: true,
                         limitRenditionByPlayerDimensions: false,
                         withCredentials: false
                     }
                 },
-                // Explicitly prioritize HLS tech
+                sources: [], // Start with no sources
                 techOrder: ['html5']
+            });
+            
+            // Start stream immediately when player is ready
+            player.ready(function() {
+                startHLSStream();
             });
         }
         

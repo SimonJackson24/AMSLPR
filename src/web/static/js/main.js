@@ -250,12 +250,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // AMSLPR Main JavaScript
-
-    // Sidebar Toggle
-    const sidebarCollapse = document.getElementById('sidebarCollapse');
-    const sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
-    const sidebar = document.getElementById('sidebar');
-    const content = document.getElementById('content');
     
     if (sidebarCollapse) {
         sidebarCollapse.addEventListener('click', function() {
