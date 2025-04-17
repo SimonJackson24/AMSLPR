@@ -237,6 +237,15 @@ def create_app(config=None):
     except Exception as e:
         logger.error(f"Failed to register direct auth users fix: {e}")
         logger.error(traceback.format_exc())
+        
+    # Register direct test OCR fix blueprint as a fallback for ocr/test
+    try:
+        from src.web.direct_test_ocr_fix import register_direct_test_ocr_fix
+        app = register_direct_test_ocr_fix(app)
+        logger.info("Direct OCR test fix registered successfully")
+    except Exception as e:
+        logger.error(f"Failed to register direct OCR test fix: {e}")
+        logger.error(traceback.format_exc())
     
     if OTHER_ROUTES_AVAILABLE:
         # Initialize any additional controllers or integrations needed
