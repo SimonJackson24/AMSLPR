@@ -1477,18 +1477,36 @@ def discover_cameras():
         else:
             # Traditional synchronous discovery with reduced timeout (5 to 2 seconds)
             logger.debug("Starting camera discovery...")
-            discovered_cameras = onvif_camera_manager.discover_cameras(timeout=2)
             
-            if not discovered_cameras:
-                logger.warning("No cameras found during discovery")
-                return jsonify({'success': True, 'cameras': [], 'message': 'No cameras found'}), 200
+            # Collect cameras synchronously but with fast discovery
+            collected_cameras = []
+            def collect_camera(camera):
+                collected_cameras.append(camera)
             
-            logger.info(f"Found {len(discovered_cameras)} cameras")
-            return jsonify({
-                'success': True,
-                'cameras': discovered_cameras,
-                'message': f'Found {len(discovered_cameras)} cameras. Please configure credentials for each camera you want to use.'
-            }), 200
+            try:
+                # Use the optimized discovery with a callback to collect cameras
+                onvif_camera_manager.discover_cameras(timeout=2, callback=collect_camera)
+                
+                # Filter out any special marker messages (like discovery_complete)
+                discovered_cameras = [c for c in collected_cameras if isinstance(c, dict) and not ('discovery_complete' in c or 'discovery_error' in c)]
+                
+                if not discovered_cameras:
+                    logger.warning("No cameras found during discovery")
+                    return jsonify({'success': True, 'cameras': [], 'message': 'No cameras found'}), 200
+                
+                logger.info(f"Found {len(discovered_cameras)} cameras")
+                return jsonify({
+                    'success': True,
+                    'cameras': discovered_cameras,
+                    'message': f'Found {len(discovered_cameras)} cameras. Please configure credentials for each camera you want to use.'
+                }), 200
+            except Exception as e:
+                logger.error(f"Error during camera discovery: {str(e)}")
+                # Return an explicit error so it's clear what went wrong
+                return jsonify({
+                    'success': False,
+                    'error': f'Error during camera discovery: {str(e)}'
+                }), 500
         
     except Exception as e:
         logger.error(f"Error during camera discovery: {str(e)}")
