@@ -210,10 +210,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (sidebar) {
             sidebar.classList.toggle('active');
             
-            if (content) {
-                content.classList.toggle('active');
-            }
-            
             // For mobile, handle overlay
             if (window.innerWidth <= 768) {
                 if (sidebar.classList.contains('active')) {

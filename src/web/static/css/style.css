@@ -119,17 +119,18 @@ a:hover {
 }
 
 #content {
-    width: calc(100% - var(--sidebar-width));
+    width: 100%;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     transition: var(--sidebar-transition);
-    margin-left: var(--sidebar-width);
+    margin-left: 0;
 }
 
-#content.active {
-    width: calc(100% - var(--sidebar-collapsed-width));
-    margin-left: var(--sidebar-collapsed-width);
+/* When sidebar is active, adjust content */
+#sidebar.active + #content {
+    width: calc(100% - var(--sidebar-width));
+    margin-left: var(--sidebar-width);
 }
 
 main {
@@ -146,7 +147,7 @@ main .container-fluid {
     width: var(--sidebar-width);
     position: fixed;
     top: 0;
-    left: 0;
+    left: -250px; /* Hidden by default */
     height: 100vh;
     z-index: 999;
     background: var(--neutral-800);
@@ -156,16 +157,19 @@ main .container-fluid {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    visibility: hidden; /* Hidden by default */
 }
 
-/* Mobile sidebar mechanism */
+#sidebar.active {
+    left: 0 !important; /* Show when active */
+    visibility: visible !important;
+}
+
+/* Mobile-specific adjustments */
 @media (max-width: 768px) {
-    #sidebar {
-        left: -250px;  /* Off-screen by default on mobile */
-    }
-    
-    #sidebar.active {
-        left: 0;  /* Visible when active */
+    #content {
+        width: 100%;
+        margin-left: 0;
     }
 }
 
