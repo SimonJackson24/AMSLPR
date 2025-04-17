@@ -140,11 +140,19 @@ class DatabaseManager:
                 )
             ''')
             
-            # Create cameras table
+            # Create cameras table with all required fields
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS cameras (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     ip TEXT NOT NULL,
+                    port INTEGER DEFAULT 80,
+                    username TEXT,
+                    password TEXT,
+                    stream_uri TEXT,
+                    manufacturer TEXT,
+                    model TEXT,
+                    name TEXT,
+                    location TEXT,
                     description TEXT,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP

@@ -489,8 +489,8 @@ def add_camera():
             # Add to database
             try:
                 logger.info(f"Adding camera to database with data: {camera_data}")
-                if _db_manager and hasattr(_db_manager, 'save_camera'):
-                    _db_manager.save_camera(camera_data)
+                if db_manager and hasattr(db_manager, 'save_camera'):
+                    db_manager.save_camera(camera_data)
                     logger.info("Camera added to database successfully")
                 else:
                     logger.warning("Database manager not available or save_camera method not found")
