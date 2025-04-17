@@ -49,7 +49,7 @@ except ImportError as e:
 
 logger = logging.getLogger('AMSLPR.web.ocr')
 
-ocr_bp = Blueprint('ocr', __name__)
+ocr_bp = Blueprint('ocr', __name__, url_prefix='/ocr')
 
 def admin_required(f):
     """Decorator for routes that require admin privileges"""
