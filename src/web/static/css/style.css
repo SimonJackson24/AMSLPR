@@ -123,14 +123,20 @@ a:hover {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    transition: var(--sidebar-transition);
+    transition: all 0.3s;
     margin-left: 0;
 }
 
-/* When sidebar is active, adjust content */
-#sidebar.active ~ #content {
+/* Default state - sidebar visible, content shifted */
+#content {
     width: calc(100% - var(--sidebar-width));
     margin-left: var(--sidebar-width);
+}
+
+/* When sidebar is NOT active, content fills the screen */
+#sidebar:not(.active) ~ #content {
+    width: 100%;
+    margin-left: 0;
 }
 
 main {
