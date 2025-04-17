@@ -129,8 +129,91 @@ def create_app(config=None):
                 from src.web.ocr_routes import ocr_bp
                 app.register_blueprint(ocr_bp)
                 logger.info("OCR blueprint registered directly to fix 404 error")
+                
+                # Add a direct route for OCR settings at the Flask app level to ensure it works
+                @app.route('/ocr/settings', methods=['GET', 'POST'])
+                def direct_ocr_settings():
+                    """Direct handler for OCR settings page to bypass any blueprint conflicts"""
+                    from flask import render_template, request, redirect, url_for, flash
+                    import os
+                    import json
+                    
+                    # Get the config file path
+                    config_path = os.path.join('config', 'ocr_config.json')
+                    
+                    # Handle form submission
+                    if request.method == 'POST':
+                        # Process form data
+                        ocr_method = request.form.get('ocr_method', 'hybrid')
+                        confidence_threshold = float(request.form.get('confidence_threshold', 0.7))
+                        use_hailo_tpu = 'use_hailo_tpu' in request.form
+                        
+                        # Create config object
+                        config = {
+                            'ocr_method': ocr_method,
+                            'confidence_threshold': confidence_threshold,
+                            'use_hailo_tpu': use_hailo_tpu,
+                            'tesseract_config': {
+                                'psm_mode': int(request.form.get('psm_mode', 7)),
+                                'oem_mode': int(request.form.get('oem_mode', 1)),
+                                'whitelist': request.form.get('whitelist', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+                            },
+                            'preprocessing': {
+                                'resize_factor': float(request.form.get('resize_factor', 2.0)),
+                                'apply_contrast_enhancement': 'apply_contrast_enhancement' in request.form,
+                                'apply_noise_reduction': 'apply_noise_reduction' in request.form,
+                                'apply_perspective_correction': 'apply_perspective_correction' in request.form
+                            }
+                        }
+                        
+                        # Save config
+                        try:
+                            with open(config_path, 'w') as f:
+                                json.dump(config, f, indent=4)
+                                
+                            flash('OCR configuration saved successfully', 'success')
+                            return redirect('/ocr/settings')
+                        except Exception as e:
+                            logger.error(f"Error saving OCR settings: {e}")
+                            flash(f'Error saving settings: {str(e)}', 'danger')
+                    
+                    # Get current config
+                    config = {}
+                    if os.path.exists(config_path):
+                        try:
+                            with open(config_path, 'r') as f:
+                                config = json.load(f)
+                        except Exception as e:
+                            logger.error(f"Error loading OCR config: {e}")
+                            flash('Error loading configuration', 'warning')
+                    
+                    # Ensure all required sections exist
+                    if 'tesseract_config' not in config:
+                        config['tesseract_config'] = {
+                            'psm_mode': 7,
+                            'oem_mode': 1,
+                            'whitelist': 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+                        }
+                    
+                    if 'preprocessing' not in config:
+                        config['preprocessing'] = {
+                            'resize_factor': 2.0,
+                            'apply_contrast_enhancement': True,
+                            'apply_noise_reduction': True,
+                            'apply_perspective_correction': False
+                        }
+                        
+                    if 'ocr_method' not in config:
+                        config['ocr_method'] = 'hybrid'
+                        
+                    if 'confidence_threshold' not in config:
+                        config['confidence_threshold'] = 0.7
+                    
+                    return render_template('ocr_settings.html', config=config)
+                    
+                logger.info("Direct OCR settings route registered at application level")
             except Exception as e:
-                logger.error(f"Failed to register OCR blueprint directly: {e}")
+                logger.error(f"Failed to register OCR routes directly: {e}")
                 
             logger.info("Camera and OCR routes registered")
         except Exception as e:
