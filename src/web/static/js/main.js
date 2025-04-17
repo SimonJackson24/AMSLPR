@@ -89,63 +89,23 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Simple sidebar toggle functionality
-    document.addEventListener('DOMContentLoaded', function() {
-        // Create the overlay element for mobile
-        if (!document.getElementById('sidebar-overlay')) {
-            var overlay = document.createElement('div');
-            overlay.id = 'sidebar-overlay';
-            overlay.className = 'sidebar-overlay';
-            document.body.appendChild(overlay);
-        }
-        
-        // Get sidebar elements
+    // Create overlay for mobile sidebar
+    var overlay = document.createElement('div');
+    overlay.id = 'sidebar-overlay';
+    overlay.className = 'sidebar-overlay';
+    document.body.appendChild(overlay);
+    
+    // Make overlay close the sidebar when clicked
+    overlay.addEventListener('click', function() {
         var sidebar = document.getElementById('sidebar');
         var content = document.getElementById('content');
-        var sidebarCollapse = document.getElementById('sidebarCollapse');
-        var sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
-        var overlay = document.getElementById('sidebar-overlay');
-        
-        // Function to toggle sidebar
-        function toggleSidebar() {
-            if (sidebar) {
-                sidebar.classList.toggle('active');
-                
-                if (content) {
-                    content.classList.toggle('active');
-                }
-                
-                // For mobile, handle overlay
-                if (window.innerWidth <= 768) {
-                    if (sidebar.classList.contains('active')) {
-                        // Show overlay when sidebar is active on mobile
-                        if (overlay) overlay.classList.add('active');
-                        document.body.style.overflow = 'hidden'; // Prevent scrolling
-                    } else {
-                        // Hide overlay when sidebar is inactive on mobile
-                        if (overlay) overlay.classList.remove('active');
-                        document.body.style.overflow = ''; // Allow scrolling
-                    }
-                }
-            }
-        }
-        
-        // Add click events to buttons
-        if (sidebarCollapse) {
-            sidebarCollapse.addEventListener('click', toggleSidebar);
-        }
-        
-        if (sidebarCollapseBtn) {
-            sidebarCollapseBtn.addEventListener('click', toggleSidebar);
-        }
-        
-        // Make overlay close the sidebar when clicked
-        if (overlay) {
-            overlay.addEventListener('click', toggleSidebar);
+        if (sidebar) {
+            sidebar.classList.remove('active');
+            if (content) content.classList.remove('active');
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
         }
     });
-    
-    // End of sidebar code
     
     /**
      * Format date and time for display
@@ -239,18 +199,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // AMSLPR Main JavaScript
     
-    if (sidebarCollapse) {
-        sidebarCollapse.addEventListener('click', function() {
+    // Sidebar toggle - get sidebar elements once
+    var sidebar = document.getElementById('sidebar');
+    var content = document.getElementById('content');
+    var sidebarCollapse = document.getElementById('sidebarCollapse');
+    var sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
+    var overlay = document.getElementById('sidebar-overlay');
+    
+    function toggleSidebar() {
+        if (sidebar) {
             sidebar.classList.toggle('active');
-            content.classList.toggle('active');
-        });
+            
+            if (content) {
+                content.classList.toggle('active');
+            }
+            
+            // For mobile, handle overlay
+            if (window.innerWidth <= 768) {
+                if (sidebar.classList.contains('active')) {
+                    if (overlay) overlay.classList.add('active');
+                    document.body.style.overflow = 'hidden'; // Prevent scrolling
+                } else {
+                    if (overlay) overlay.classList.remove('active');
+                    document.body.style.overflow = ''; // Allow scrolling
+                }
+            }
+        }
+    }
+    
+    if (sidebarCollapse) {
+        sidebarCollapse.addEventListener('click', toggleSidebar);
     }
     
     if (sidebarCollapseBtn) {
-        sidebarCollapseBtn.addEventListener('click', function() {
-            sidebar.classList.toggle('active');
-            content.classList.toggle('active');
-        });
+        sidebarCollapseBtn.addEventListener('click', toggleSidebar);
     }
 
     // Initialize tooltips

@@ -142,7 +142,7 @@ main .container-fluid {
 }
 
 /* Sidebar */
-#sidebar, nav.sidebar {
+#sidebar {
     width: var(--sidebar-width);
     position: fixed;
     top: 0;
@@ -158,17 +158,15 @@ main .container-fluid {
     overflow-y: auto;
 }
 
-/* Important rule for sidebar when not active */
-#sidebar:not(.active), nav.sidebar:not(.active) {
-    left: -250px;
-    visibility: hidden;
-}
-
-#sidebar.collapsed {
-    margin-left: -250px;
-    transform: translateX(-100%);
-    visibility: hidden;
-    opacity: 0;
+/* Mobile sidebar mechanism */
+@media (max-width: 768px) {
+    #sidebar {
+        left: -250px;  /* Off-screen by default on mobile */
+    }
+    
+    #sidebar.active {
+        left: 0;  /* Visible when active */
+    }
 }
 
 #sidebar.active .sidebar-header span,
@@ -504,39 +502,75 @@ main .container-fluid {
     margin-bottom: var(--spacing-4);
 }
 
-/* Mobile sidebar adjustments */
+/* Sidebar - New Improved Version */
+.wrapper {
+    display: flex;
+    width: 100%;
+    align-items: stretch;
+}
+
+#sidebar {
+    min-width: 250px;
+    max-width: 250px;
+    background: #343a40;
+    color: #fff;
+    transition: all 0.3s;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 9999;
+}
+
+/* Ensure sidebar is completely hidden when collapsed */
+#sidebar.collapsed {
+    margin-left: -250px !important;
+    transform: translateX(-100%) !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    left: -250px !important;
+}
+
+#content {
+    width: calc(100% - 250px);
+    min-height: 100vh;
+    position: absolute;
+    right: 0;
+    transition: all 0.3s;
+}
+
+#content.expanded {
+    width: 100%;
+    margin-left: 0;
+}
+
+/* Sidebar overlay for mobile */
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9998; /* Just below the sidebar */
+    display: none;
+}
+
+.sidebar-overlay.active {
+    display: block;
+}
+
 @media (max-width: 768px) {
     #sidebar {
-        position: fixed;
-        top: 0;
-        left: -250px;
-        height: 100vh;
-        z-index: 999;
-        transition: all 0.3s;
+        margin-left: -250px;
     }
-    
     #sidebar.active {
-        left: 0;
+        margin-left: 0;
     }
-    
     #content {
         width: 100%;
-    }
-    
-    /* Sidebar overlay for mobile */
-    .sidebar-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 998; /* Just below the sidebar */
-        display: none;
-    }
-    
-    .sidebar-overlay.active {
-        display: block;
+        margin-left: 0;
     }
 }
 
