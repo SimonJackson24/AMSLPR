@@ -285,7 +285,7 @@
                         });
                         
                         // Load the source and attach to video element
-                        hls.loadSource(playlistUrl);
+                        hls.loadSource(data.playlist_url);
                         hls.attachMedia(document.getElementById('camera-video'));
                         
                         hls.on(Hls.Events.MANIFEST_PARSED, function() {
@@ -296,7 +296,7 @@
                     } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
                         // For Safari with native HLS support
                         player.src({
-                            src: playlistUrl,
+                            src: data.playlist_url,
                             type: 'application/x-mpegURL'
                         });
                         player.play();
