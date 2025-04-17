@@ -89,9 +89,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // New robust sidebar implementation
+    // Simple sidebar toggle functionality
     document.addEventListener('DOMContentLoaded', function() {
-        // Create overlay element if it doesn't exist
+        // Create the overlay element for mobile
         if (!document.getElementById('sidebar-overlay')) {
             var overlay = document.createElement('div');
             overlay.id = 'sidebar-overlay';
@@ -106,83 +106,46 @@ document.addEventListener('DOMContentLoaded', function() {
         var sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
         var overlay = document.getElementById('sidebar-overlay');
         
-        // Function to toggle sidebar visibility
+        // Function to toggle sidebar
         function toggleSidebar() {
             if (sidebar) {
-                // Only toggle 'collapsed' class to avoid conflicts
-                sidebar.classList.toggle('collapsed');
-            }
-            
-            if (content) {
-                content.classList.toggle('expanded');
-            }
-            
-            if (overlay) {
-                overlay.classList.toggle('active');
-            }
-            
-            // Block scrolling when sidebar is open on mobile
-            if (window.innerWidth <= 768 && sidebar && sidebar.classList.contains('active')) {
-                document.body.style.overflow = 'hidden';
-            } else {
-                document.body.style.overflow = '';
+                sidebar.classList.toggle('active');
+                
+                if (content) {
+                    content.classList.toggle('active');
+                }
+                
+                // For mobile, handle overlay
+                if (window.innerWidth <= 768) {
+                    if (sidebar.classList.contains('active')) {
+                        // Show overlay when sidebar is active on mobile
+                        if (overlay) overlay.classList.add('active');
+                        document.body.style.overflow = 'hidden'; // Prevent scrolling
+                    } else {
+                        // Hide overlay when sidebar is inactive on mobile
+                        if (overlay) overlay.classList.remove('active');
+                        document.body.style.overflow = ''; // Allow scrolling
+                    }
+                }
             }
         }
         
-        // Close sidebar when clicking overlay
+        // Add click events to buttons
+        if (sidebarCollapse) {
+            sidebarCollapse.addEventListener('click', toggleSidebar);
+        }
+        
+        if (sidebarCollapseBtn) {
+            sidebarCollapseBtn.addEventListener('click', toggleSidebar);
+        }
+        
+        // Make overlay close the sidebar when clicked
         if (overlay) {
             overlay.addEventListener('click', toggleSidebar);
         }
-        
-        // Add click event to main toggle button
-        if (sidebarCollapse) {
-            sidebarCollapse.addEventListener('click', function(e) {
-                e.preventDefault();
-                toggleSidebar();
-            });
-        }
-        
-        // Add click event to mobile toggle button
-        if (sidebarCollapseBtn) {
-            sidebarCollapseBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                toggleSidebar();
-            });
-        }
-        
-        // Initialize sidebar state based on screen size
-        function initSidebarState() {
-            if (window.innerWidth <= 768) {
-                // On mobile, sidebar is collapsed by default
-                if (sidebar) {
-                    sidebar.classList.remove('active');
-                    sidebar.classList.add('collapsed');
-                }
-                if (content) {
-                    content.classList.add('expanded');
-                }
-            } else {
-                // On desktop, sidebar is expanded by default
-                if (sidebar) {
-                    sidebar.classList.add('active');
-                    sidebar.classList.remove('collapsed');
-                }
-                if (content) {
-                    content.classList.remove('expanded');
-                }
-            }
-        }
-        
-        // Initialize sidebar state on page load
-        initSidebarState();
-        
-        // Update sidebar state on window resize
-        window.addEventListener('resize', function() {
-            initSidebarState();
-        });
     });
     
-    // The new sidebar implementation handles all responsive behavior
+    // End of sidebar code
     
     /**
      * Format date and time for display
