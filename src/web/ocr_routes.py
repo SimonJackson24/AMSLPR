@@ -143,9 +143,14 @@ def setup_routes(app, detector):
     _detector = detector
     _app = app
     
+    # Register the blueprint with the app
+    app.register_blueprint(ocr_bp)
+    
     # Check if detector is available
     if _detector is None:
         app.logger.warning("OCR routes initialized without a detector. Some functionality will be limited.")
+        
+    logger.info("OCR routes registered successfully")
 
 @ocr_bp.route('/settings', methods=['GET', 'POST'])
 def ocr_settings():
