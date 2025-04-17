@@ -123,6 +123,15 @@ def create_app(config=None):
         try:
             app = register_camera_routes(app, detector, db_manager)
             app = register_ocr_routes(app, detector)
+            
+            # Direct import and registration of OCR blueprint to fix 404 error
+            try:
+                from src.web.ocr_routes import ocr_bp
+                app.register_blueprint(ocr_bp)
+                logger.info("OCR blueprint registered directly to fix 404 error")
+            except Exception as e:
+                logger.error(f"Failed to register OCR blueprint directly: {e}")
+                
             logger.info("Camera and OCR routes registered")
         except Exception as e:
             logger.error(f"Failed to register camera/OCR routes: {e}")
