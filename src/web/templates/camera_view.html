@@ -255,7 +255,16 @@
                     
                     // Use a more direct approach to load the HLS stream
                     if (Hls.isSupported()) {
+                        console.log('Using HLS.js to play stream:', data.playlist_url);
                         // Use HLS.js for better browser support
+                        const videoElement = document.getElementById('camera-video');
+                        
+                        // Destroy previous HLS instance if exists
+                        if (window.hlsPlayer) {
+                            window.hlsPlayer.destroy();
+                        }
+                        
+                        // Create new HLS instance
                         const hls = new Hls({
                             debug: true,
                             enableWorker: true,
@@ -263,6 +272,9 @@
                             backBufferLength: 30,
                             maxBufferLength: 30
                         });
+                        
+                        // Store for later use
+                        window.hlsPlayer = hls;
                         
                         // Add error handling
                         hls.on(Hls.Events.ERROR, function(event, data) {
@@ -288,7 +300,7 @@
                         
                         // Load the source and attach to video element
                         hls.loadSource(data.playlist_url);
-                        hls.attachMedia(document.getElementById('camera-video'));
+                        hls.attachMedia(videoElement);
                         
                         hls.on(Hls.Events.MANIFEST_PARSED, function() {
                             console.log('HLS manifest parsed, starting playback');
@@ -355,27 +367,33 @@
         startHLSStream();
     }
 
+    // Initialize player only once when the page loads
+    var playerInitialized = false;
+    
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize video.js player with explicit HLS support
-        player = videojs('camera-video', {
-            autoplay: true,
-            controls: true,
-            fluid: true,
-            preload: 'auto',
-            liveui: true,
-            responsive: true,
-            html5: {
-                vhs: {
-                    overrideNative: true,  // Override native HLS playback
-                    enableLowInitialPlaylist: true,
-                    handleManifestRedirects: true,
-                    limitRenditionByPlayerDimensions: false,
-                    withCredentials: false
-                }
-            },
-            // Explicitly prioritize HLS tech
-            techOrder: ['html5']
-        });
+        if (!playerInitialized) {
+            playerInitialized = true;
+            player = videojs('camera-video', {
+                autoplay: true,
+                controls: true,
+                fluid: true,
+                preload: 'auto',
+                liveui: true,
+                responsive: true,
+                html5: {
+                    vhs: {
+                        overrideNative: true,  // Override native HLS playback
+                        enableLowInitialPlaylist: true,
+                        handleManifestRedirects: true,
+                        limitRenditionByPlayerDimensions: false,
+                        withCredentials: false
+                    }
+                },
+                // Explicitly prioritize HLS tech
+                techOrder: ['html5']
+            });
+        }
         
         // Add debug events to see what's happening with the player
         player.on('error', function(e) {
