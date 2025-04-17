@@ -1424,89 +1424,20 @@ def discover_cameras():
                 logger.error(f"Error initializing camera manager: {str(e)}")
                 return jsonify({'success': False, 'error': f'Error initializing camera manager: {str(e)}'}), 500
         
-        # Check if progressive results requested
-        use_progressive = request.json.get('progressive', False)
+        # Start camera discovery with reduced timeout (5 to 2 seconds)
+        logger.debug("Starting camera discovery...")
+        discovered_cameras = onvif_camera_manager.discover_cameras(timeout=2)
         
-        if use_progressive:
-            # Start discovery in a background thread and immediately return
-            # The frontend will connect to the event endpoint to get updates
-            
-            # Store discovered cameras in a shared variable
-            if not hasattr(current_app, 'discovered_cameras'):
-                current_app.discovered_cameras = {}
-            
-            # Generate a unique discovery ID
-            import uuid
-            discovery_id = str(uuid.uuid4())
-            current_app.discovered_cameras[discovery_id] = []
-            
-            # Define callback function for progressive updates
-            def discovery_callback(camera):
-                if discovery_id in current_app.discovered_cameras:
-                    current_app.discovered_cameras[discovery_id].append(camera)
-            
-            # Start discovery in a background thread
-            def run_discovery():
-                try:
-                    # Reduced timeout from 5 to 2 seconds
-                    onvif_camera_manager.discover_cameras(timeout=2, callback=discovery_callback)
-                    # Mark discovery as complete
-                    if discovery_id in current_app.discovered_cameras:
-                        current_app.discovered_cameras[discovery_id].append({'discovery_complete': True})
-                except Exception as e:
-                    logger.error(f"Error in background discovery: {str(e)}")
-                    # Mark discovery as failed
-                    if discovery_id in current_app.discovered_cameras:
-                        current_app.discovered_cameras[discovery_id].append({
-                            'discovery_error': True, 
-                            'error': str(e)
-                        })
-            
-            import threading
-            discovery_thread = threading.Thread(target=run_discovery)
-            discovery_thread.daemon = True
-            discovery_thread.start()
-            
-            # Return immediately with the discovery ID
-            return jsonify({
-                'success': True,
-                'progressive': True,
-                'discovery_id': discovery_id,
-                'message': 'Camera discovery started in background. Connect to event stream for updates.'
-            }), 200
-        else:
-            # Traditional synchronous discovery with reduced timeout (5 to 2 seconds)
-            logger.debug("Starting camera discovery...")
-            
-            # Collect cameras synchronously but with fast discovery
-            collected_cameras = []
-            def collect_camera(camera):
-                collected_cameras.append(camera)
-            
-            try:
-                # Use the optimized discovery with a callback to collect cameras
-                onvif_camera_manager.discover_cameras(timeout=2, callback=collect_camera)
-                
-                # Filter out any special marker messages (like discovery_complete)
-                discovered_cameras = [c for c in collected_cameras if isinstance(c, dict) and not ('discovery_complete' in c or 'discovery_error' in c)]
-                
-                if not discovered_cameras:
-                    logger.warning("No cameras found during discovery")
-                    return jsonify({'success': True, 'cameras': [], 'message': 'No cameras found'}), 200
-                
-                logger.info(f"Found {len(discovered_cameras)} cameras")
-                return jsonify({
-                    'success': True,
-                    'cameras': discovered_cameras,
-                    'message': f'Found {len(discovered_cameras)} cameras. Please configure credentials for each camera you want to use.'
-                }), 200
-            except Exception as e:
-                logger.error(f"Error during camera discovery: {str(e)}")
-                # Return an explicit error so it's clear what went wrong
-                return jsonify({
-                    'success': False,
-                    'error': f'Error during camera discovery: {str(e)}'
-                }), 500
+        if not discovered_cameras:
+            logger.warning("No cameras found during discovery")
+            return jsonify({'success': True, 'cameras': [], 'message': 'No cameras found'}), 200
+        
+        logger.info(f"Found {len(discovered_cameras)} cameras")
+        return jsonify({
+            'success': True,
+            'cameras': discovered_cameras,
+            'message': f'Found {len(discovered_cameras)} cameras. Please configure credentials for each camera you want to use.'
+        }), 200
         
     except Exception as e:
         logger.error(f"Error during camera discovery: {str(e)}")

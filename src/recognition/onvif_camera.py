@@ -216,13 +216,12 @@ class ONVIFCameraManager:
             logger.error(f"Error getting local network: {str(e)}")
             return None
 
-    def scan_network(self, timeout=2, callback=None):
+    def scan_network(self, timeout=2):
         """
         Scan the local network for potential cameras.
         
         Args:
             timeout (int): Timeout in seconds for each connection attempt
-            callback (function, optional): Function to call with each discovered camera
             
         Returns:
             list: List of discovered camera information dictionaries
@@ -258,34 +257,23 @@ class ONVIFCameraManager:
                         if not any(cam['ip'] == result['ip'] for cam in discovered_cameras):
                             discovered_cameras.append(result)
                             
-                            # Call callback with progressive results if provided
-                            if callback and callable(callback):
-                                callback(result)
+                            # No callback functionality needed
                 except Exception as e:
                     logger.debug(f"Error in scan task: {str(e)}")
         
         return discovered_cameras
 
-    def discover_cameras(self, timeout=2, callback=None):
+    def discover_cameras(self, timeout=2):
         """
         Discover cameras on the network using both WS-Discovery and network scanning.
         
         Args:
             timeout (int): Timeout in seconds for discovery (reduced from 5 to 2 for faster scanning)
-            callback (function, optional): Function to call with each discovered camera for progressive results
             
         Returns:
             list: List of discovered camera information dictionaries
         """
         discovered_cameras = []
-        
-        # Create a wrapper callback to avoid duplicate callbacks
-        def add_camera_callback(camera):
-            # Only send callback if we haven't seen this camera yet
-            if not any(cam['ip'] == camera['ip'] for cam in discovered_cameras):
-                discovered_cameras.append(camera)
-                if callback and callable(callback):
-                    callback(camera)
         
         try:
             # First, try WS-Discovery with reduced timeout
@@ -350,8 +338,8 @@ class ONVIFCameraManager:
                                     'status': 'detected'
                                 }
                                 
-                                # Add to results and trigger callback
-                                add_camera_callback(camera_info)
+                                # Add to results
+                                discovered_cameras.append(camera_info)
                     except socket.timeout:
                         break
 
@@ -360,12 +348,14 @@ class ONVIFCameraManager:
             except Exception as e:
                 logger.error(f"Error during WS-Discovery: {str(e)}")
 
-            # Then, perform network scan with progressive results
+            # Then, perform network scan with the optimized settings
             logger.info("Starting network scan...")
-            # Pass the callback to scan_network for progressive results
-            scan_results = self.scan_network(timeout, callback=add_camera_callback)
+            scan_results = self.scan_network(timeout)
             
-            # No need to merge results as the callback handles this
+            # Merge results from network scan
+            for camera in scan_results:
+                if not any(cam['ip'] == camera['ip'] for cam in discovered_cameras):
+                    discovered_cameras.append(camera)
 
             logger.info(f"Discovery complete. Found {len(discovered_cameras)} cameras")
             return discovered_cameras
