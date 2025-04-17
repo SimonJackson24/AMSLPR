@@ -216,12 +216,13 @@ class ONVIFCameraManager:
             logger.error(f"Error getting local network: {str(e)}")
             return None
 
-    def scan_network(self, timeout=2):
+    def scan_network(self, timeout=2, callback=None):
         """
         Scan the local network for potential cameras.
         
         Args:
             timeout (int): Timeout in seconds for each connection attempt
+            callback (function, optional): Function to call with each discovered camera
             
         Returns:
             list: List of discovered camera information dictionaries
@@ -232,8 +233,8 @@ class ONVIFCameraManager:
         if not network:
             return []
         
-        # Use a thread pool to scan IPs in parallel
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        # Use a thread pool to scan IPs in parallel - increased max_workers for faster scanning
+        with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
             futures = []
             for ip in network.hosts():
                 ip_str = str(ip)
@@ -241,45 +242,59 @@ class ONVIFCameraManager:
                 if ip_str.endswith('.0') or ip_str.endswith('.255'):
                     continue
                     
-                # First check RTSP port
-                futures.append(executor.submit(self.try_connect_camera, ip_str, 554))
-                
-                # Then check common ONVIF ports
-                for port in [80, 8080, 8000, 8081, 8899]:
-                    futures.append(executor.submit(self.try_connect_camera, ip_str, port))
+                # Only check standard RTSP and ONVIF ports for faster scanning
+                futures.append(executor.submit(self.try_connect_camera, ip_str, 554))  # RTSP port
+                futures.append(executor.submit(self.try_connect_camera, ip_str, 80))   # HTTP/ONVIF port
             
             for future in concurrent.futures.as_completed(futures):
                 try:
                     result = future.result()
                     if result:
+                        # Skip metadata gathering during initial discovery
+                        result['manufacturer'] = 'Unknown'  # Will be populated later
+                        result['model'] = 'Unknown'         # Will be populated later
+                        
                         # Only add if we haven't found this IP yet
                         if not any(cam['ip'] == result['ip'] for cam in discovered_cameras):
                             discovered_cameras.append(result)
+                            
+                            # Call callback with progressive results if provided
+                            if callback and callable(callback):
+                                callback(result)
                 except Exception as e:
                     logger.debug(f"Error in scan task: {str(e)}")
         
         return discovered_cameras
 
-    def discover_cameras(self, timeout=2):
+    def discover_cameras(self, timeout=2, callback=None):
         """
         Discover cameras on the network using both WS-Discovery and network scanning.
         
         Args:
-            timeout (int): Timeout in seconds for discovery
+            timeout (int): Timeout in seconds for discovery (reduced from 5 to 2 for faster scanning)
+            callback (function, optional): Function to call with each discovered camera for progressive results
             
         Returns:
             list: List of discovered camera information dictionaries
         """
         discovered_cameras = []
         
+        # Create a wrapper callback to avoid duplicate callbacks
+        def add_camera_callback(camera):
+            # Only send callback if we haven't seen this camera yet
+            if not any(cam['ip'] == camera['ip'] for cam in discovered_cameras):
+                discovered_cameras.append(camera)
+                if callback and callable(callback):
+                    callback(camera)
+        
         try:
-            # First, try WS-Discovery
+            # First, try WS-Discovery with reduced timeout
             logger.info("Starting WS-Discovery...")
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
-                sock.settimeout(timeout)
+                sock.settimeout(timeout)  # Reduced timeout
 
                 message = """<?xml version="1.0" encoding="UTF-8"?>
                 <e:Envelope xmlns:e="http://www.w3.org/2003/05/soap-envelope"
@@ -309,66 +324,34 @@ class ONVIFCameraManager:
                             if not any(cam['ip'] == ip for cam in discovered_cameras):
                                 logger.info(f"Found camera via WS-Discovery at {ip}")
                                 
-                                # Try to extract more information from the response
-                                response_str = data.decode('utf-8')
-                                
-                                # Extract XAddrs (device service URLs)
-                                xaddrs_match = re.search(r'<d:XAddrs>(.*?)</d:XAddrs>', response_str)
+                                # Extract minimal info for fast discovery - skip metadata gathering
                                 device_url = None
                                 port = 80
                                 
+                                # Basic extraction of port from response if available
+                                response_str = data.decode('utf-8')
+                                xaddrs_match = re.search(r'<d:XAddrs>(.*?)</d:XAddrs>', response_str)
                                 if xaddrs_match:
                                     xaddrs = xaddrs_match.group(1).strip()
                                     device_urls = xaddrs.split()
                                     if device_urls:
                                         device_url = device_urls[0]
-                                        # Parse URL to get port
                                         parsed_url = urlparse(device_url)
                                         port = parsed_url.port or 80
                                 
-                                # Try to extract manufacturer from URL or other metadata
-                                manufacturer = 'Unknown'
-                                model = 'Unknown'
-                                
-                                # Try to get HTTP headers which may contain manufacturer info
-                                if device_url:
-                                    try:
-                                        # Try a HEAD request to get headers
-                                        headers_response = requests.head(device_url, timeout=1)
-                                        if 'Server' in headers_response.headers:
-                                            server = headers_response.headers['Server']
-                                            logger.info(f"Server header: {server}")
-                                            
-                                            # Extract manufacturer from server header
-                                            if 'hikvision' in server.lower():
-                                                manufacturer = 'Hikvision'
-                                            elif 'axis' in server.lower():
-                                                manufacturer = 'Axis'
-                                            elif 'dahua' in server.lower():
-                                                manufacturer = 'Dahua'
-                                    except:
-                                        pass
-                                
-                                # If we couldn't determine manufacturer from headers, try from URL
-                                if manufacturer == 'Unknown' and device_url:
-                                    if 'hikvision' in device_url.lower():
-                                        manufacturer = 'Hikvision'
-                                    elif 'axis' in device_url.lower():
-                                        manufacturer = 'Axis'
-                                    elif 'dahua' in device_url.lower():
-                                        manufacturer = 'Dahua'
-                                
+                                # Create camera info with minimal data
                                 camera_info = {
                                     'ip': ip,
                                     'port': port,
-                                    'manufacturer': manufacturer,
-                                    'model': model,
+                                    'manufacturer': 'Unknown',  # Will be populated later
+                                    'model': 'Unknown',         # Will be populated later
                                     'type': 'ONVIF Camera',
                                     'requires_auth': True,
                                     'status': 'detected'
                                 }
                                 
-                                discovered_cameras.append(camera_info)
+                                # Add to results and trigger callback
+                                add_camera_callback(camera_info)
                     except socket.timeout:
                         break
 
@@ -377,14 +360,12 @@ class ONVIFCameraManager:
             except Exception as e:
                 logger.error(f"Error during WS-Discovery: {str(e)}")
 
-            # Then, perform network scan
+            # Then, perform network scan with progressive results
             logger.info("Starting network scan...")
-            scan_results = self.scan_network(timeout)
+            # Pass the callback to scan_network for progressive results
+            scan_results = self.scan_network(timeout, callback=add_camera_callback)
             
-            # Merge results, avoiding duplicates
-            for camera in scan_results:
-                if not any(cam['ip'] == camera['ip'] for cam in discovered_cameras):
-                    discovered_cameras.append(camera)
+            # No need to merge results as the callback handles this
 
             logger.info(f"Discovery complete. Found {len(discovered_cameras)} cameras")
             return discovered_cameras
