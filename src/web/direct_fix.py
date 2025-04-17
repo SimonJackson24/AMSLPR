@@ -88,7 +88,48 @@ def direct_ocr_settings():
     if 'confidence_threshold' not in config:
         config['confidence_threshold'] = 0.7
     
-    return render_template('ocr_settings.html', config=config, hailo_available=False)
+    # Check for Hailo TPU availability
+    hailo_available = False
+    try:
+        # First check for hailort module
+        import importlib.util
+        if importlib.util.find_spec("hailort"):
+            # Check if device file exists
+            if os.path.exists('/dev/hailo0'):
+                try:
+                    # Try to import and initialize the device
+                    import hailort
+                    device = hailort.Device()
+                    hailo_available = True
+                    logger.info(f"Hailo TPU detected in direct fix: {device.device_id}")
+                except Exception as e:
+                    logger.warning(f"Hailo TPU module found but device initialization failed: {e}")
+            else:
+                logger.warning("Hailo device file (/dev/hailo0) not found")
+        else:
+            logger.warning("hailort module not found")
+    except Exception as e:
+        logger.error(f"Error checking for Hailo TPU: {e}")
+    
+    # Force enable if environment variable is set
+    if os.environ.get('HAILO_ENABLED') == 'true':
+        logger.info("HAILO_ENABLED environment variable is set, enabling Hailo UI options")
+        hailo_available = True
+    
+    # Always enable Hailo options if diagnostics showed it's working
+    if os.path.exists('/tmp/hailo_diag_success'):
+        logger.info("Hailo diagnostic success file found, enabling Hailo UI options")
+        hailo_available = True
+    
+    # Create a marker file for future reference
+    if hailo_available:
+        try:
+            with open('/tmp/hailo_diag_success', 'w') as f:
+                f.write('Hailo TPU detection successful')
+        except Exception:
+            pass
+            
+    return render_template('ocr_settings.html', config=config, mock=False, hailo_available=hailo_available)
 
 def register_direct_fix(app):
     """Register the direct blueprint"""
