@@ -1027,9 +1027,10 @@ def start_ffmpeg_stream(camera_id, rtsp_url):
             '-ac', '2',            # 2 audio channels
             '-b:a', '128k',        # Audio bitrate
             '-f', 'hls',           # Output format is HLS
-            '-hls_time', '2',      # Each segment is 2 seconds
-            '-hls_list_size', '3', # Keep 3 segments in the playlist
-            '-hls_flags', 'delete_segments',  # Delete old segments
+            '-hls_time', '0.5',    # Each segment is 0.5 seconds (reduced from 2)
+            '-hls_list_size', '2', # Keep only 2 segments in the playlist (reduced from 3)
+            '-hls_flags', 'delete_segments+append_list+omit_endlist',  # Delete old segments and use low-latency flags
+            '-hls_segment_type', 'fmp4', # Use fragmented MP4 segments for lower latency
             os.path.join(hls_dir, 'stream.m3u8')
         ]
         
