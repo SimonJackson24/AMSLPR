@@ -89,33 +89,73 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Sidebar toggle functionality
-    const sidebarCollapse = document.getElementById('sidebarCollapse');
-    const sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
-    const sidebar = document.getElementById('sidebar');
-    const content = document.getElementById('content');
-    
-    // Function to toggle sidebar
-    function toggleSidebar() {
-        sidebar.classList.toggle('active');
-        content.classList.toggle('active');
+    // Sidebar toggle functionality - using a self-executing function to avoid variable conflicts
+    (function() {
+        // Get sidebar elements - declare as variables, not constants for compatibility
+        var sidebarCollapse = document.getElementById('sidebarCollapse');
+        var sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
+        var sidebar = document.getElementById('sidebar');
+        var content = document.getElementById('content');
         
-        // Save sidebar state to localStorage
-        const isSidebarActive = sidebar.classList.contains('active');
-        localStorage.setItem('sidebarCollapsed', isSidebarActive);
-    }
-    
-    // Add click event to sidebar toggle buttons
-    if (sidebarCollapse) {
-        sidebarCollapse.addEventListener('click', toggleSidebar);
-    }
-    
-    if (sidebarCollapseBtn) {
-        sidebarCollapseBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            toggleSidebar();
-        });
-    }
+        // Only proceed if we have the required elements
+        if (!sidebar || !content) return;
+        
+        // Function to toggle sidebar
+        function toggleSidebar(e) {
+            if (e) e.preventDefault();
+            
+            sidebar.classList.toggle('active');
+            content.classList.toggle('active');
+            
+            // Save sidebar state to localStorage
+            var isSidebarActive = sidebar.classList.contains('active');
+            localStorage.setItem('sidebarCollapsed', isSidebarActive);
+            
+            // On mobile, add/remove overlay when sidebar is shown/hidden
+            if (window.innerWidth <= 768) {
+                if (isSidebarActive) {
+                    addSidebarOverlay();
+                } else {
+                    removeSidebarOverlay();
+                }
+            }
+        }
+        
+        // Add/remove overlay for mobile
+        function addSidebarOverlay() {
+            // Create overlay if it doesn't exist
+            if (!document.getElementById('sidebar-overlay')) {
+                var overlay = document.createElement('div');
+                overlay.id = 'sidebar-overlay';
+                overlay.className = 'sidebar-overlay';
+                overlay.addEventListener('click', toggleSidebar);
+                document.body.appendChild(overlay);
+                
+                // Prevent body scrolling when sidebar is open
+                document.body.style.overflow = 'hidden';
+            }
+        }
+        
+        function removeSidebarOverlay() {
+            var overlay = document.getElementById('sidebar-overlay');
+            if (overlay) {
+                overlay.removeEventListener('click', toggleSidebar);
+                overlay.remove();
+                
+                // Restore body scrolling
+                document.body.style.overflow = '';
+            }
+        }
+        
+        // Add click event to sidebar toggle buttons
+        if (sidebarCollapse) {
+            sidebarCollapse.addEventListener('click', toggleSidebar);
+        }
+        
+        if (sidebarCollapseBtn) {
+            sidebarCollapseBtn.addEventListener('click', toggleSidebar);
+        }
+    })(); // Close the self-executing function
     
     // Load saved sidebar state
     window.addEventListener('load', function() {
