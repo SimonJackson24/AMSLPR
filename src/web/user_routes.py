@@ -45,12 +45,14 @@ def integration_settings_redirect():
     """
     return redirect(url_for('system.integration_settings'))
 
-@user_bp.route('/ocr/settings')
-def ocr_settings_redirect():
-    """
-    Redirect from /system/ocr/settings to /ocr/settings
-    """
-    return redirect(url_for('ocr.settings'))
+# This route is causing a conflict with the OCR blueprint
+# Commenting out as we now have a direct route with the OCR blueprint
+# @user_bp.route('/ocr/settings')
+# def ocr_settings_redirect():
+#     """
+#     Redirect from /system/ocr/settings to /ocr/settings
+#     """
+#     return redirect(url_for('ocr.settings'))
 
 @user_bp.route('/backup')
 def backup_redirect():
