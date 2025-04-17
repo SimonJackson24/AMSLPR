@@ -1702,3 +1702,124 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Error deleting camera from database: {str(e)}")
             return False
+
+    def get_all_cameras(self):
+        """
+        Get all cameras from the database.
+        
+        Returns:
+            list: List of camera dictionaries
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            # Check if cameras table exists
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='cameras'")
+            if not cursor.fetchone():
+                logger.warning("Cameras table does not exist")
+                return []
+            
+            # Check if the extended camera fields exist
+            cursor.execute("PRAGMA table_info(cameras)")
+            columns = [col[1] for col in cursor.fetchall()]
+            
+            # If the extended fields don't exist, alter the table to add them
+            required_fields = ['port', 'username', 'password', 'stream_uri', 'manufacturer', 'model', 'name', 'location']
+            missing_fields = [field for field in required_fields if field not in columns]
+            
+            # Add missing fields to the table
+            for field in missing_fields:
+                try:
+                    cursor.execute(f"ALTER TABLE cameras ADD COLUMN {field} TEXT")
+                    conn.commit()
+                    logger.info(f"Added missing field '{field}' to cameras table")
+                except Exception as e:
+                    logger.warning(f"Error adding field '{field}' to cameras table: {str(e)}")
+            
+            # Get all cameras
+            cursor.execute('SELECT * FROM cameras')
+            cameras = cursor.fetchall()
+            conn.close()
+            
+            # Convert to list of dictionaries
+            return [dict(camera) for camera in cameras]
+            
+        except Exception as e:
+            logger.error(f"Error getting cameras from database: {str(e)}")
+            return []
+    
+    def save_camera(self, camera_info):
+        """
+        Save a camera to the database. If the camera already exists, it will be updated.
+        
+        Args:
+            camera_info (dict): Camera information dictionary
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Extract camera info
+            camera_id = camera_info.get('ip')
+            if not camera_id:
+                logger.error("Cannot save camera without IP address")
+                return False
+            
+            # Check if camera exists
+            cursor.execute('SELECT id FROM cameras WHERE ip = ?', (camera_id,))
+            camera_exists = cursor.fetchone() is not None
+            
+            if camera_exists:
+                # Update existing camera
+                # Build the query dynamically based on available fields
+                fields = []
+                values = []
+                for key, value in camera_info.items():
+                    if key != 'ip':
+                        fields.append(f"{key} = ?")
+                        values.append(value)
+                
+                if not fields:
+                    logger.warning(f"No fields to update for camera {camera_id}")
+                    conn.close()
+                    return False
+                
+                # Add IP for WHERE clause
+                values.append(camera_id)
+                
+                # Build and execute the query
+                query = f"UPDATE cameras SET {', '.join(fields)} WHERE ip = ?";
+                cursor.execute(query, values)
+                
+                logger.info(f"Updated camera {camera_id} in database")
+            else:
+                # Insert new camera
+                # Build the query dynamically based on available fields
+                fields = ['ip']
+                placeholders = ['?']
+                values = [camera_id]
+                
+                for key, value in camera_info.items():
+                    if key != 'ip':
+                        fields.append(key)
+                        placeholders.append('?')
+                        values.append(value)
+                
+                # Build and execute the query
+                query = f"INSERT INTO cameras ({', '.join(fields)}) VALUES ({', '.join(placeholders)})";
+                cursor.execute(query, values)
+                
+                logger.info(f"Added camera {camera_id} to database")
+            
+            conn.commit()
+            conn.close()
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error saving camera to database: {str(e)}")
+            return False

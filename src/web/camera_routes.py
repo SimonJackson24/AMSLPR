@@ -147,67 +147,80 @@ def reload_cameras_from_database():
     """Reload cameras from the database."""
     global onvif_camera_manager, db_manager
     
-    if db_manager and onvif_camera_manager and hasattr(onvif_camera_manager, 'cameras'):
-        try:
-            logger.info("Reloading cameras from database")
-            cameras = db_manager.get_all_cameras()
-            logger.info(f"Found {len(cameras)} cameras in database")
-            
-            # Store existing cameras temporarily instead of clearing them
-            # This ensures we don't lose cameras if there's an issue with the database
-            existing_cameras = dict(onvif_camera_manager.cameras)
-            
-            # Add each camera from the database
-            for camera in cameras:
-                try:
-                    logger.info(f"Adding camera from database: {camera['ip']}")
-                    camera_info = {
-                        'ip': camera['ip'],
-                        'port': camera['port'],
-                        'username': camera['username'],
-                        'password': camera['password']
-                    }
-                    
-                    # Check if this is an RTSP camera (stored with rtsp- prefix)
-                    if camera['ip'].startswith('rtsp-'):
-                        logger.info(f"Found RTSP camera: {camera['ip']}")
-                        camera_id = camera['ip']
-                        rtsp_url = camera['stream_uri']
-                        
-                        # Add directly to cameras dict
-                        onvif_camera_manager.cameras[camera_id] = {
-                            'camera': None,  # No ONVIF camera object
-                            'info': {
-                                'id': camera_id,
-                                'name': camera['name'],
-                                'location': camera['location'],
-                                'status': 'connected',
-                                'stream_uri': rtsp_url,
-                                'rtsp_url': rtsp_url,
-                                'manufacturer': camera['manufacturer'],
-                                'model': camera['model']
-                            },
-                            'stream': None
-                        }
-                        logger.info(f"Added RTSP camera to manager: {camera_id}")
-                    else:
-                        # Regular ONVIF camera
-                        if 'stream_uri' in camera and camera['stream_uri']:
-                            camera_info['rtsp_url'] = camera['stream_uri']
-                        
-                        # Only add if not already in the manager
-                        if camera['ip'] not in onvif_camera_manager.cameras:
-                            logger.info(f"Adding ONVIF camera to manager: {camera_info}")
-                            onvif_camera_manager.add_camera(camera_info)
-                except Exception as e:
-                    logger.error(f"Failed to add camera {camera['ip']}: {str(e)}")
-            
-            logger.info("Successfully reloaded cameras from database")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to reload cameras from database: {str(e)}")
+    if not (db_manager and onvif_camera_manager and hasattr(onvif_camera_manager, 'cameras')):
+        return False
+    
+    try:
+        logger.info("Reloading cameras from database")
+        
+        # Check if get_all_cameras method exists
+        if not hasattr(db_manager, 'get_all_cameras'):
+            logger.warning("Database manager does not have get_all_cameras method")
             return False
-    return False
+            
+        cameras = db_manager.get_all_cameras()
+        logger.info(f"Found {len(cameras)} cameras in database")
+        
+        # Store existing cameras temporarily instead of clearing them
+        # This ensures we don't lose cameras if there's an issue with the database
+        existing_cameras = dict(onvif_camera_manager.cameras)
+        
+        # Add each camera from the database
+        for camera in cameras:
+            try:
+                logger.info(f"Adding camera from database: {camera['ip']}")
+                camera_info = {
+                    'ip': camera['ip'],
+                    'port': camera.get('port', 80),
+                    'username': camera.get('username', ''),
+                    'password': camera.get('password', '')
+                }
+                
+                # Add additional fields if they exist
+                for field in ['stream_uri', 'manufacturer', 'model', 'name', 'location']:
+                    if field in camera and camera[field]:
+                        camera_info[field] = camera[field]
+                
+                # Check if this is an RTSP camera (stored with rtsp- prefix)
+                if camera['ip'].startswith('rtsp-'):
+                    logger.info(f"Found RTSP camera: {camera['ip']}")
+                    camera_id = camera['ip']
+                    rtsp_url = camera.get('stream_uri', '')
+                    
+                    # Add directly to cameras dict
+                    onvif_camera_manager.cameras[camera_id] = {
+                        'camera': None,  # No ONVIF camera object
+                        'info': {
+                            'id': camera_id,
+                            'name': camera.get('name', 'RTSP Camera'),
+                            'location': camera.get('location', 'Unknown'),
+                            'status': 'connected',
+                            'stream_uri': rtsp_url,
+                            'rtsp_url': rtsp_url,
+                            'manufacturer': camera.get('manufacturer', 'Unknown'),
+                            'model': camera.get('model', 'RTSP Camera')
+                        },
+                        'stream': None
+                    }
+                    logger.info(f"Added RTSP camera to manager: {camera_id}")
+                else:
+                    # Regular ONVIF camera
+                    if 'stream_uri' in camera and camera['stream_uri']:
+                        camera_info['rtsp_url'] = camera['stream_uri']
+                    
+                    # Only add if not already in the manager
+                    if camera['ip'] not in onvif_camera_manager.cameras:
+                        logger.info(f"Adding ONVIF camera to manager: {camera_info}")
+                        onvif_camera_manager.add_camera(camera_info)
+            except Exception as e:
+                logger.error(f"Failed to add camera {camera['ip']}: {str(e)}")
+                # Continue with next camera
+        
+        logger.info("Successfully reloaded cameras from database")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to reload cameras from database: {str(e)}")
+        return False
 
 @camera_bp.route('/cameras')
 @login_required(user_manager)
@@ -476,9 +489,11 @@ def add_camera():
             # Add to database
             try:
                 logger.info(f"Adding camera to database with data: {camera_data}")
-                if _db_manager:
-                    _db_manager.add_camera(camera_data)
+                if _db_manager and hasattr(_db_manager, 'save_camera'):
+                    _db_manager.save_camera(camera_data)
                     logger.info("Camera added to database successfully")
+                else:
+                    logger.warning("Database manager not available or save_camera method not found")
             except Exception as e:
                 logger.error(f"Failed to add camera to database: {str(e)}")
                 # Continue anyway - the camera is in memory
@@ -587,7 +602,11 @@ def add_camera():
             
             # Add to database
             try:
-                db_manager.add_camera(camera_data)
+                if hasattr(db_manager, 'save_camera'):
+                    db_manager.save_camera(camera_data)
+                    logger.info("Camera added to database successfully")
+                else:
+                    logger.warning("Database manager does not have save_camera method")
             except Exception as e:
                 logger.error(f"Failed to add camera to database: {str(e)}")
                 # Continue anyway - the camera is in memory
