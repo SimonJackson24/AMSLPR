@@ -334,7 +334,7 @@ def cameras():
                                 camera.update({
                                     'name': camera_info.get('name', 'Unknown'),
                                     'location': camera_info.get('location', 'Unknown'),
-                                    'status': camera_info.get('status', 'unknown'),
+                                    'status': camera_info.get('status', 'online'),
                                     'manufacturer': camera_info.get('manufacturer', 'Unknown'),
                                     'model': camera_info.get('model', 'Unknown')
                                 })
@@ -343,7 +343,7 @@ def cameras():
                                 camera.update({
                                     'name': getattr(camera_info, 'name', 'Unknown'),
                                     'location': getattr(camera_info, 'location', 'Unknown'),
-                                    'status': getattr(camera_info, 'status', 'unknown'),
+                                    'status': getattr(camera_info, 'status', 'online'),
                                     'manufacturer': getattr(camera_info, 'manufacturer', 'Unknown'),
                                     'model': getattr(camera_info, 'model', 'Unknown')
                                 })
@@ -1352,7 +1352,7 @@ def camera_view(camera_id):
             'id': camera_id,
             'name': camera_info.get('name', 'Unknown Camera') if isinstance(camera_info, dict) else getattr(camera_info, 'name', 'Unknown Camera'),
             'location': camera_info.get('location', 'Unknown') if isinstance(camera_info, dict) else getattr(camera_info, 'location', 'Unknown'),
-            'status': camera_info.get('status', 'unknown') if isinstance(camera_info, dict) else getattr(camera_info, 'status', 'unknown'),
+            'status': camera_info.get('status', 'online') if isinstance(camera_info, dict) else getattr(camera_info, 'status', 'online'),
             'thumbnail': 'default_camera.jpg',  # Add required thumbnail
             'manufacturer': camera_info.get('manufacturer', 'Unknown') if isinstance(camera_info, dict) else getattr(camera_info, 'manufacturer', 'Unknown'),
             'model': camera_info.get('model', 'Unknown') if isinstance(camera_info, dict) else getattr(camera_info, 'model', 'Unknown'),
@@ -1686,7 +1686,7 @@ def cameras():
                                 camera.update({
                                     'name': camera_info.get('name', 'Unknown'),
                                     'location': camera_info.get('location', 'Unknown'),
-                                    'status': camera_info.get('status', 'unknown'),
+                                    'status': camera_info.get('status', 'online'),
                                     'manufacturer': camera_info.get('manufacturer', 'Unknown'),
                                     'model': camera_info.get('model', 'Unknown')
                                 })
@@ -1695,7 +1695,7 @@ def cameras():
                                 camera.update({
                                     'name': getattr(camera_info, 'name', 'Unknown'),
                                     'location': getattr(camera_info, 'location', 'Unknown'),
-                                    'status': getattr(camera_info, 'status', 'unknown'),
+                                    'status': getattr(camera_info, 'status', 'online'),
                                     'manufacturer': getattr(camera_info, 'manufacturer', 'Unknown'),
                                     'model': getattr(camera_info, 'model', 'Unknown')
                                 })
