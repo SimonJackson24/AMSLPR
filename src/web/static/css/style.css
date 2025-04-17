@@ -517,6 +517,8 @@ main .container-fluid {
 
 #sidebar.collapsed {
     margin-left: -250px;
+    transform: translateX(-100%);
+    visibility: hidden;
 }
 
 #content {

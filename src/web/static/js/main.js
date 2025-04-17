@@ -109,13 +109,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Function to toggle sidebar visibility
         function toggleSidebar() {
             if (sidebar) {
-                if (sidebar.classList.contains('active')) {
-                    sidebar.classList.remove('active');
-                    sidebar.classList.add('collapsed');
-                } else {
-                    sidebar.classList.add('active');
-                    sidebar.classList.remove('collapsed');
-                }
+                sidebar.classList.toggle('active');
+                sidebar.classList.toggle('collapsed');
             }
             
             if (content) {
