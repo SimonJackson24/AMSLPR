@@ -147,7 +147,7 @@ main .container-fluid {
     width: var(--sidebar-width);
     position: fixed;
     top: 0;
-    left: -250px; /* Hidden by default */
+    left: 0; /* Visible by default */
     height: 100vh;
     z-index: 999;
     background: var(--neutral-800);
@@ -157,12 +157,14 @@ main .container-fluid {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    visibility: hidden; /* Hidden by default */
 }
 
-#sidebar.active {
-    left: 0 !important; /* Show when active */
-    visibility: visible !important;
+/* Only hide when active class is NOT present on desktop */
+@media (min-width: 769px) {
+    #sidebar:not(.active) {
+        left: -250px;
+        visibility: hidden;
+    }
 }
 
 /* Mobile-specific adjustments */
@@ -173,10 +175,11 @@ main .container-fluid {
     }
 }
 
-#sidebar.active .sidebar-header span,
-#sidebar.active .components li a span,
-#sidebar.active .sidebar-footer span {
-    display: none;
+/* Keep spans visible in all states */
+#sidebar .sidebar-header span,
+#sidebar .components li a span,
+#sidebar .sidebar-footer span {
+    display: inline-block;
 }
 
 #sidebar .sidebar-header {

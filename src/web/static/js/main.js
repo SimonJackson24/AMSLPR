@@ -206,6 +206,11 @@ document.addEventListener('DOMContentLoaded', function() {
     var sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
     var overlay = document.getElementById('sidebar-overlay');
     
+    // Ensure sidebar is active by default on desktop
+    if (sidebar && window.innerWidth > 768) {
+        sidebar.classList.add('active');
+    }
+    
     function toggleSidebar() {
         if (sidebar) {
             sidebar.classList.toggle('active');
