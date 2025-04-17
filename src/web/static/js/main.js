@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Function to toggle sidebar visibility
         function toggleSidebar() {
             if (sidebar) {
-                sidebar.classList.toggle('active');
+                // Only toggle 'collapsed' class to avoid conflicts
                 sidebar.classList.toggle('collapsed');
             }
             
