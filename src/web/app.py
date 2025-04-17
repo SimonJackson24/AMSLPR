@@ -220,6 +220,15 @@ def create_app(config=None):
             logger.error(f"Failed to register camera/OCR routes: {e}")
             logger.error(traceback.format_exc())
     
+    # Register direct fix blueprint as a final fallback for OCR settings
+    try:
+        from src.web.direct_fix import register_direct_fix
+        app = register_direct_fix(app)
+        logger.info("Direct OCR settings fix registered successfully")
+    except Exception as e:
+        logger.error(f"Failed to register direct OCR settings fix: {e}")
+        logger.error(traceback.format_exc())
+    
     if OTHER_ROUTES_AVAILABLE:
         # Initialize any additional controllers or integrations needed
         barrier_controller = None
