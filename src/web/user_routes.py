@@ -50,7 +50,7 @@ def ocr_settings_redirect():
     """
     Redirect from /system/ocr/settings to /ocr/settings
     """
-    return redirect(url_for('ocr.ocr_settings'))
+    return redirect(url_for('ocr.settings'))
 
 @user_bp.route('/backup')
 def backup_redirect():
