@@ -7,33 +7,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Discover cameras
     document.getElementById('discoverCameras').addEventListener('click', async function() {
         try {
-            // Show loading spinner with stages
+            // Show loading spinner
             const resultsContainer = document.getElementById('discoveryResults');
             resultsContainer.innerHTML = `
                 <div class="text-center py-4">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
-                    <p class="mt-3" id="discovery-status">Searching for cameras on your network...</p>
-                    <div class="progress mt-3" style="height: 20px;">
-                        <div id="discovery-progress" class="progress-bar" role="progressbar" style="width: 5%;" aria-valuenow="5" aria-valuemin="0" aria-valuemax="100">5%</div>
-                    </div>
+                    <p class="mt-3">Searching for cameras on your network...</p>
                 </div>
             `;
 
-            // Update progress stages
-            const updateStatus = (status, progress) => {
-                document.getElementById('discovery-status').textContent = status;
-                const progressBar = document.getElementById('discovery-progress');
-                progressBar.style.width = `${progress}%`;
-                progressBar.setAttribute('aria-valuenow', progress);
-                progressBar.textContent = `${progress}%`;
-            };
-
-            // Use optimized camera discovery
-            updateStatus('Starting camera discovery...', 10);
-            
-            // Make API call with faster timeout
+            // Make API call with improved error handling
             const response = await fetch('/cameras/discover', {
                 method: 'POST',
                 headers: {
@@ -46,9 +31,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error('Network error when discovering cameras');
             });
             
-            // Update progress
-            updateStatus('Processing discovery results...', 80);
-            
             // Parse the response carefully to avoid JSON errors
             let data;
             try {
@@ -57,8 +39,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('JSON parse error:', parseError);
                 throw new Error('Failed to parse camera discovery results');
             }
-            
-            updateStatus('Finishing camera discovery...', 95);
             if (data.success) {
                 // Clear spinner
                 resultsContainer.innerHTML = '';
