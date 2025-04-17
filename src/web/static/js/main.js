@@ -213,7 +213,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function toggleSidebar() {
         if (sidebar) {
+            // Toggle the active class
             sidebar.classList.toggle('active');
+            
+            // Force browser reflow to recognize layout changes
+            if (content) {
+                content.style.transition = 'none';
+                content.offsetHeight; // Force reflow
+                content.style.transition = '';
+            }
             
             // For mobile, handle overlay
             if (window.innerWidth <= 768) {
