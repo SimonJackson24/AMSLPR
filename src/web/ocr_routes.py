@@ -137,8 +137,8 @@ def reload_ocr_config():
 _detector = None
 _app = None
 
-def setup_routes(app, detector):
-    """Set up OCR routes with the detector."""
+def register_routes(app, detector):
+    """Register OCR routes with the Flask application."""
     global _detector, _app
     _detector = detector
     _app = app
@@ -151,6 +151,13 @@ def setup_routes(app, detector):
         app.logger.warning("OCR routes initialized without a detector. Some functionality will be limited.")
         
     logger.info("OCR routes registered successfully")
+    
+    return app  # Return the app instance for chaining
+
+# Keep setup_routes for backward compatibility
+def setup_routes(app, detector):
+    """Set up OCR routes with the detector (alias for register_routes)."""
+    return register_routes(app, detector)
 
 @ocr_bp.route('/settings', methods=['GET', 'POST'])
 def ocr_settings():
