@@ -142,7 +142,7 @@ main .container-fluid {
 }
 
 /* Sidebar */
-#sidebar {
+#sidebar, nav.sidebar {
     width: var(--sidebar-width);
     position: fixed;
     top: 0;
@@ -156,6 +156,12 @@ main .container-fluid {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+}
+
+/* Important rule for sidebar when not active */
+#sidebar:not(.active), nav.sidebar:not(.active) {
+    left: -250px;
+    visibility: hidden;
 }
 
 #sidebar.collapsed {
