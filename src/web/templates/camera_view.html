@@ -2,11 +2,6 @@
 
 {% block title %}Camera View - {{ camera.name }} - AMSLPR{% endblock %}
 
-{% block head %}
-<!-- HLS.js for streaming -->
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-{% endblock %}
-
 {% block content %}
 <div class="row mb-4">
     <div class="col">
@@ -210,6 +205,8 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- HLS.js for streaming -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script>
     // Global variable for the video player
     var player;
