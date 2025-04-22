@@ -94,7 +94,8 @@ def install_tensorflow_in_venv():
     log.info("\nInstalling TensorFlow for ARM64 architecture...")
     
     # Install the tensorflow-aarch64 package specifically designed for Raspberry Pi
-    if not run_command(f"{venv_pip} install tensorflow-aarch64==2.9.1"):
+    # Using a more recent version that's compatible with Raspberry Pi
+    if not run_command(f"{venv_pip} install tensorflow-aarch64==2.15.1"):
         log.error("Failed to install tensorflow-aarch64")
         return False
     
