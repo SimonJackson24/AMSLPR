@@ -273,11 +273,44 @@ def ocr_settings():
             'plate_format': '[A-Z0-9]{3,8}'
         }
     
-    # Check for Hailo TPU in configuration
-    hailo_available = True if config.get('use_hailo_tpu', False) else False
-    logger.info(f"Hailo TPU enabled in configuration: {hailo_available}")
+    # Check for Hailo TPU availability using the approach from enable_hailo_tpu.py
+    # This approach doesn't require TensorFlow and matches what enable_hailo_tpu.py does
+    hailo_available = False
+    try:
+        import hailo_platform
+        
+        try:
+            # Try to initialize Hailo device - handle different SDK versions
+            try:
+                # Newer SDK version
+                from hailo_platform import HailoDevice
+                device = HailoDevice()
+            except (ImportError, AttributeError):
+                try:
+                    # Older SDK version with pyhailort
+                    from hailo_platform import pyhailort
+                    device = pyhailort.Device()
+                except (ImportError, AttributeError):
+                    # Even older SDK version - direct import
+                    import hailort
+                    device = hailort.Device()
+                    
+            logger.info(f"Hailo TPU is available and working. Device ID: {device.device_id if hasattr(device, 'device_id') else 'Unknown'}")
+            hailo_available = True
+        except Exception as e:
+            logger.warning(f"Hailo TPU is installed but not working: {e}")
+    except ImportError as e:
+        logger.warning(f"Hailo modules not available: {e}")
     
-    # Trust the configuration setting since enable_hailo_tpu.py already verified the hardware
+    # Override detection with environment variable if present
+    if os.environ.get('HAILO_ENABLED', '').lower() in ('true', '1', 'yes'):
+        logger.info("HAILO_ENABLED environment variable is set, forcing UI to enable Hailo options")
+        hailo_available = True
+    
+    if hailo_available:
+        logger.info("=== Hailo TPU is AVAILABLE and will be used for hardware acceleration ===")
+    else:
+        logger.warning("=== Hailo TPU is NOT AVAILABLE, deep learning options will be disabled ===")
     
     return render_template('ocr_settings.html', config=config, mock=MOCK_DETECTOR, hailo_available=hailo_available)
 
