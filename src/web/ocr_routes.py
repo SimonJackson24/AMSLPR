@@ -273,66 +273,11 @@ def ocr_settings():
             'plate_format': '[A-Z0-9]{3,8}'
         }
     
-    # Check for actual Hailo TPU availability by testing all required components
-    hailo_available = False
+    # Check for Hailo TPU in configuration
+    hailo_available = True if config.get('use_hailo_tpu', False) else False
+    logger.info(f"Hailo TPU enabled in configuration: {hailo_available}")
     
-    # Step 1: Check for TensorFlow
-    tensorflow_available = False
-    try:
-        import tensorflow
-        tensorflow_available = True
-        logger.info(f"✓ TensorFlow is available (version {tensorflow.__version__})")
-    except ImportError as e:
-        logger.warning(f"✗ TensorFlow is not available: {e}")
-    
-    # Step 2: Check for Hailo modules
-    hailo_modules_available = False
-    if tensorflow_available:
-        try:
-            import hailo_platform
-            import hailo_model_zoo
-            hailo_modules_available = True
-            logger.info("✓ Hailo SDK modules are available")
-        except ImportError as e:
-            logger.warning(f"✗ Some Hailo modules are not available: {e}")
-    
-    # Step 3: Check for Hailo device on Linux systems
-    device_check_passed = False
-    if hailo_modules_available:
-        if os.name == 'posix':
-            # On Linux, check for physical device
-            if os.path.exists('/dev/hailo0'):
-                device_check_passed = True
-                logger.info("✓ Hailo device found at /dev/hailo0")
-            else:
-                logger.warning("✗ Hailo device not found at /dev/hailo0")
-        else:
-            # On Windows, we can't easily check for the device, so just check SDK
-            device_check_passed = True
-            logger.info("✓ Running on Windows, skipping physical device check")
-    
-    # Step 4: Check for model files
-    models_available = False
-    models_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'models')
-    if os.path.exists(models_dir):
-        hef_models = [f for f in os.listdir(models_dir) if f.endswith('.hef')]
-        if hef_models:
-            models_available = True
-            logger.info(f"✓ Found {len(hef_models)} Hailo model files: {', '.join(hef_models)}")
-        else:
-            logger.warning("✗ No Hailo model files found in models directory")
-    else:
-        logger.warning("✗ Models directory not found")
-    
-    # Make final decision on Hailo availability
-    hailo_available = tensorflow_available and hailo_modules_available and device_check_passed and models_available
-    
-    # Print summary
-    if hailo_available:
-        logger.info("=== Hailo TPU is AVAILABLE and will be used for hardware acceleration ===")
-    else:
-        logger.warning("=== Hailo TPU is NOT AVAILABLE, deep learning options will be disabled ===")
-        logger.warning("    Run python scripts/install_tpu_dependencies.py to fix missing dependencies")
+    # Trust the configuration setting since enable_hailo_tpu.py already verified the hardware
     
     return render_template('ocr_settings.html', config=config, mock=MOCK_DETECTOR, hailo_available=hailo_available)
 
