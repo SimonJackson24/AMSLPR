@@ -1788,20 +1788,48 @@ class DatabaseManager:
             list: List of camera dictionaries
         """
         try:
+            logger.error("======= CAMERA DEBUG ======= get_all_cameras method called")
+            logger.error(f"======= CAMERA DEBUG ======= Database path: {self.db_path}")
+            
+            # Try to open the database file
+            if not os.path.exists(self.db_path):
+                logger.error("======= CAMERA DEBUG ======= Database file does not exist!")
+                return []
+                
+            logger.error("======= CAMERA DEBUG ======= Database file exists")
+            
             conn = sqlite3.connect(self.db_path)
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             
+            # Check if cameras table exists
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='cameras'")
+            if not cursor.fetchone():
+                logger.error("======= CAMERA DEBUG ======= 'cameras' table does not exist in database!")
+                conn.close()
+                return []
+                
+            logger.error("======= CAMERA DEBUG ======= 'cameras' table exists in database")
+            
             # Query all cameras
             cursor.execute('SELECT * FROM cameras')
             cameras = cursor.fetchall()
+            camera_count = len(cameras)
+            logger.error(f"======= CAMERA DEBUG ======= Found {camera_count} cameras in database")
+            
             conn.close()
             
             # Convert to list of dictionaries
-            return [dict(camera) for camera in cameras]
+            camera_dicts = [dict(camera) for camera in cameras]
+            if camera_dicts:
+                logger.error(f"======= CAMERA DEBUG ======= First camera: {camera_dicts[0]}")
+            
+            return camera_dicts
             
         except Exception as e:
-            logger.error(f"Error getting cameras from database: {str(e)}")
+            logger.error(f"======= CAMERA DEBUG ======= Error getting cameras from database: {str(e)}")
+            import traceback
+            logger.error(f"======= CAMERA DEBUG ======= {traceback.format_exc()}")
             return []
     
     def save_camera(self, camera_info):
