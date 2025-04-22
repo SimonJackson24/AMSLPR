@@ -24,7 +24,7 @@
                                 <option value="hybrid" {% if config.ocr_method == 'hybrid' %}selected{% endif %} {% if not hailo_available %}disabled{% endif %}>Hybrid (Tesseract + Deep Learning)</option>
                             </select>
                             {% if not hailo_available %}
-                            <small class="form-text text-warning">Check Hailo TPU configuration in settings.</small>
+                            <small class="form-text text-warning">Hailo TPU not detected. Deep learning options are disabled.</small>
                             {% endif %}
                         </div>
                         
@@ -33,7 +33,9 @@
                                 <input type="checkbox" class="custom-control-input" id="use_hailo_tpu" name="use_hailo_tpu" {% if config.use_hailo_tpu %}checked{% endif %} {% if not hailo_available %}disabled{% endif %}>
                                 <label class="custom-control-label" for="use_hailo_tpu">Use Hailo TPU for hardware acceleration</label>
                             </div>
-
+                            {% if not hailo_available %}
+                            <small class="form-text text-warning">Hailo TPU not detected.</small>
+                            {% endif %}
                         </div>
                         
                         <div class="form-group">
