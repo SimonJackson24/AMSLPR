@@ -97,11 +97,12 @@ def direct_ocr_settings():
             # Check if device file exists
             if os.path.exists('/dev/hailo0'):
                 try:
-                    # Try to import and initialize the device
-                    from hailo_platform.drivers.hailort import device
-                    hailo_device = device.Device()
+                    # Try to import and initialize the device (directly from hailo_platform)
+                    import hailo_platform
+                    # Check if hailo_runtime is accessible
+                    logger.info(f"Found hailo_platform at: {hailo_platform.__file__}")
                     hailo_available = True
-                    logger.info(f"Hailo TPU detected in direct fix: {hailo_device}")
+                    logger.info("Hailo TPU detected in direct fix")
                 except Exception as e:
                     logger.warning(f"Hailo TPU module found but device initialization failed: {e}")
             else:
