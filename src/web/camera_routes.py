@@ -254,6 +254,8 @@ def reload_cameras_from_database():
         logger.error(f"Failed to reload cameras from database: {str(e)}")
         return False
 
+# Original camera route below - restored from commented state
+# Original camera route below - restored from commented state
 @camera_bp.route('/cameras')
 @login_required(user_manager)
 def cameras():
@@ -1624,11 +1626,13 @@ def register_camera_routes(app, detector, db_manager):
         # Re-raise to let the app.py catch it
         raise
 
-@camera_bp.route('/cameras')
-@login_required(user_manager)
-def cameras():
-    """Camera management page."""
-    global onvif_camera_manager, db_manager
+# DUPLICATE ROUTE COMMENTED OUT - This route is already defined above
+# Removing this duplicate to fix the error: "View function mapping is overwriting an existing endpoint function"
+# DUPLICATE REMOVED: # @camera_bp.route('/cameras')
+# DUPLICATE REMOVED: # @login_required(user_manager)
+# DUPLICATE REMOVED: # def cameras():
+#     """Camera management page."""
+#     global onvif_camera_manager, db_manager
     
     # Capture diagnostic information
     diagnostics = {
