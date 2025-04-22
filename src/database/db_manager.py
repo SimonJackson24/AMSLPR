@@ -97,6 +97,28 @@ class DatabaseManager:
                 )
             ''')
             
+            # Create cameras table to persist camera settings
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS cameras (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ip TEXT UNIQUE NOT NULL,
+                    name TEXT,
+                    username TEXT,
+                    password TEXT,
+                    port INTEGER DEFAULT 80,
+                    type TEXT DEFAULT 'onvif',
+                    rtsp_url TEXT,
+                    http_url TEXT,
+                    snapshot_url TEXT,
+                    location TEXT,
+                    enabled BOOLEAN DEFAULT 1,
+                    use_for_lpr BOOLEAN DEFAULT 1,
+                    direction TEXT DEFAULT 'entry',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS payment_transactions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
