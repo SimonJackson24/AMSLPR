@@ -127,11 +127,23 @@ def init_camera_manager(config):
             # Load cameras from database using the reload function
             if db_manager:
                 try:
-                    logger.info("Loading cameras from database using reload_cameras_from_database()")
+                    logger.info("CAMERA INIT: Loading cameras from database with reload_cameras_from_database()")
+                    # Check if the method exists in db_manager
+                    if hasattr(db_manager, 'get_all_cameras'):
+                        logger.info(f"CAMERA INIT: db_manager.get_all_cameras method exists: {db_manager.get_all_cameras}")
+                    else:
+                        logger.error("CAMERA INIT: db_manager.get_all_cameras method MISSING")
+                        
+                    # Log database path
+                    if hasattr(db_manager, 'db_path'):
+                        logger.info(f"CAMERA INIT: Database path: {db_manager.db_path}")
+                        
                     # Call the dedicated function to load cameras consistently
                     reload_cameras_from_database()
                 except Exception as e:
                     logger.error(f"Failed to load cameras from database: {str(e)}")
+                    import traceback
+                    logger.error(f"Traceback: {traceback.format_exc()}")
         except ImportError as e:
             logger.error(f"Failed to import ONVIFCameraManager: {str(e)}")
             from src.recognition.mock_camera import MockCameraManager
@@ -147,19 +159,36 @@ def reload_cameras_from_database():
     """Reload cameras from the database."""
     global onvif_camera_manager, db_manager
     
-    if not (db_manager and onvif_camera_manager and hasattr(onvif_camera_manager, 'cameras')):
+    logger.info("DEBUG: reload_cameras_from_database() called")
+    
+    if not db_manager:
+        logger.error("DEBUG: db_manager is None - cannot load cameras")
+        return False
+        
+    if not onvif_camera_manager:
+        logger.error("DEBUG: onvif_camera_manager is None - cannot load cameras")
+        return False
+        
+    if not hasattr(onvif_camera_manager, 'cameras'):
+        logger.error("DEBUG: onvif_camera_manager has no cameras attribute")
         return False
     
     try:
-        logger.info("Reloading cameras from database")
+        logger.info("DEBUG: Actually reloading cameras from database now")
         
         # Check if get_all_cameras method exists
         if not hasattr(db_manager, 'get_all_cameras'):
-            logger.warning("Database manager does not have get_all_cameras method")
+            logger.error("DEBUG: Database manager does not have get_all_cameras method")
             return False
             
+        # Call the method and check return value
         cameras = db_manager.get_all_cameras()
-        logger.info(f"Found {len(cameras)} cameras in database")
+        
+        if cameras is None:
+            logger.error("DEBUG: db_manager.get_all_cameras() returned None")
+            return False
+            
+        logger.info(f"DEBUG: Found {len(cameras)} cameras in database")
         
         # Store existing cameras temporarily instead of clearing them
         # This ensures we don't lose cameras if there's an issue with the database
