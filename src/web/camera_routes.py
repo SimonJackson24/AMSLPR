@@ -101,6 +101,9 @@ def init_camera_manager(config):
     """Initialize the camera manager with the given configuration."""
     global onvif_camera_manager, db_manager, _db_manager
     
+    # Add an ERROR level message that will definitely show up in logs
+    logger.error("[CAMERA_PERSISTENCE] CRITICAL TEST MESSAGE - CAMERA INITIALIZATION ATTEMPT")
+    
     # Add detailed logging
     logger.info("Initializing camera manager")
     
