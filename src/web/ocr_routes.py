@@ -276,29 +276,45 @@ def ocr_settings():
     # Check for Hailo TPU availability
     hailo_available = False
     try:
-        # First check for hailort module
+        # Check for tensorflow first - needed for deep learning methods
         import importlib.util
-        if importlib.util.find_spec("hailort"):
-            # Check if device file exists
-            if os.path.exists('/dev/hailo0'):
-                try:
-                    # Try to import and initialize the device (but catch any errors)
-                    import hailort
-                    device = hailort.Device()
-                    hailo_available = True
-                    logger.info(f"Hailo TPU detected: {device.device_id}")
-                except Exception as e:
-                    logger.warning(f"Hailo TPU module found but device initialization failed: {e}")
-                    # Even if we can't initialize, let's enable the UI since we've installed the modules
+        if importlib.util.find_spec("tensorflow"):
+            logger.info("TensorFlow module found")
+            
+            # Now check for Hailo-specific modules
+            hailo_modules_found = True
+            for module_name in ["hailort", "hailo_platform", "hailo_model_zoo"]:
+                if not importlib.util.find_spec(module_name):
+                    logger.warning(f"{module_name} module not found")
+                    hailo_modules_found = False
+                    
+            if hailo_modules_found:
+                logger.info("All required Hailo modules found")
+                
+                # On Linux, check for device file
+                if os.name == 'posix' and os.path.exists('/dev/hailo0'):
+                    try:
+                        # Try to import and initialize the device (but catch any errors)
+                        import hailort
+                        device = hailort.Device()
+                        hailo_available = True
+                        logger.info(f"Hailo TPU detected and initialized: {device.device_id}")
+                    except Exception as e:
+                        logger.warning(f"Hailo TPU module found but device initialization failed: {e}")
+                        # Even if we can't initialize, let's enable the UI since we've installed the modules
+                        hailo_available = True
+                else:
+                    # On Windows or if no device file, still allow UI options if modules are installed
+                    logger.info("Hailo modules found, enabling TPU options in UI")
                     hailo_available = True
             else:
-                logger.warning("Hailo device file (/dev/hailo0) not found")
-                # We still have the module, so let's allow usage
-                hailo_available = True
+                logger.warning("Not all required Hailo modules found")
         else:
-            logger.warning("hailort module not found")
+            logger.warning("TensorFlow module not found, required for deep learning methods")
     except Exception as e:
         logger.error(f"Error checking for Hailo TPU: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
     
     # If we're in production mode, force enable hailo_available for UI purposes
     if os.environ.get('HAILO_ENABLED') == 'true':
