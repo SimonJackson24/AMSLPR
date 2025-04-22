@@ -103,7 +103,8 @@ def install_tensorflow_in_venv():
     
     # Verify installation
     log.info("\nVerifying TensorFlow installation...")
-    verify_cmd = f"{venv_python} -c \"import tensorflow as tf; print('TensorFlow version:', tf.__version__); print('Num GPUs Available: ', len(tf.config.experimental.list_physical_devices(\\'GPU\\')))\""
+    # Simple verification command with proper escaping
+    verify_cmd = f"{venv_python} -c \"import tensorflow as tf; print('TensorFlow version:', tf.__version__); print('Num GPUs:', len(tf.config.experimental.list_physical_devices(\\\"GPU\\\")))\""
     if not run_command(verify_cmd):
         log.warning("TensorFlow verification failed. It may not be installed correctly.")
         return False
