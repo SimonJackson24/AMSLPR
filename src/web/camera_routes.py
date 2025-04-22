@@ -1562,7 +1562,10 @@ def register_camera_routes(app, detector, db_manager):
     _app = app
     
     # Register the blueprint
-    app.register_blueprint(camera_bp)
+    if 'camera' not in app.blueprints:
+        app.register_blueprint(camera_bp)
+    else:
+        logger.warning("Camera blueprint already registered, skipping")
     
     # Initialize camera manager if app.config exists
     if hasattr(app, 'config') and app.config:
