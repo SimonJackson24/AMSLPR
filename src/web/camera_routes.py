@@ -1447,9 +1447,10 @@ def discover_cameras():
                     logger.error("No camera configuration found in app config")
                     return jsonify({'success': False, 'error': 'No camera configuration found'}), 500
                 
-                # Initialize camera manager directly
+                # Initialize camera manager using the proper initialization function
                 logger.debug("Creating ONVIFCameraManager instance...")
-                onvif_camera_manager = ONVIFCameraManager(camera_config)
+                from src.recognition.onvif_camera import init_camera_manager
+                onvif_camera_manager = init_camera_manager(camera_config)
                 if onvif_camera_manager is None:
                     logger.error("Failed to create camera manager")
                     return jsonify({'success': False, 'error': 'Failed to initialize camera manager'}), 500
@@ -1460,18 +1461,52 @@ def discover_cameras():
         
         # Start camera discovery with reduced timeout (5 to 2 seconds)
         logger.debug("Starting camera discovery...")
-        discovered_cameras = onvif_camera_manager.discover_cameras(timeout=2)
-        
-        if not discovered_cameras:
-            logger.warning("No cameras found during discovery")
-            return jsonify({'success': True, 'cameras': [], 'message': 'No cameras found'}), 200
-        
-        logger.info(f"Found {len(discovered_cameras)} cameras")
-        return jsonify({
-            'success': True,
-            'cameras': discovered_cameras,
-            'message': f'Found {len(discovered_cameras)} cameras. Please configure credentials for each camera you want to use.'
-        }), 200
+        try:
+            discovered_cameras = onvif_camera_manager.discover_cameras(timeout=2)
+            
+            # Additional logging to diagnose parsing issues
+            logger.debug(f"Raw discovered cameras data type: {type(discovered_cameras)}")
+            if isinstance(discovered_cameras, list):
+                logger.debug(f"Number of discovered cameras: {len(discovered_cameras)}")
+                if discovered_cameras:
+                    logger.debug(f"First camera data type: {type(discovered_cameras[0])}")
+                    logger.debug(f"First camera data: {discovered_cameras[0]}")
+            
+            if not discovered_cameras:
+                logger.warning("No cameras found during discovery")
+                return jsonify({'success': True, 'cameras': [], 'message': 'No cameras found'}), 200
+            
+            # Ensure discovered_cameras is a list of dictionaries
+            if not isinstance(discovered_cameras, list):
+                logger.error(f"Unexpected data type for discovered_cameras: {type(discovered_cameras)}")
+                return jsonify({'success': False, 'error': 'Invalid camera data format'}), 500
+            
+            # Make sure each camera entry is properly formatted
+            sanitized_cameras = []
+            for camera in discovered_cameras:
+                if isinstance(camera, dict):
+                    # Ensure the camera has all required fields
+                    sanitized_camera = {
+                        'ip': camera.get('ip', 'unknown'),
+                        'port': camera.get('port', 80),
+                        'manufacturer': camera.get('manufacturer', 'Unknown'),
+                        'model': camera.get('model', 'Unknown'),
+                        'type': camera.get('type', 'Unknown Camera'),
+                        'requires_auth': camera.get('requires_auth', True)
+                    }
+                    sanitized_cameras.append(sanitized_camera)
+                else:
+                    logger.warning(f"Skipping invalid camera data: {camera}")
+            
+            logger.info(f"Found {len(sanitized_cameras)} cameras")
+            return jsonify({
+                'success': True,
+                'cameras': sanitized_cameras,
+                'message': f'Found {len(sanitized_cameras)} cameras. Please configure credentials for each camera you want to use.'
+            }), 200
+        except Exception as discovery_error:
+            logger.error(f"Error during camera discovery process: {str(discovery_error)}")
+            return jsonify({'success': False, 'error': f'Error during camera discovery process: {str(discovery_error)}'}), 500
         
     except Exception as e:
         logger.error(f"Error during camera discovery: {str(e)}")
