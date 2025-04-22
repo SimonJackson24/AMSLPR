@@ -1499,6 +1499,28 @@ def discover_cameras():
                     logger.warning(f"Skipping invalid camera data: {camera}")
             
             logger.info(f"Found {len(sanitized_cameras)} cameras")
+            
+            # Save discovered cameras to configuration
+            if len(sanitized_cameras) > 0:
+                try:
+                    # Update the camera section in app config
+                    config = current_app.config.copy()
+                    if "camera" not in config:
+                        config["camera"] = {}
+                    
+                    # Add the discovered cameras to config
+                    for camera in sanitized_cameras:
+                        camera_ip = camera.get("ip", "unknown")
+                        if camera_ip != "unknown":
+                            config["camera"][camera_ip] = camera
+                    
+                    # Save the updated config
+                    from src.config.settings import save_config
+                    save_config(config)
+                    logger.info(f"Saved {len(sanitized_cameras)} cameras to configuration")
+                except Exception as save_error:
+                    logger.error(f"Error saving cameras to config: {str(save_error)}")
+            
             return jsonify({
                 'success': True,
                 'cameras': sanitized_cameras,
