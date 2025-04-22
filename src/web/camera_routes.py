@@ -1588,26 +1588,41 @@ def delete_camera(camera_id):
 
 def register_camera_routes(app, detector, db_manager):
     """Register camera routes with the Flask application."""
-    global _detector, _db_manager, _app, camera_state
-    _detector = detector
-    _db_manager = db_manager
-    _app = app
-    
-    # Register the blueprint
-    if 'camera' not in app.blueprints:
-        app.register_blueprint(camera_bp)
-    else:
-        logger.warning("Camera blueprint already registered, skipping")
-    
-    # Initialize camera manager if app.config exists
-    if hasattr(app, 'config') and app.config:
-        init_camera_manager(app.config)
-    else:
-        logger.warning("App config not available, skipping camera manager initialization")
-    
-    logger.info("Camera routes registered")
-    
-    return app
+    logger.error("[CAMERA_PERSISTENCE] CRITICAL DIAGNOSTIC - register_camera_routes function called")
+    try:
+        global _detector, _db_manager, _app, camera_state
+        _detector = detector
+        _db_manager = db_manager
+        _app = app
+        
+        # Log the state of important variables
+        logger.error(f"[CAMERA_PERSISTENCE] detector: {detector is not None}, db_manager: {db_manager is not None}")
+        
+        # Register the blueprint
+        if 'camera' not in app.blueprints:
+            app.register_blueprint(camera_bp)
+            logger.error("[CAMERA_PERSISTENCE] Camera blueprint registered")
+        else:
+            logger.warning("Camera blueprint already registered, skipping")
+        
+        # Initialize camera manager if app.config exists
+        if hasattr(app, 'config') and app.config:
+            logger.error("[CAMERA_PERSISTENCE] About to initialize camera manager")
+            init_camera_manager(app.config)
+            logger.error("[CAMERA_PERSISTENCE] Camera manager initialized")
+        else:
+            logger.warning("App config not available, skipping camera manager initialization")
+        
+        logger.info("Camera routes registered")
+        logger.error("[CAMERA_PERSISTENCE] CRITICAL DIAGNOSTIC - register_camera_routes function completed successfully")
+        
+        return app
+    except Exception as e:
+        logger.error(f"[CAMERA_PERSISTENCE] CRITICAL ERROR in register_camera_routes: {str(e)}")
+        import traceback
+        logger.error(f"[CAMERA_PERSISTENCE] Traceback: {traceback.format_exc()}")
+        # Re-raise to let the app.py catch it
+        raise
 
 @camera_bp.route('/cameras')
 @login_required(user_manager)
