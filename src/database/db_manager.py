@@ -1780,6 +1780,30 @@ class DatabaseManager:
             logger.error(f"Error getting cameras from database: {str(e)}")
             return []
     
+    def get_all_cameras(self):
+        """
+        Get all cameras from the database.
+        
+        Returns:
+            list: List of camera dictionaries
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            # Query all cameras
+            cursor.execute('SELECT * FROM cameras')
+            cameras = cursor.fetchall()
+            conn.close()
+            
+            # Convert to list of dictionaries
+            return [dict(camera) for camera in cameras]
+            
+        except Exception as e:
+            logger.error(f"Error getting cameras from database: {str(e)}")
+            return []
+    
     def save_camera(self, camera_info):
         """
         Save a camera to the database. If the camera already exists, it will be updated.
