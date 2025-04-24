@@ -20,7 +20,14 @@ import tensorflow as tf
 try:
     # Import Hailo-specific libraries if available
     import hailo_platform
-    import hailo_model_zoo
+    try:
+        # Optional: model zoo provides convenience utilities but is not strictly required
+        import hailo_model_zoo
+    except ImportError:
+        # Log a warning but do not fail TPU availability if model zoo is missing
+        logging.getLogger('AMSLPR.recognition').warning(
+            "hailo_model_zoo not found – continuing without it. Ensure .hef models are provided via 'hailo_ocr_model_path'."
+        )
     HAILO_AVAILABLE = True
 except ImportError:
     HAILO_AVAILABLE = False
