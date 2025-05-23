@@ -1386,7 +1386,29 @@ def hls_segments(camera_id, filename):
 def mjpeg_stream(camera_id):
     """Stream camera feed as MJPEG."""
     try:
+        # Add CORS headers to allow cross-origin requests
+        response_headers = {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        }
+        
+        # Handle OPTIONS request for CORS preflight
+        if request.method == 'OPTIONS':
+            return Response('', headers=response_headers)
+            
+        # Log available cameras for debugging
+        logger.info(f"MJPEG stream requested for camera_id: {camera_id}")
+        logger.info(f"Available cameras: {list(onvif_camera_manager.cameras.keys()) if onvif_camera_manager and hasattr(onvif_camera_manager, 'cameras') else 'None'}")
+        
         # Get camera info - with more detailed logging
+        if not onvif_camera_manager or not hasattr(onvif_camera_manager, 'cameras'):
+            logger.error("Camera manager not initialized or missing cameras attribute")
+            return jsonify({"success": False, "message": "Camera manager not available"}), 500
+            
         if camera_id not in onvif_camera_manager.cameras:
             logger.error(f"Camera {camera_id} not found in onvif_camera_manager.cameras")
             logger.debug(f"Available cameras: {list(onvif_camera_manager.cameras.keys())}")
@@ -1497,10 +1519,14 @@ def mjpeg_stream(camera_id):
         
         # Return streaming response
         response = Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=mjpegboundary')
+        
+        # Add all necessary headers
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
         response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
         return response
         
     except Exception as e:
