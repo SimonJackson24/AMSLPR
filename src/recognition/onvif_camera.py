@@ -451,6 +451,29 @@ class ONVIFCameraManager:
                         'stream': None
                     }
                     
+                    # Save camera to database if db_manager is available
+                    try:
+                        from src.web.camera_routes import db_manager
+                        if db_manager and hasattr(db_manager, 'add_camera'):
+                            logger.info(f"Saving camera {ip} to database")
+                            db_camera_info = {
+                                'ip': ip,
+                                'port': port,
+                                'username': username,
+                                'password': password,
+                                'stream_uri': rtsp_url,
+                                'name': camera_info.get('name', f'Camera {ip}'),
+                                'location': camera_info.get('location', 'Unknown'),
+                                'manufacturer': camera_info.get('manufacturer', 'Unknown'),
+                                'model': camera_info.get('model', 'RTSP Camera')
+                            }
+                            db_manager.add_camera(db_camera_info)
+                            logger.info(f"Camera {ip} saved to database")
+                        else:
+                            logger.warning(f"Database manager not available, camera {ip} not saved to database")
+                    except Exception as e:
+                        logger.error(f"Error saving camera {ip} to database: {str(e)}")
+                    
                     logger.info(f"Added camera at {ip} with direct RTSP URL")
                     return True
                 else:
@@ -501,6 +524,29 @@ class ONVIFCameraManager:
                         'info': camera_info,
                         'stream': None
                     }
+                    
+                    # Save camera to database if db_manager is available
+                    try:
+                        from src.web.camera_routes import db_manager
+                        if db_manager and hasattr(db_manager, 'add_camera'):
+                            logger.info(f"Saving camera {ip} to database")
+                            db_camera_info = {
+                                'ip': ip,
+                                'port': port,
+                                'username': username,
+                                'password': password,
+                                'stream_uri': camera_info.get('stream_uri', ''),
+                                'name': camera_info.get('name', f'Camera {ip}'),
+                                'location': camera_info.get('location', 'Unknown'),
+                                'manufacturer': camera_info.get('manufacturer', 'Unknown'),
+                                'model': camera_info.get('model', 'ONVIF Camera')
+                            }
+                            db_manager.add_camera(db_camera_info)
+                            logger.info(f"Camera {ip} saved to database")
+                        else:
+                            logger.warning(f"Database manager not available, camera {ip} not saved to database")
+                    except Exception as e:
+                        logger.error(f"Error saving camera {ip} to database: {str(e)}")
                     
                     logger.info(f"Added camera at {ip} with special handling")
                     return True
@@ -568,6 +614,47 @@ class ONVIFCameraManager:
                     'info': camera_details,
                     'stream': None
                 }
+                
+                # Save camera to database if db_manager is available
+                try:
+                    from src.web.camera_routes import db_manager
+                    if db_manager and hasattr(db_manager, 'add_camera'):
+                        logger.info(f"Saving camera {ip} to database")
+                        # Get stream URI if available
+                        stream_uri = ''
+                        try:
+                            # Try to get media service
+                            media_service = camera.create_media_service()
+                            profiles = media_service.GetProfiles()
+                            if profiles:
+                                # Get stream URI for first profile
+                                token = profiles[0]._token
+                                stream_setup = {'Stream': 'RTP-Unicast', 'Transport': {'Protocol': 'RTSP'}}
+                                stream_uri = media_service.GetStreamUri({'StreamSetup': stream_setup, 'ProfileToken': token}).Uri
+                                logger.info(f"Got stream URI: {stream_uri}")
+                                # Add stream URI to camera details
+                                camera_details['stream_uri'] = stream_uri
+                        except Exception as e:
+                            logger.warning(f"Error getting stream URI: {str(e)}")
+                            
+                        # Prepare camera info for database
+                        db_camera_info = {
+                            'ip': ip,
+                            'port': port,
+                            'username': username,
+                            'password': password,
+                            'stream_uri': stream_uri,
+                            'name': camera_details.get('name', f'Camera {ip}'),
+                            'location': camera_details.get('location', 'Unknown'),
+                            'manufacturer': camera_details.get('manufacturer', 'Unknown'),
+                            'model': camera_details.get('model', 'ONVIF Camera')
+                        }
+                        db_manager.add_camera(db_camera_info)
+                        logger.info(f"Camera {ip} saved to database")
+                    else:
+                        logger.warning(f"Database manager not available, camera {ip} not saved to database")
+                except Exception as e:
+                    logger.error(f"Error saving camera {ip} to database: {str(e)}")
                 
                 logger.info(f"Added camera at {ip}")
                 return True
