@@ -1113,12 +1113,17 @@ def start_ffmpeg_stream(camera_id, rtsp_url):
             '-ac', '2',            # 2 audio channels
             '-b:a', '128k',        # Audio bitrate
             '-f', 'hls',           # Output format is HLS
-            '-hls_time', '0.5',    # Each segment is 0.5 seconds (reduced from 2)
-            '-hls_list_size', '2', # Keep only 2 segments in the playlist (reduced from 3)
-            '-hls_flags', 'delete_segments+append_list+omit_endlist',  # Delete old segments and use low-latency flags
-            '-hls_segment_type', 'fmp4', # Use fragmented MP4 segments for lower latency
+            '-hls_time', '2',      # Each segment is 2 seconds (more compatible)
+            '-hls_list_size', '3', # Keep only 3 segments in the playlist
+            '-hls_flags', 'delete_segments',  # Delete old segments
+            '-hls_allow_cache', '1',  # Allow caching
+            '-hls_segment_filename', os.path.join(hls_dir, 'segment_%03d.ts'),  # Segment naming pattern
             os.path.join(hls_dir, 'stream.m3u8')
         ]
+        
+        # Log the full command for debugging
+        logger.info(f"FFmpeg command: {' '.join(cmd)}")
+        logger.info(f"HLS output directory: {hls_dir}")
         
         logger.info(f"FFmpeg command: {' '.join(cmd)}")
         
@@ -1296,18 +1301,38 @@ def hls_segments(camera_id, filename):
         
         # Construct the full path to the requested file
         file_path = os.path.join(hls_dir, filename)
+        logger.info(f"Serving HLS file: {file_path}")
         
         # Check if the file exists
         if not os.path.exists(file_path):
             logger.warning(f"Requested HLS file not found: {file_path}")
-            
-            # If the playlist is requested but not yet created (FFmpeg might still be starting up)
-            # return an empty playlist instead of 404
             if filename.endswith('.m3u8'):
-                empty_playlist = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-ENDLIST\n"
-                return Response(empty_playlist, mimetype='application/vnd.apple.mpegurl')
-            
-            return "File not found", 404
+                # For playlist files, check if FFmpeg is still running
+                if camera_id in ffmpeg_processes and ffmpeg_processes[camera_id].poll() is None:
+                    logger.info(f"FFmpeg is still running for camera {camera_id}, returning empty playlist")
+                    # FFmpeg is running but playlist not yet created, return temporary playlist
+                    empty_playlist = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-ENDLIST\n"
+                    return Response(empty_playlist, mimetype='application/vnd.apple.mpegurl')
+                else:
+                    # FFmpeg not running, try to restart it
+                    logger.warning(f"FFmpeg not running for camera {camera_id}, attempting to restart")
+                    if camera_id in onvif_camera_manager.cameras:
+                        camera_info = onvif_camera_manager.cameras[camera_id]
+                        stream_url = ''
+                        if isinstance(camera_info, dict):
+                            stream_url = camera_info.get('stream_uri', '')
+                        else:
+                            stream_url = getattr(camera_info, 'stream_uri', '')
+                            
+                        if stream_url:
+                            start_ffmpeg_stream(camera_id, stream_url)
+                            
+                    # Return empty playlist while restarting
+                    empty_playlist = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-ENDLIST\n"
+                    return Response(empty_playlist, mimetype='application/vnd.apple.mpegurl')
+            else:
+                # For segment files, return a 404
+                return "File not found", 404
         
         # Determine the correct MIME type
         mime_type = 'application/vnd.apple.mpegurl' if filename.endswith('.m3u8') else 'video/mp2t'
