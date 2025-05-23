@@ -127,27 +127,21 @@ def init_camera_manager(config):
             onvif_camera_manager = ONVIFCameraManager()
             logger.info(f"ONVIFCameraManager initialized: {onvif_camera_manager}")
             
-            # Load cameras from database using the reload function
-            if db_manager:
-                try:
-                    logger.info("[CAMERA_PERSISTENCE] **** Loading cameras from database with reload_cameras_from_database() ****")
-                    # Check if the method exists in db_manager
-                    if hasattr(db_manager, 'get_all_cameras'):
-                        logger.info(f"[CAMERA_PERSISTENCE] SUCCESS: db_manager.get_all_cameras method exists: {db_manager.get_all_cameras}")
-                    else:
-                        logger.error("[CAMERA_PERSISTENCE] ERROR: db_manager.get_all_cameras method MISSING")
-                        
-                    # Log database path
-                    if hasattr(db_manager, 'db_path'):
-                        logger.info(f"[CAMERA_PERSISTENCE] Database path: {db_manager.db_path}")
-                        
-                    # Call the dedicated function to load cameras consistently
-                    reload_cameras_from_database()
+            # Always load cameras from database using the reload function
+            try:
+                logger.info("[CAMERA_PERSISTENCE] **** Loading cameras from database with reload_cameras_from_database() ****")
+                
+                # Always call reload_cameras_from_database, which will initialize db_manager if needed
+                reload_result = reload_cameras_from_database()
+                
+                if reload_result:
                     logger.info("[CAMERA_PERSISTENCE] Successfully loaded cameras from database")
-                except Exception as e:
-                    logger.error(f"[CAMERA_PERSISTENCE] ERROR: Failed to load cameras from database: {str(e)}")
-                    import traceback
-                    logger.error(f"[CAMERA_PERSISTENCE] ERROR TRACE: {traceback.format_exc()}")
+                else:
+                    logger.error("[CAMERA_PERSISTENCE] Failed to load cameras from database")
+            except Exception as e:
+                logger.error(f"[CAMERA_PERSISTENCE] ERROR: Failed to load cameras from database: {str(e)}")
+                import traceback
+                logger.error(f"[CAMERA_PERSISTENCE] ERROR TRACE: {traceback.format_exc()}")
         except ImportError as e:
             logger.error(f"Failed to import ONVIFCameraManager: {str(e)}")
             from src.recognition.mock_camera import MockCameraManager
@@ -165,9 +159,15 @@ def reload_cameras_from_database():
     
     logger.info("[CAMERA_PERSISTENCE] **** reload_cameras_from_database() called ****")
     
+    # Initialize database manager if not already initialized
     if not db_manager:
-        logger.error("[CAMERA_PERSISTENCE] ERROR: db_manager is None - cannot load cameras")
-        return False
+        try:
+            from src.database.db_manager import DatabaseManager
+            db_manager = DatabaseManager()
+            logger.info("[CAMERA_PERSISTENCE] Created new database manager instance")
+        except Exception as e:
+            logger.error(f"[CAMERA_PERSISTENCE] ERROR: Failed to create database manager: {str(e)}")
+            return False
         
     if not onvif_camera_manager:
         logger.error("[CAMERA_PERSISTENCE] ERROR: onvif_camera_manager is None - cannot load cameras")

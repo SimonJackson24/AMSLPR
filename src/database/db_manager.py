@@ -20,22 +20,18 @@ class DatabaseManager:
     Handles database operations for vehicle management and access logs.
     """
     
-    def __init__(self, config):
-        """
-        Initialize the database manager.
+    def __init__(self, config=None):
+        """Initialize the database manager."""
+        self.config = config or {}
         
-        Args:
-            config (dict): Configuration dictionary for database
-        """
-        self.config = config
-        self.db_path = config.get('db_path', 'data/amslpr.db')
-        self.backup_interval = config.get('backup_interval', 86400)  # 24 hours
-        self.last_backup_time = 0
+        # Always use the standard database path in the data directory
+        db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'amslpr.db')
         
-        # Create database directory if it doesn't exist
-        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
         
-        # Initialize database
+        self.db_path = db_path
+        logger.info(f"DatabaseManager initialized with database path: {self.db_path}")
         self._init_database()
         
         logger.info("Database manager initialized")

@@ -851,29 +851,41 @@ class ONVIFCameraManager:
                         'model': camera_details.get('model', 'ONVIF Camera')
                     }
                     
-                    # Try to get db_manager from camera_routes
+                    # First try to import directly - this is the most reliable method
                     try:
-                        from src.web.camera_routes import db_manager as routes_db_manager
-                        if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
-                            logger.info(f"Saving camera {ip} to database")
-                            routes_db_manager.add_camera(db_camera_info)
-                            logger.info(f"Camera {ip} saved to database successfully")
+                        from src.database.db_manager import DatabaseManager
+                        # Use the standard database path
+                        direct_db_manager = DatabaseManager()
+                        if hasattr(direct_db_manager, 'add_camera'):
+                            logger.info(f"Saving camera {ip} to database using direct DatabaseManager")
+                            direct_db_manager.add_camera(db_camera_info)
+                            logger.info(f"Camera {ip} saved to database using direct DatabaseManager")
                         else:
-                            logger.error(f"Database manager not available in camera_routes")
-                            
-                            # Try to import directly as fallback
+                            logger.error("Direct DatabaseManager does not have add_camera method")
+                            # Try to get db_manager from camera_routes as fallback
                             try:
-                                from src.database.db_manager import DatabaseManager
-                                config = {'database': {'path': os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'amslpr.db')}}
-                                direct_db_manager = DatabaseManager(config)
-                                if hasattr(direct_db_manager, 'add_camera'):
-                                    logger.info(f"Saving camera {ip} to database using direct DatabaseManager")
-                                    direct_db_manager.add_camera(db_camera_info)
-                                    logger.info(f"Camera {ip} saved to database using direct DatabaseManager")
+                                from src.web.camera_routes import db_manager as routes_db_manager
+                                if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
+                                    logger.info(f"Saving camera {ip} to database using routes_db_manager")
+                                    routes_db_manager.add_camera(db_camera_info)
+                                    logger.info(f"Camera {ip} saved to database using routes_db_manager")
+                                else:
+                                    logger.error(f"Database manager not available in camera_routes")
                             except Exception as e:
-                                logger.error(f"Error using direct DatabaseManager: {str(e)}")
+                                logger.error(f"Error getting db_manager from camera_routes: {str(e)}")
                     except Exception as e:
-                        logger.error(f"Error getting db_manager from camera_routes: {str(e)}")
+                        logger.error(f"Error using direct DatabaseManager: {str(e)}")
+                        # Try to get db_manager from camera_routes as fallback
+                        try:
+                            from src.web.camera_routes import db_manager as routes_db_manager
+                            if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
+                                logger.info(f"Saving camera {ip} to database using routes_db_manager")
+                                routes_db_manager.add_camera(db_camera_info)
+                                logger.info(f"Camera {ip} saved to database using routes_db_manager")
+                            else:
+                                logger.error(f"Database manager not available in camera_routes")
+                        except Exception as e:
+                            logger.error(f"Error getting db_manager from camera_routes: {str(e)}")
                 except Exception as e:
                     logger.error(f"Error saving camera {ip} to database: {str(e)}")
                     import traceback
