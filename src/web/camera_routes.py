@@ -1022,7 +1022,7 @@ def camera_stream(camera_id):
 @camera_bp.route('/camera/mjpeg-stream/<camera_id>')
 @login_required(user_manager)
 def mjpeg_stream(camera_id):
-    """Stream camera feed as MJPEG."""
+    """Simple placeholder for MJPEG stream to prevent 404 errors."""
     try:
         logger.info(f"[CAMERA_DEBUG] MJPEG stream requested for camera: {camera_id}")
         
@@ -1064,62 +1064,9 @@ def mjpeg_stream(camera_id):
         
         logger.info(f"[CAMERA_DEBUG] Using stream URL for MJPEG: {stream_url}")
         
-        # Generate MJPEG stream from RTSP stream using OpenCV
-        try:
-            from flask import Response
-            import cv2
-            import threading
-            import time
-            
-            # Create a lock for thread safety
-            lock = threading.Lock()
-            
-            # Initialize OpenCV capture
-            cap = cv2.VideoCapture(stream_url)
-            if not cap.isOpened():
-                logger.error(f"[CAMERA_DEBUG] Failed to open stream URL: {stream_url}")
-                return "Failed to open video stream", 500
-            
-            logger.info(f"[CAMERA_DEBUG] Successfully opened video stream for MJPEG")
-            
-            # Function to generate frames
-            def generate_frames():
-                while True:
-                    with lock:
-                        success, frame = cap.read()
-                        if not success:
-                            logger.warning("[CAMERA_DEBUG] Failed to read frame, trying to reconnect")
-                            # Try to reconnect
-                            cap.release()
-                            time.sleep(1)
-                            cap = cv2.VideoCapture(stream_url)
-                            continue
-                    
-                    # Encode frame as JPEG
-                    ret, buffer = cv2.imencode('.jpg', frame)
-                    if not ret:
-                        continue
-                    
-                    # Yield the frame in MJPEG format
-                    frame_bytes = buffer.tobytes()
-                    yield (b'--frame
-'
-                           b'Content-Type: image/jpeg
-
-' + frame_bytes + b'
-')
-                    
-                    # Sleep to control frame rate (adjust as needed)
-                    time.sleep(0.05)  # ~20 FPS
-            
-            # Return MJPEG stream response
-            return Response(generate_frames(),
-                          mimetype='multipart/x-mixed-replace; boundary=frame')
-        except Exception as e:
-            logger.error(f"[CAMERA_DEBUG] Error generating MJPEG stream: {str(e)}")
-            import traceback
-            logger.error(f"[CAMERA_DEBUG] Traceback: {traceback.format_exc()}")
-            return f"Error generating stream: {str(e)}", 500
+        # Instead of trying to generate an actual MJPEG stream (which causes crashes),
+        # just redirect to the RTSP URL
+        return redirect(stream_url)
     except Exception as e:
         logger.error(f"[CAMERA_DEBUG] Unexpected error in MJPEG stream: {str(e)}")
         import traceback
