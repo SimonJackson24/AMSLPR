@@ -478,6 +478,58 @@ class ONVIFCameraManager:
                         'info': camera_info,
                         'stream': None
                     }
+
+                # Save camera to database
+                try:
+                    # Try to get db_manager from camera_routes
+                    from src.web.camera_routes import db_manager as routes_db_manager
+                    if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
+                        logger.info(f"Saving camera {ip} to database")
+                        db_camera_info = {
+                            'ip': ip,
+                            'port': camera_info.get('port', 80),
+                            'username': camera_info.get('username', ''),
+                            'password': camera_info.get('password', ''),
+                            'stream_uri': camera_info.get('stream_uri', ''),
+                            'name': camera_info.get('name', f'Camera {ip}'),
+                            'location': camera_info.get('location', 'Unknown'),
+                            'manufacturer': camera_info.get('manufacturer', 'Unknown'),
+                            'model': camera_info.get('model', 'ONVIF Camera')
+                        }
+                        routes_db_manager.add_camera(db_camera_info)
+                        logger.info(f"Camera {ip} saved to database")
+                    else:
+                        logger.warning(f"Database manager not available, camera {ip} not saved to database")
+                except Exception as e:
+                    logger.error(f"Error saving camera {ip} to database: {str(e)}")
+                    import traceback
+                    logger.error(f"Traceback: {traceback.format_exc()}")
+
+                # Save camera to database
+                try:
+                    # Try to get db_manager from camera_routes
+                    from src.web.camera_routes import db_manager as routes_db_manager
+                    if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
+                        logger.info(f"Saving camera {ip} to database")
+                        db_camera_info = {
+                            'ip': ip,
+                            'port': camera_info.get('port', 80),
+                            'username': camera_info.get('username', ''),
+                            'password': camera_info.get('password', ''),
+                            'stream_uri': camera_info.get('stream_uri', ''),
+                            'name': camera_info.get('name', f'Camera {ip}'),
+                            'location': camera_info.get('location', 'Unknown'),
+                            'manufacturer': camera_info.get('manufacturer', 'Unknown'),
+                            'model': camera_info.get('model', 'ONVIF Camera')
+                        }
+                        routes_db_manager.add_camera(db_camera_info)
+                        logger.info(f"Camera {ip} saved to database")
+                    else:
+                        logger.warning(f"Database manager not available, camera {ip} not saved to database")
+                except Exception as e:
+                    logger.error(f"Error saving camera {ip} to database: {str(e)}")
+                    import traceback
+                    logger.error(f"Traceback: {traceback.format_exc()}")
                     
                     # Save camera to database if db_manager is available
                     try:
@@ -552,6 +604,58 @@ class ONVIFCameraManager:
                         'info': camera_info,
                         'stream': None
                     }
+
+                # Save camera to database
+                try:
+                    # Try to get db_manager from camera_routes
+                    from src.web.camera_routes import db_manager as routes_db_manager
+                    if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
+                        logger.info(f"Saving camera {ip} to database")
+                        db_camera_info = {
+                            'ip': ip,
+                            'port': camera_info.get('port', 80),
+                            'username': camera_info.get('username', ''),
+                            'password': camera_info.get('password', ''),
+                            'stream_uri': camera_info.get('stream_uri', ''),
+                            'name': camera_info.get('name', f'Camera {ip}'),
+                            'location': camera_info.get('location', 'Unknown'),
+                            'manufacturer': camera_info.get('manufacturer', 'Unknown'),
+                            'model': camera_info.get('model', 'ONVIF Camera')
+                        }
+                        routes_db_manager.add_camera(db_camera_info)
+                        logger.info(f"Camera {ip} saved to database")
+                    else:
+                        logger.warning(f"Database manager not available, camera {ip} not saved to database")
+                except Exception as e:
+                    logger.error(f"Error saving camera {ip} to database: {str(e)}")
+                    import traceback
+                    logger.error(f"Traceback: {traceback.format_exc()}")
+
+                # Save camera to database
+                try:
+                    # Try to get db_manager from camera_routes
+                    from src.web.camera_routes import db_manager as routes_db_manager
+                    if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
+                        logger.info(f"Saving camera {ip} to database")
+                        db_camera_info = {
+                            'ip': ip,
+                            'port': camera_info.get('port', 80),
+                            'username': camera_info.get('username', ''),
+                            'password': camera_info.get('password', ''),
+                            'stream_uri': camera_info.get('stream_uri', ''),
+                            'name': camera_info.get('name', f'Camera {ip}'),
+                            'location': camera_info.get('location', 'Unknown'),
+                            'manufacturer': camera_info.get('manufacturer', 'Unknown'),
+                            'model': camera_info.get('model', 'ONVIF Camera')
+                        }
+                        routes_db_manager.add_camera(db_camera_info)
+                        logger.info(f"Camera {ip} saved to database")
+                    else:
+                        logger.warning(f"Database manager not available, camera {ip} not saved to database")
+                except Exception as e:
+                    logger.error(f"Error saving camera {ip} to database: {str(e)}")
+                    import traceback
+                    logger.error(f"Traceback: {traceback.format_exc()}")
                     
                     # Save camera to database using the db_manager
                     try:
@@ -664,6 +768,58 @@ class ONVIFCameraManager:
                     'info': camera_details,
                     'stream': None
                 }
+
+                # Save camera to database
+                try:
+                    # Try to get db_manager from camera_routes
+                    from src.web.camera_routes import db_manager as routes_db_manager
+                    if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
+                        logger.info(f"Saving camera {ip} to database")
+                        db_camera_info = {
+                            'ip': ip,
+                            'port': camera_info.get('port', 80),
+                            'username': camera_info.get('username', ''),
+                            'password': camera_info.get('password', ''),
+                            'stream_uri': camera_info.get('stream_uri', ''),
+                            'name': camera_info.get('name', f'Camera {ip}'),
+                            'location': camera_info.get('location', 'Unknown'),
+                            'manufacturer': camera_info.get('manufacturer', 'Unknown'),
+                            'model': camera_info.get('model', 'ONVIF Camera')
+                        }
+                        routes_db_manager.add_camera(db_camera_info)
+                        logger.info(f"Camera {ip} saved to database")
+                    else:
+                        logger.warning(f"Database manager not available, camera {ip} not saved to database")
+                except Exception as e:
+                    logger.error(f"Error saving camera {ip} to database: {str(e)}")
+                    import traceback
+                    logger.error(f"Traceback: {traceback.format_exc()}")
+
+                # Save camera to database
+                try:
+                    # Try to get db_manager from camera_routes
+                    from src.web.camera_routes import db_manager as routes_db_manager
+                    if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
+                        logger.info(f"Saving camera {ip} to database")
+                        db_camera_info = {
+                            'ip': ip,
+                            'port': camera_info.get('port', 80),
+                            'username': camera_info.get('username', ''),
+                            'password': camera_info.get('password', ''),
+                            'stream_uri': camera_info.get('stream_uri', ''),
+                            'name': camera_info.get('name', f'Camera {ip}'),
+                            'location': camera_info.get('location', 'Unknown'),
+                            'manufacturer': camera_info.get('manufacturer', 'Unknown'),
+                            'model': camera_info.get('model', 'ONVIF Camera')
+                        }
+                        routes_db_manager.add_camera(db_camera_info)
+                        logger.info(f"Camera {ip} saved to database")
+                    else:
+                        logger.warning(f"Database manager not available, camera {ip} not saved to database")
+                except Exception as e:
+                    logger.error(f"Error saving camera {ip} to database: {str(e)}")
+                    import traceback
+                    logger.error(f"Traceback: {traceback.format_exc()}")
                 
                 # Save camera to database using the db_manager
                 try:

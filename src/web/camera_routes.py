@@ -200,6 +200,14 @@ def reload_cameras_from_database():
         # Add each camera from the database
         for camera in cameras:
             try:
+                # Log all camera data for debugging
+                logger.info(f"[CAMERA_PERSISTENCE] Camera data from DB: {camera}")
+                
+                # Skip cameras with missing IP address
+                if 'ip' not in camera or not camera['ip']:
+                    logger.error("[CAMERA_PERSISTENCE] Camera missing IP address, skipping")
+                    continue
+                    
                 logger.info(f"[CAMERA_PERSISTENCE] Adding camera from database: {camera['ip']}")
                 camera_info = {
                     'ip': camera['ip'],
@@ -245,13 +253,17 @@ def reload_cameras_from_database():
                         logger.info(f"Adding ONVIF camera to manager: {camera_info}")
                         onvif_camera_manager.add_camera(camera_info)
             except Exception as e:
-                logger.error(f"Failed to add camera {camera['ip']}: {str(e)}")
+                logger.error(f"Failed to add camera {camera.get('ip', 'unknown')}: {str(e)}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
                 # Continue with next camera
         
         logger.info("Successfully reloaded cameras from database")
         return True
     except Exception as e:
-        logger.error(f"Failed to reload cameras from database: {str(e)}")
+        logger.error(f"Error reloading cameras from database: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return False
 
 # Original camera route below - restored from commented state

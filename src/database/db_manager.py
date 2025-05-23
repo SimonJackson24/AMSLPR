@@ -98,6 +98,7 @@ class DatabaseManager:
             ''')
             
             # Create cameras table to persist camera settings
+            # Create cameras table with all required fields
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS cameras (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -106,14 +107,10 @@ class DatabaseManager:
                     username TEXT,
                     password TEXT,
                     port INTEGER DEFAULT 80,
-                    type TEXT DEFAULT 'onvif',
-                    rtsp_url TEXT,
-                    http_url TEXT,
-                    snapshot_url TEXT,
+                    stream_uri TEXT,
+                    manufacturer TEXT,
+                    model TEXT,
                     location TEXT,
-                    enabled BOOLEAN DEFAULT 1,
-                    use_for_lpr BOOLEAN DEFAULT 1,
-                    direction TEXT DEFAULT 'entry',
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
@@ -162,24 +159,8 @@ class DatabaseManager:
                 )
             ''')
             
-            # Create cameras table with all required fields
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS cameras (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    ip TEXT NOT NULL,
-                    port INTEGER DEFAULT 80,
-                    username TEXT,
-                    password TEXT,
-                    stream_uri TEXT,
-                    manufacturer TEXT,
-                    model TEXT,
-                    name TEXT,
-                    location TEXT,
-                    description TEXT,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
+            # Add index for cameras table
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_cameras_ip ON cameras(ip)')
             
             # Create indexes
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_vehicles_plate_number ON vehicles(plate_number)')
@@ -829,9 +810,14 @@ class DatabaseManager:
             conn.commit()
             conn.close()
             
+            # Log the database path for debugging
+            logger.info(f"Camera saved to database at {self.db_path}")
+            
             return True
         except Exception as e:
             logger.error(f"Error adding camera to database: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return False
 
     def get_all_cameras(self):
@@ -842,9 +828,24 @@ class DatabaseManager:
             list: List of camera dictionaries
         """
         try:
+            # Log the database path for debugging
+            logger.info(f"Loading cameras from database at {self.db_path}")
+            
+            # Check if database file exists
+            if not os.path.exists(self.db_path):
+                logger.error(f"Database file does not exist: {self.db_path}")
+                return []
+                
             conn = sqlite3.connect(self.db_path)
             conn.row_factory = sqlite3.Row  # Return rows as dictionaries
             cursor = conn.cursor()
+            
+            # Check if cameras table exists
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='cameras'")
+            if not cursor.fetchone():
+                logger.error("Cameras table does not exist in the database")
+                conn.close()
+                return []
             
             # Get all cameras
             cursor.execute('SELECT * FROM cameras')
@@ -857,9 +858,15 @@ class DatabaseManager:
             cameras = [dict(row) for row in rows]
             logger.info(f"Retrieved {len(cameras)} cameras from database")
             
+            # Log camera details for debugging
+            for camera in cameras:
+                logger.info(f"Camera from DB: IP={camera.get('ip')}, Name={camera.get('name')}, Stream URI={camera.get('stream_uri')}")
+            
             return cameras
         except Exception as e:
             logger.error(f"Error getting cameras from database: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return []
 
     def delete_camera(self, camera_id):
