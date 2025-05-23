@@ -264,19 +264,26 @@
                             window.hlsPlayer.destroy();
                         }
                         
-                        // Create new HLS instance
+                        // Create new HLS instance with optimized settings
                         const hls = new Hls({
-                            debug: true,
+                            debug: false,  // Set to false in production
                             enableWorker: true,
                             lowLatencyMode: true,
+                            startLevel: -1,  // Auto select quality level
+                            maxBufferLength: 10,  // Reduce buffer to decrease latency
+                            maxMaxBufferLength: 30,
                             backBufferLength: 30,
-                            maxBufferLength: 30
+                            manifestLoadingTimeOut: 10000,  // Longer timeout for manifest loading
+                            manifestLoadingMaxRetry: 5,
+                            levelLoadingTimeOut: 10000,
+                            fragLoadingTimeOut: 10000,
+                            fragLoadingMaxRetry: 6
                         });
                         
                         // Store for later use
                         window.hlsPlayer = hls;
                         
-                        // Add error handling
+                        // Add error handling with MJPEG fallback
                         hls.on(Hls.Events.ERROR, function(event, data) {
                             console.error('HLS detailed error:', data);
                             if (data.fatal) {
@@ -291,12 +298,54 @@
                                         hls.recoverMediaError();
                                         break;
                                     default:
-                                        // Cannot recover
-                                        showStreamError('Fatal streaming error');
+                                        // Cannot recover from HLS error, try MJPEG fallback
+                                        console.log('Fatal HLS error, switching to MJPEG fallback');
+                                        switchToMjpegFallback();
                                         break;
                                 }
                             }
+                            
+                            // Count errors to detect persistent problems
+                            window.hlsErrorCount = (window.hlsErrorCount || 0) + 1;
+                            if (window.hlsErrorCount > 5) {
+                                console.log('Too many HLS errors, switching to MJPEG fallback');
+                                switchToMjpegFallback();
+                            }
                         });
+                        
+                        // Function to switch to MJPEG fallback
+                        function switchToMjpegFallback() {
+                            // Only switch once
+                            if (window.usingMjpegFallback) return;
+                            window.usingMjpegFallback = true;
+                            
+                            console.log('Switching to MJPEG fallback stream');
+                            
+                            // Clean up HLS player
+                            if (window.hlsPlayer) {
+                                window.hlsPlayer.destroy();
+                                window.hlsPlayer = null;
+                            }
+                            
+                            // Get MJPEG URL
+                            const mjpegUrl = '/camera/mjpeg-stream/' + '{{ camera.id }}';
+                            
+                            // Set up MJPEG stream
+                            const videoElement = document.getElementById('camera-video');
+                            const imgElement = document.createElement('img');
+                            imgElement.id = 'mjpeg-stream';
+                            imgElement.src = mjpegUrl;
+                            imgElement.style.width = '100%';
+                            imgElement.style.height = 'auto';
+                            imgElement.style.display = 'block';
+                            
+                            // Replace video with image
+                            videoElement.style.display = 'none';
+                            videoElement.parentNode.insertBefore(imgElement, videoElement.nextSibling);
+                            
+                            // Hide loading overlay
+                            document.getElementById('camera-overlay').classList.add('d-none');
+                        }
                         
                         // Clear any existing sources and reset player
                         player.pause();

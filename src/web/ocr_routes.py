@@ -273,32 +273,90 @@ def ocr_settings():
             'plate_format': '[A-Z0-9]{3,8}'
         }
     
-    # Check for Hailo TPU availability using the approach from enable_hailo_tpu.py
-    # This approach doesn't require TensorFlow and matches what enable_hailo_tpu.py does
+    # Check for Hailo TPU availability using a comprehensive approach
+    # This handles both USB and PCIe connected devices
     hailo_available = False
+    hailo_device_info = {}
+    
+    # First check if Hailo device files exist (for PCIe devices)
+    pcie_device_found = False
+    try:
+        # Check for PCIe device files
+        import glob
+        hailo_devices = glob.glob('/dev/hailo*')
+        if hailo_devices:
+            logger.info(f"Found Hailo device files: {hailo_devices}")
+            pcie_device_found = True
+            hailo_device_info['device_files'] = hailo_devices
+    except Exception as e:
+        logger.warning(f"Error checking for Hailo device files: {e}")
+    
+    # Then try to import Hailo modules and initialize device
     try:
         import hailo_platform
+        hailo_device_info['sdk_version'] = getattr(hailo_platform, '__version__', 'unknown')
+        logger.info(f"Hailo Platform SDK version: {hailo_device_info['sdk_version']}")
         
         try:
-            # Try to initialize Hailo device - handle different SDK versions
+            # Try multiple initialization approaches to handle different SDK versions
+            device = None
+            
+            # Approach 1: Newer SDK version with scan_devices
             try:
-                # Newer SDK version
-                from hailo_platform import HailoDevice
-                device = HailoDevice()
-            except (ImportError, AttributeError):
+                from hailo_platform import Device
+                devices = Device.scan_devices()
+                if devices:
+                    logger.info(f"Found {len(devices)} Hailo devices using scan_devices()")
+                    device = Device(device_id=devices[0])
+                    hailo_device_info['device_id'] = devices[0]
+                    hailo_device_info['init_method'] = 'scan_devices'
+            except (ImportError, AttributeError, Exception) as e:
+                logger.info(f"Could not initialize using scan_devices: {e}")
+            
+            # Approach 2: Newer SDK version with direct initialization
+            if device is None:
                 try:
-                    # Older SDK version with pyhailort
+                    from hailo_platform import HailoDevice
+                    device = HailoDevice()
+                    hailo_device_info['init_method'] = 'HailoDevice'
+                except (ImportError, AttributeError, Exception) as e:
+                    logger.info(f"Could not initialize using HailoDevice: {e}")
+            
+            # Approach 3: Older SDK version with pyhailort
+            if device is None:
+                try:
                     from hailo_platform import pyhailort
                     device = pyhailort.Device()
-                except (ImportError, AttributeError):
-                    # Even older SDK version - direct import
+                    hailo_device_info['init_method'] = 'pyhailort.Device'
+                except (ImportError, AttributeError, Exception) as e:
+                    logger.info(f"Could not initialize using pyhailort.Device: {e}")
+            
+            # Approach 4: Even older SDK version - direct import
+            if device is None:
+                try:
                     import hailort
                     device = hailort.Device()
-                    
-            logger.info(f"Hailo TPU is available and working. Device ID: {device.device_id if hasattr(device, 'device_id') else 'Unknown'}")
-            hailo_available = True
+                    hailo_device_info['init_method'] = 'hailort.Device'
+                except (ImportError, AttributeError, Exception) as e:
+                    logger.info(f"Could not initialize using hailort.Device: {e}")
+            
+            # If we have a device or found PCIe device files, consider Hailo available
+            if device is not None:
+                device_id = getattr(device, 'device_id', 'Unknown')
+                logger.info(f"Hailo TPU is available and working. Device ID: {device_id}")
+                hailo_device_info['device_id'] = device_id
+                hailo_available = True
+            elif pcie_device_found:
+                # If we found PCIe device files but couldn't initialize, still consider it available
+                # This handles cases where the device is present but SDK has permission issues
+                logger.info("Hailo TPU PCIe device files found, considering TPU available")
+                hailo_available = True
         except Exception as e:
             logger.warning(f"Hailo TPU is installed but not working: {e}")
+            if pcie_device_found:
+                # If PCIe device files exist, consider it available despite initialization failure
+                logger.info("Hailo PCIe device files exist, marking TPU as available despite initialization error")
+                hailo_available = True
     except ImportError as e:
         logger.warning(f"Hailo modules not available: {e}")
     

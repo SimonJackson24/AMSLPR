@@ -1105,18 +1105,25 @@ def start_ffmpeg_stream(camera_id, rtsp_url):
         cmd = [
             'ffmpeg',
             '-y',                  # Overwrite output files without asking
-            '-loglevel', 'warning',  # Show warnings and errors
+            '-loglevel', 'info',   # Show more info for debugging
             '-rtsp_transport', 'tcp',  # Use TCP for RTSP (more reliable than UDP)
             '-i', rtsp_url,        # Input URL
-            '-c:v', 'copy',        # Copy video stream without re-encoding (if possible)
+            '-c:v', 'libx264',     # Use libx264 encoder for maximum compatibility
+            '-preset', 'ultrafast', # Fastest encoding
+            '-tune', 'zerolatency', # Minimize latency
+            '-profile:v', 'baseline', # Use baseline profile for maximum compatibility
+            '-level', '3.0',       # Compatible level
+            '-pix_fmt', 'yuv420p',  # Standard pixel format for web
+            '-r', '15',            # Lower frame rate for better compatibility
+            '-g', '30',            # GOP size
             '-c:a', 'aac',         # Convert audio to AAC (more compatible)
             '-ac', '2',            # 2 audio channels
             '-b:a', '128k',        # Audio bitrate
             '-f', 'hls',           # Output format is HLS
-            '-hls_time', '2',      # Each segment is 2 seconds (more compatible)
-            '-hls_list_size', '3', # Keep only 3 segments in the playlist
-            '-hls_flags', 'delete_segments',  # Delete old segments
-            '-hls_allow_cache', '1',  # Allow caching
+            '-hls_time', '2',      # Each segment is 2 seconds
+            '-hls_list_size', '5', # Keep 5 segments in the playlist
+            '-hls_flags', 'delete_segments+append_list',  # Delete old segments and append to list
+            '-hls_segment_type', 'mpegts',  # Use standard MPEG-TS segments
             '-hls_segment_filename', os.path.join(hls_dir, 'segment_%03d.ts'),  # Segment naming pattern
             os.path.join(hls_dir, 'stream.m3u8')
         ]
@@ -1292,10 +1299,15 @@ def hls_segments(camera_id, filename):
         if not hls_dir or not os.path.exists(hls_dir):
             logger.error(f"HLS directory for camera {camera_id} not found")
             if filename.endswith('.m3u8'):
-                # Return an empty HLS playlist if the directory doesn't exist but we're requesting the playlist
+                # Return a valid empty HLS playlist if the directory doesn't exist but we're requesting the playlist
                 # This prevents player errors and allows for better error handling on the client
-                empty_playlist = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-ENDLIST\n"
-                return Response(empty_playlist, mimetype='application/vnd.apple.mpegurl')
+                empty_playlist = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:4\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-PLAYLIST-TYPE:EVENT\n#EXT-X-ENDLIST\n"
+                response = Response(empty_playlist, mimetype='application/vnd.apple.mpegurl')
+                response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                response.headers['Pragma'] = 'no-cache'
+                response.headers['Expires'] = '0'
+                response.headers['Access-Control-Allow-Origin'] = '*'
+                return response
             else:
                 return "Stream directory not found", 404
         
@@ -1311,8 +1323,13 @@ def hls_segments(camera_id, filename):
                 if camera_id in ffmpeg_processes and ffmpeg_processes[camera_id].poll() is None:
                     logger.info(f"FFmpeg is still running for camera {camera_id}, returning empty playlist")
                     # FFmpeg is running but playlist not yet created, return temporary playlist
-                    empty_playlist = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-ENDLIST\n"
-                    return Response(empty_playlist, mimetype='application/vnd.apple.mpegurl')
+                    empty_playlist = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:4\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-PLAYLIST-TYPE:EVENT\n#EXT-X-ENDLIST\n"
+                    response = Response(empty_playlist, mimetype='application/vnd.apple.mpegurl')
+                    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                    response.headers['Pragma'] = 'no-cache'
+                    response.headers['Expires'] = '0'
+                    response.headers['Access-Control-Allow-Origin'] = '*'
+                    return response
                 else:
                     # FFmpeg not running, try to restart it
                     logger.warning(f"FFmpeg not running for camera {camera_id}, attempting to restart")
@@ -1328,29 +1345,145 @@ def hls_segments(camera_id, filename):
                             start_ffmpeg_stream(camera_id, stream_url)
                             
                     # Return empty playlist while restarting
-                    empty_playlist = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-ENDLIST\n"
-                    return Response(empty_playlist, mimetype='application/vnd.apple.mpegurl')
+                    empty_playlist = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:4\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-PLAYLIST-TYPE:EVENT\n#EXT-X-ENDLIST\n"
+                    response = Response(empty_playlist, mimetype='application/vnd.apple.mpegurl')
+                    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                    response.headers['Pragma'] = 'no-cache'
+                    response.headers['Expires'] = '0'
+                    response.headers['Access-Control-Allow-Origin'] = '*'
+                    return response
             else:
                 # For segment files, return a 404
                 return "File not found", 404
         
         # Determine the correct MIME type
-        mime_type = 'application/vnd.apple.mpegurl' if filename.endswith('.m3u8') else 'video/mp2t'
-        
-        # Create response with appropriate MIME type
-        response = send_file(file_path, mimetype=mime_type)
-        
+        if filename.endswith('.m3u8'):
+            mime_type = 'application/vnd.apple.mpegurl'
+            # For playlists, we want to ensure they're not cached
+            response = send_file(file_path, mimetype=mime_type, conditional=False)
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+        else:
+            # For TS segments, we can allow some caching
+            mime_type = 'video/mp2t'
+            response = send_file(file_path, mimetype=mime_type, conditional=True)
+            response.headers['Cache-Control'] = 'public, max-age=3600'
+            
         # Add CORS headers to allow cross-origin requests
         response.headers['Access-Control-Allow-Origin'] = '*'
         response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-        response.headers['Cache-Control'] = 'no-cache'  # Ensure fresh content
         
         return response
         
     except Exception as e:
         logger.error(f"Error serving HLS segment: {str(e)}")
         return jsonify({"success": False, "message": f"Error serving stream file: {str(e)}"}), 500
+
+# MJPEG streaming route as fallback
+@camera_bp.route('/camera/mjpeg-stream/<camera_id>')
+def mjpeg_stream(camera_id):
+    """Stream camera feed as MJPEG."""
+    try:
+        # Get camera info
+        if camera_id not in onvif_camera_manager.cameras:
+            logger.error(f"Camera {camera_id} not found")
+            return jsonify({"success": False, "message": "Camera not found"}), 404
+            
+        camera_info = onvif_camera_manager.cameras[camera_id]
+        stream_url = ''
+        if isinstance(camera_info, dict):
+            stream_url = camera_info.get('stream_uri', '')
+        else:
+            stream_url = getattr(camera_info, 'stream_uri', '')
+            
+        if not stream_url:
+            logger.error(f"Stream URL not found for camera {camera_id}")
+            return jsonify({"success": False, "message": "Stream URL not found"}), 404
+        
+        # FFmpeg command for MJPEG streaming
+        cmd = [
+            'ffmpeg',
+            '-y',                  # Overwrite output files
+            '-loglevel', 'error',  # Only show errors
+            '-rtsp_transport', 'tcp',  # Use TCP for RTSP
+            '-i', stream_url,      # Input URL
+            '-q:v', '5',          # Quality level (1-31, lower is better)
+            '-f', 'mjpeg',        # Output format is MJPEG
+            '-update', '1',        # Update mode
+            '-r', '10',           # Reduced frame rate for better reliability
+            '-'                    # Output to stdout
+        ]
+        
+        # Start FFmpeg process
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=10**8          # Large buffer
+        )
+        
+        # Generator function to yield frames
+        def generate_frames():
+            try:
+                # MJPEG boundary
+                boundary = b'--mjpegboundary'
+                separator = b'\r\n'
+                
+                # MJPEG header
+                yield b'--mjpegboundary\r\n'
+                yield b'Content-Type: image/jpeg\r\n\r\n'
+                
+                # Buffer for reading JPEG data
+                buffer = b''
+                jpeg_start = b'\xff\xd8'
+                jpeg_end = b'\xff\xd9'
+                
+                while True:
+                    # Read chunk from FFmpeg
+                    chunk = process.stdout.read(4096)
+                    if not chunk:
+                        break
+                        
+                    buffer += chunk
+                    
+                    # Find JPEG start and end markers
+                    start_pos = buffer.find(jpeg_start)
+                    if start_pos >= 0:
+                        end_pos = buffer.find(jpeg_end, start_pos)
+                        if end_pos >= 0:
+                            # Extract complete JPEG frame
+                            frame = buffer[start_pos:end_pos+2]
+                            buffer = buffer[end_pos+2:]
+                            
+                            # Yield the frame with MJPEG headers
+                            yield b'\r\n--mjpegboundary\r\n'
+                            yield b'Content-Type: image/jpeg\r\n'
+                            yield f'Content-Length: {len(frame)}\r\n\r\n'.encode()
+                            yield frame
+            except Exception as e:
+                logger.error(f"Error in MJPEG generator: {str(e)}")
+            finally:
+                # Clean up process
+                if process.poll() is None:
+                    process.terminate()
+                    try:
+                        process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+        
+        # Return streaming response
+        response = Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=mjpegboundary')
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error setting up MJPEG stream: {str(e)}")
+        return jsonify({"success": False, "message": f"Error setting up MJPEG stream: {str(e)}"}), 500
 
 @camera_bp.route('/camera/health')
 @login_required(user_manager)
