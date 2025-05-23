@@ -157,65 +157,92 @@ def reload_cameras_from_database():
     """Reload cameras from the database."""
     global onvif_camera_manager, db_manager
     
-    logger.info("[CAMERA_PERSISTENCE] **** reload_cameras_from_database() called ****")
+    logger.info("[CAMERA_DEBUG] ===== RELOAD_CAMERAS_FROM_DATABASE CALLED =====")
     
     # Initialize database manager if not already initialized
     if not db_manager:
         try:
+            logger.info("[CAMERA_DEBUG] Database manager is None, creating new instance")
             from src.database.db_manager import DatabaseManager
             db_manager = DatabaseManager()
-            logger.info("[CAMERA_PERSISTENCE] Created new database manager instance")
+            logger.info(f"[CAMERA_DEBUG] Created new database manager instance with path: {db_manager.db_path}")
         except Exception as e:
-            logger.error(f"[CAMERA_PERSISTENCE] ERROR: Failed to create database manager: {str(e)}")
+            logger.error(f"[CAMERA_DEBUG] ERROR: Failed to create database manager: {str(e)}")
+            import traceback
+            logger.error(f"[CAMERA_DEBUG] Traceback: {traceback.format_exc()}")
             return False
         
     if not onvif_camera_manager:
-        logger.error("[CAMERA_PERSISTENCE] ERROR: onvif_camera_manager is None - cannot load cameras")
+        logger.error("[CAMERA_DEBUG] ERROR: onvif_camera_manager is None - cannot load cameras")
         return False
         
     if not hasattr(onvif_camera_manager, 'cameras'):
-        logger.error("[CAMERA_PERSISTENCE] ERROR: onvif_camera_manager has no cameras attribute")
+        logger.error("[CAMERA_DEBUG] ERROR: onvif_camera_manager has no cameras attribute")
         return False
     
     try:
-        logger.info("[CAMERA_PERSISTENCE] **** Actually reloading cameras from database now ****")
+        logger.info("[CAMERA_DEBUG] Starting to reload cameras from database")
+        
+        # Log current camera manager state
+        logger.info(f"[CAMERA_DEBUG] Current camera manager has {len(onvif_camera_manager.cameras)} cameras before reload")
+        if len(onvif_camera_manager.cameras) > 0:
+            logger.info(f"[CAMERA_DEBUG] Current cameras: {list(onvif_camera_manager.cameras.keys())}")
+        
+        # Check database manager state
+        logger.info(f"[CAMERA_DEBUG] Database manager object: {db_manager}")
+        logger.info(f"[CAMERA_DEBUG] Database path: {db_manager.db_path if hasattr(db_manager, 'db_path') else 'No db_path attribute'}")
         
         # Check if get_all_cameras method exists
         if not hasattr(db_manager, 'get_all_cameras'):
-            logger.error("[CAMERA_PERSISTENCE] ERROR: Database manager does not have get_all_cameras method")
+            logger.error("[CAMERA_DEBUG] ERROR: Database manager does not have get_all_cameras method")
             return False
             
+        logger.info(f"[CAMERA_DEBUG] Calling db_manager.get_all_cameras() method")
         # Call the method and check return value
         cameras = db_manager.get_all_cameras()
         
         if cameras is None:
-            logger.error("[CAMERA_PERSISTENCE] ERROR: db_manager.get_all_cameras() returned None")
+            logger.error("[CAMERA_DEBUG] ERROR: db_manager.get_all_cameras() returned None")
             return False
             
-        logger.info(f"[CAMERA_PERSISTENCE] **** Found {len(cameras)} cameras in database ****")
+        logger.info(f"[CAMERA_DEBUG] Found {len(cameras)} cameras in database")
+        if len(cameras) > 0:
+            logger.info(f"[CAMERA_DEBUG] Camera IPs from database: {[camera.get('ip') for camera in cameras]}")
+        else:
+            logger.info(f"[CAMERA_DEBUG] No cameras found in database at path: {db_manager.db_path}")
+            # Check if database file exists
+            import os
+            logger.info(f"[CAMERA_DEBUG] Database file exists: {os.path.exists(db_manager.db_path)}")
+            logger.info(f"[CAMERA_DEBUG] Database directory exists: {os.path.exists(os.path.dirname(db_manager.db_path))}")
+            logger.info(f"[CAMERA_DEBUG] Database directory contents: {os.listdir(os.path.dirname(db_manager.db_path)) if os.path.exists(os.path.dirname(db_manager.db_path)) else 'Directory does not exist'}")
+
         
         # Store existing cameras temporarily instead of clearing them
         # This ensures we don't lose cameras if there's an issue with the database
         existing_cameras = dict(onvif_camera_manager.cameras)
+        logger.info(f"[CAMERA_DEBUG] Stored {len(existing_cameras)} existing cameras temporarily")
         
         # Add each camera from the database
-        for camera in cameras:
+        logger.info(f"[CAMERA_DEBUG] Processing {len(cameras)} cameras from database")
+        for i, camera in enumerate(cameras):
             try:
                 # Log all camera data for debugging
-                logger.info(f"[CAMERA_PERSISTENCE] Camera data from DB: {camera}")
+                logger.info(f"[CAMERA_DEBUG] Processing camera {i+1}/{len(cameras)} from DB: {camera}")
                 
                 # Skip cameras with missing IP address
                 if 'ip' not in camera or not camera['ip']:
-                    logger.error("[CAMERA_PERSISTENCE] Camera missing IP address, skipping")
+                    logger.error(f"[CAMERA_DEBUG] Camera {i+1}/{len(cameras)} missing IP address, skipping")
                     continue
                     
-                logger.info(f"[CAMERA_PERSISTENCE] Adding camera from database: {camera['ip']}")
+                logger.info(f"[CAMERA_DEBUG] Adding camera from database: {camera['ip']}")
                 camera_info = {
                     'ip': camera['ip'],
                     'port': camera.get('port', 80),
                     'username': camera.get('username', ''),
                     'password': camera.get('password', '')
                 }
+                logger.info(f"[CAMERA_DEBUG] Created camera_info object for {camera['ip']}")
+
                 
                 # Add additional fields if they exist
                 for field in ['stream_uri', 'manufacturer', 'model', 'name', 'location']:
@@ -259,12 +286,36 @@ def reload_cameras_from_database():
                 logger.error(f"Traceback: {traceback.format_exc()}")
                 # Continue with next camera
         
-        logger.info("Successfully reloaded cameras from database")
+        logger.info(f"[CAMERA_DEBUG] ===== SUCCESSFULLY RELOADED {len(onvif_camera_manager.cameras)} CAMERAS FROM DATABASE =====")
+        logger.info(f"[CAMERA_DEBUG] Final camera list: {list(onvif_camera_manager.cameras.keys())}")
+        
+        # Verify database state after loading
+        try:
+            verify_cameras = db_manager.get_all_cameras()
+            logger.info(f"[CAMERA_DEBUG] Verification: {len(verify_cameras)} cameras in database after reload")
+            
+            # Check if database file is writeable
+            import os
+            db_path = db_manager.db_path
+            logger.info(f"[CAMERA_DEBUG] Database path for verification: {db_path}")
+            logger.info(f"[CAMERA_DEBUG] Database file exists: {os.path.exists(db_path)}")
+            logger.info(f"[CAMERA_DEBUG] Database file is readable: {os.access(db_path, os.R_OK) if os.path.exists(db_path) else 'File does not exist'}")
+            logger.info(f"[CAMERA_DEBUG] Database file is writable: {os.access(db_path, os.W_OK) if os.path.exists(db_path) else 'File does not exist'}")
+            
+            # Check database directory permissions
+            db_dir = os.path.dirname(db_path)
+            logger.info(f"[CAMERA_DEBUG] Database directory: {db_dir}")
+            logger.info(f"[CAMERA_DEBUG] Database directory exists: {os.path.exists(db_dir)}")
+            logger.info(f"[CAMERA_DEBUG] Database directory is readable: {os.access(db_dir, os.R_OK) if os.path.exists(db_dir) else 'Directory does not exist'}")
+            logger.info(f"[CAMERA_DEBUG] Database directory is writable: {os.access(db_dir, os.W_OK) if os.path.exists(db_dir) else 'Directory does not exist'}")
+        except Exception as verify_error:
+            logger.error(f"[CAMERA_DEBUG] Error during verification: {str(verify_error)}")
+        
         return True
     except Exception as e:
-        logger.error(f"Error reloading cameras from database: {str(e)}")
+        logger.error(f"[CAMERA_DEBUG] ERROR reloading cameras from database: {str(e)}")
         import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
+        logger.error(f"[CAMERA_DEBUG] Traceback: {traceback.format_exc()}")
         return False
 
 # Original camera route below - restored from commented state

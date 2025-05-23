@@ -775,12 +775,45 @@ class DatabaseManager:
             bool: True if successful, False otherwise
         """
         try:
+            # Log detailed information about the camera being added
+            logger.info(f"[CAMERA_DEBUG] Adding camera to database: {camera_info['ip']}")
+            logger.info(f"[CAMERA_DEBUG] Database path: {self.db_path}")
+            logger.info(f"[CAMERA_DEBUG] Database exists: {os.path.exists(self.db_path)}")
+            logger.info(f"[CAMERA_DEBUG] Database directory exists: {os.path.exists(os.path.dirname(self.db_path))}")
+            
+            # Create database directory if it doesn't exist
+            os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+            
+            # Create database connection
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
+            # Ensure the cameras table exists
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS cameras (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ip TEXT UNIQUE NOT NULL,
+                    port INTEGER DEFAULT 80,
+                    username TEXT,
+                    password TEXT,
+                    stream_uri TEXT,
+                    manufacturer TEXT,
+                    model TEXT,
+                    name TEXT,
+                    location TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
+            logger.info(f"[CAMERA_DEBUG] Ensured cameras table exists")
+            
             # Check if camera already exists
             cursor.execute('SELECT id FROM cameras WHERE ip = ?', (camera_info['ip'],))
-            if cursor.fetchone() is not None:
+            existing_camera = cursor.fetchone()
+            logger.info(f"[CAMERA_DEBUG] Camera exists in database: {existing_camera is not None}")
+            
+            if existing_camera is not None:
                 # Update existing camera
                 query = 'UPDATE cameras SET updated_at = CURRENT_TIMESTAMP'
                 params = []
@@ -796,7 +829,7 @@ class DatabaseManager:
                 params.append(camera_info['ip'])
                 
                 cursor.execute(query, params)
-                logger.info(f"Updated camera with IP {camera_info['ip']}")
+                logger.info(f"[CAMERA_DEBUG] Updated camera with IP {camera_info['ip']}")
             else:
                 # Insert new camera
                 fields = ['ip', 'port', 'username', 'password', 'stream_uri', 'manufacturer', 'model', 'name', 'location']
@@ -808,14 +841,22 @@ class DatabaseManager:
                 fields_str = ', '.join(fields)
                 
                 cursor.execute(f'INSERT INTO cameras ({fields_str}) VALUES ({placeholders})', values)
-                logger.info(f"Added camera with IP {camera_info['ip']}")
+                logger.info(f"[CAMERA_DEBUG] Added new camera with IP {camera_info['ip']}")
             
             # Commit changes
             conn.commit()
+            logger.info(f"[CAMERA_DEBUG] Changes committed to database")
+            
+            # Verify camera was saved
+            cursor.execute('SELECT * FROM cameras WHERE ip = ?', (camera_info['ip'],))
+            saved_camera = cursor.fetchone()
+            logger.info(f"[CAMERA_DEBUG] Camera verification after save: {saved_camera is not None}")
+            
+            # Close connection
             conn.close()
             
             # Log the database path for debugging
-            logger.info(f"Camera saved to database at {self.db_path}")
+            logger.info(f"[CAMERA_DEBUG] Camera saved to database at {self.db_path}")
             
             return True
         except Exception as e:
@@ -832,24 +873,43 @@ class DatabaseManager:
             list: List of camera dictionaries
         """
         try:
-            # Log the database path for debugging
-            logger.info(f"Loading cameras from database at {self.db_path}")
+            # Log detailed information about the database
+            logger.info(f"[CAMERA_DEBUG] ===== LOADING CAMERAS FROM DATABASE =====")
+            logger.info(f"[CAMERA_DEBUG] Database path: {self.db_path}")
+            logger.info(f"[CAMERA_DEBUG] Database exists: {os.path.exists(self.db_path)}")
+            logger.info(f"[CAMERA_DEBUG] Database directory exists: {os.path.exists(os.path.dirname(self.db_path))}")
             
             # Check if database file exists
             if not os.path.exists(self.db_path):
-                logger.error(f"Database file does not exist: {self.db_path}")
-                return []
+                logger.error(f"[CAMERA_DEBUG] Database file does not exist: {self.db_path}")
+                logger.info(f"[CAMERA_DEBUG] Creating empty database file")
                 
+                # Create database directory if it doesn't exist
+                os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+                
+                # Create empty database file
+                conn = sqlite3.connect(self.db_path)
+                conn.close()
+                logger.info(f"[CAMERA_DEBUG] Empty database file created")
+                return []
+            
+            # Connect to database
+            logger.info(f"[CAMERA_DEBUG] Connecting to database")
             conn = sqlite3.connect(self.db_path)
             conn.row_factory = sqlite3.Row  # Return rows as dictionaries
             cursor = conn.cursor()
+            logger.info(f"[CAMERA_DEBUG] Connected to database successfully")
             
             # Check if cameras table exists
+            logger.info(f"[CAMERA_DEBUG] Checking if cameras table exists")
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='cameras'")
-            if not cursor.fetchone():
-                logger.error("Cameras table does not exist in the database")
+            table_exists = cursor.fetchone() is not None
+            logger.info(f"[CAMERA_DEBUG] Cameras table exists: {table_exists}")
+            
+            if not table_exists:
+                logger.error("[CAMERA_DEBUG] Cameras table does not exist in the database")
                 # Create cameras table
-                logger.info("Creating cameras table")
+                logger.info("[CAMERA_DEBUG] Creating cameras table")
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS cameras (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -867,25 +927,36 @@ class DatabaseManager:
                     )
                 ''')
                 conn.commit()
-                logger.info("Cameras table created successfully")
+                logger.info("[CAMERA_DEBUG] Cameras table created successfully")
                 conn.close()
                 return []
             
+            # Check table structure
+            logger.info(f"[CAMERA_DEBUG] Checking cameras table structure")
+            cursor.execute("PRAGMA table_info(cameras)")
+            columns = cursor.fetchall()
+            column_names = [column[1] for column in columns]
+            logger.info(f"[CAMERA_DEBUG] Cameras table columns: {column_names}")
+            
             # Get all cameras
+            logger.info(f"[CAMERA_DEBUG] Retrieving cameras from database")
             cursor.execute('SELECT * FROM cameras')
             rows = cursor.fetchall()
+            logger.info(f"[CAMERA_DEBUG] Retrieved {len(rows)} rows from cameras table")
             
             # Close connection
             conn.close()
+            logger.info(f"[CAMERA_DEBUG] Database connection closed")
             
             # Convert rows to dictionaries
             cameras = [dict(row) for row in rows]
-            logger.info(f"Retrieved {len(cameras)} cameras from database")
+            logger.info(f"[CAMERA_DEBUG] Converted {len(cameras)} rows to camera dictionaries")
             
             # Log camera details for debugging
             for camera in cameras:
-                logger.info(f"Camera from DB: IP={camera.get('ip')}, Name={camera.get('name')}, Stream URI={camera.get('stream_uri')}")
+                logger.info(f"[CAMERA_DEBUG] Camera from DB: ID={camera.get('id')}, IP={camera.get('ip')}, Name={camera.get('name')}, Stream URI={camera.get('stream_uri')}")
             
+            logger.info(f"[CAMERA_DEBUG] ===== FINISHED LOADING CAMERAS FROM DATABASE =====")
             return cameras
         except Exception as e:
             logger.error(f"Error getting cameras from database: {e}")
