@@ -21,17 +21,25 @@ class DatabaseManager:
     """
     
     def __init__(self, config=None):
-        """Initialize the database manager."""
+        """
+        Initialize the database manager.
+        
+        Args:
+            config (dict, optional): Configuration dictionary for database
+        """
         self.config = config or {}
         
         # Always use the standard database path in the data directory
-        db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'amslpr.db')
+        self.db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'amslpr.db')
+        self.backup_interval = self.config.get('backup_interval', 86400)  # 24 hours
+        self.last_backup_time = 0
         
-        # Ensure directory exists
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        # Create database directory if it doesn't exist
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         
-        self.db_path = db_path
         logger.info(f"DatabaseManager initialized with database path: {self.db_path}")
+        
+        # Initialize database
         self._init_database()
         
         logger.info("Database manager initialized")
