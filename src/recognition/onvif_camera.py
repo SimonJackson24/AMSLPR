@@ -6,13 +6,35 @@ This module provides functionality to discover, connect to, and stream from
 ONVIF-compatible IP cameras for license plate recognition.
 """
 
-import os
-import time
-import socket
 import logging
-from onvif.client import ONVIFCamera
-from urllib.parse import urlparse
-from src.utils.security import CredentialManager
+import time
+import threading
+import os
+from typing import Dict, Any, Optional, List, Union
+
+# Import database manager directly
+try:
+    from src.database.db_manager import DatabaseManager
+    db_manager = None
+    # Initialize database manager with default path
+    db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'amslpr.db')
+    if os.path.exists(os.path.dirname(db_path)):
+        db_manager = DatabaseManager({'database': {'path': db_path}})
+        logging.info(f"Initialized database manager with path: {db_path}")
+    else:
+        logging.error(f"Database directory does not exist: {os.path.dirname(db_path)}")
+except ImportError as e:
+    logging.error(f"Failed to import DatabaseManager: {e}")
+    db_manager = None
+
+try:
+    import onvif
+    from onvif import ONVIFCamera
+    ONVIF_AVAILABLE = True
+except ImportError:
+    logging.warning("onvif package not available, using mock implementation")
+    ONVIF_AVAILABLE = False
+
 import cv2
 import numpy as np
 from datetime import datetime
@@ -525,11 +547,11 @@ class ONVIFCameraManager:
                         'stream': None
                     }
                     
-                    # Save camera to database if db_manager is available
+                    # Save camera to database using the db_manager
                     try:
-                        from src.web.camera_routes import db_manager
+                        # Use the db_manager that was imported at the module level
                         if db_manager and hasattr(db_manager, 'add_camera'):
-                            logger.info(f"Saving camera {ip} to database")
+                            logger.info(f"Saving camera {ip} to database using global db_manager")
                             db_camera_info = {
                                 'ip': ip,
                                 'port': port,
@@ -542,11 +564,33 @@ class ONVIFCameraManager:
                                 'model': camera_info.get('model', 'ONVIF Camera')
                             }
                             db_manager.add_camera(db_camera_info)
-                            logger.info(f"Camera {ip} saved to database")
+                            logger.info(f"Camera {ip} saved to database successfully")
                         else:
-                            logger.warning(f"Database manager not available, camera {ip} not saved to database")
+                            logger.warning(f"Global database manager not available, camera {ip} not saved to database")
+                            # Try to get db_manager from camera_routes as fallback
+                            try:
+                                from src.web.camera_routes import db_manager as routes_db_manager
+                                if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
+                                    logger.info(f"Saving camera {ip} to database using routes_db_manager")
+                                    db_camera_info = {
+                                        'ip': ip,
+                                        'port': port,
+                                        'username': username,
+                                        'password': password,
+                                        'stream_uri': camera_info.get('stream_uri', ''),
+                                        'name': camera_info.get('name', f'Camera {ip}'),
+                                        'location': camera_info.get('location', 'Unknown'),
+                                        'manufacturer': camera_info.get('manufacturer', 'Unknown'),
+                                        'model': camera_info.get('model', 'ONVIF Camera')
+                                    }
+                                    routes_db_manager.add_camera(db_camera_info)
+                                    logger.info(f"Camera {ip} saved to database using routes_db_manager")
+                            except Exception as e:
+                                logger.error(f"Error saving camera {ip} to database using routes_db_manager: {str(e)}")
                     except Exception as e:
                         logger.error(f"Error saving camera {ip} to database: {str(e)}")
+                        import traceback
+                        logger.error(f"Traceback: {traceback.format_exc()}")
                     
                     logger.info(f"Added camera at {ip} with special handling")
                     return True
@@ -615,46 +659,59 @@ class ONVIFCameraManager:
                     'stream': None
                 }
                 
-                # Save camera to database if db_manager is available
+                # Save camera to database using the db_manager
                 try:
-                    from src.web.camera_routes import db_manager
+                    # Use the db_manager that was imported at the module level
+                    # Get stream URI if available
+                    stream_uri = ''
+                    try:
+                        # Try to get media service
+                        media_service = camera.create_media_service()
+                        profiles = media_service.GetProfiles()
+                        if profiles:
+                            # Get stream URI for first profile
+                            token = profiles[0]._token
+                            stream_setup = {'Stream': 'RTP-Unicast', 'Transport': {'Protocol': 'RTSP'}}
+                            stream_uri = media_service.GetStreamUri({'StreamSetup': stream_setup, 'ProfileToken': token}).Uri
+                            logger.info(f"Got stream URI: {stream_uri}")
+                            # Add stream URI to camera details
+                            camera_details['stream_uri'] = stream_uri
+                    except Exception as e:
+                        logger.warning(f"Error getting stream URI: {str(e)}")
+                        
+                    # Prepare camera info for database
+                    db_camera_info = {
+                        'ip': ip,
+                        'port': port,
+                        'username': username,
+                        'password': password,
+                        'stream_uri': stream_uri,
+                        'name': camera_details.get('name', f'Camera {ip}'),
+                        'location': camera_details.get('location', 'Unknown'),
+                        'manufacturer': camera_details.get('manufacturer', 'Unknown'),
+                        'model': camera_details.get('model', 'ONVIF Camera')
+                    }
+                    
+                    # First try with global db_manager
                     if db_manager and hasattr(db_manager, 'add_camera'):
-                        logger.info(f"Saving camera {ip} to database")
-                        # Get stream URI if available
-                        stream_uri = ''
-                        try:
-                            # Try to get media service
-                            media_service = camera.create_media_service()
-                            profiles = media_service.GetProfiles()
-                            if profiles:
-                                # Get stream URI for first profile
-                                token = profiles[0]._token
-                                stream_setup = {'Stream': 'RTP-Unicast', 'Transport': {'Protocol': 'RTSP'}}
-                                stream_uri = media_service.GetStreamUri({'StreamSetup': stream_setup, 'ProfileToken': token}).Uri
-                                logger.info(f"Got stream URI: {stream_uri}")
-                                # Add stream URI to camera details
-                                camera_details['stream_uri'] = stream_uri
-                        except Exception as e:
-                            logger.warning(f"Error getting stream URI: {str(e)}")
-                            
-                        # Prepare camera info for database
-                        db_camera_info = {
-                            'ip': ip,
-                            'port': port,
-                            'username': username,
-                            'password': password,
-                            'stream_uri': stream_uri,
-                            'name': camera_details.get('name', f'Camera {ip}'),
-                            'location': camera_details.get('location', 'Unknown'),
-                            'manufacturer': camera_details.get('manufacturer', 'Unknown'),
-                            'model': camera_details.get('model', 'ONVIF Camera')
-                        }
+                        logger.info(f"Saving camera {ip} to database using global db_manager")
                         db_manager.add_camera(db_camera_info)
-                        logger.info(f"Camera {ip} saved to database")
+                        logger.info(f"Camera {ip} saved to database successfully")
                     else:
-                        logger.warning(f"Database manager not available, camera {ip} not saved to database")
+                        logger.warning(f"Global database manager not available, camera {ip} not saved to database")
+                        # Try to get db_manager from camera_routes as fallback
+                        try:
+                            from src.web.camera_routes import db_manager as routes_db_manager
+                            if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
+                                logger.info(f"Saving camera {ip} to database using routes_db_manager")
+                                routes_db_manager.add_camera(db_camera_info)
+                                logger.info(f"Camera {ip} saved to database using routes_db_manager")
+                        except Exception as e:
+                            logger.error(f"Error saving camera {ip} to database using routes_db_manager: {str(e)}")
                 except Exception as e:
                     logger.error(f"Error saving camera {ip} to database: {str(e)}")
+                    import traceback
+                    logger.error(f"Traceback: {traceback.format_exc()}")
                 
                 logger.info(f"Added camera at {ip}")
                 return True
