@@ -958,7 +958,7 @@ def camera_stream(camera_id):
 @camera_bp.route('/camera/view/<camera_id>')
 @login_required(user_manager)
 def camera_view_stream(camera_id):
-    """Render a dedicated page for viewing a camera stream."""
+    """Render a dedicated page for viewing a camera stream with analytics overlay."""
     try:
         # Check if camera manager is available
         if not onvif_camera_manager:
@@ -984,10 +984,43 @@ def camera_view_stream(camera_id):
         if not stream_url:
             logger.warning(f"Stream URL not available for camera: {camera_id}")
             return "Stream not available", 404
-            
-        camera_name = camera_info.get('name', camera_id) if isinstance(camera_info, dict) else camera_id
         
-        return render_template('camera_stream.html', camera_id=camera_id, stream_url=stream_url, camera_name=camera_name)
+        # Prepare camera object for template
+        camera = {
+            'id': camera_id,
+            'name': camera_info.get('name', camera_id) if isinstance(camera_info, dict) else camera_id,
+            'location': camera_info.get('location', 'Unknown') if isinstance(camera_info, dict) else 'Unknown',
+            'model': camera_info.get('model', 'Unknown') if isinstance(camera_info, dict) else 'Unknown',
+            'resolution': camera_info.get('resolution', '1920x1080') if isinstance(camera_info, dict) else '1920x1080',
+            'frame_rate': camera_info.get('frame_rate', '25') if isinstance(camera_info, dict) else '25',
+            'uptime': camera_info.get('uptime', 'Unknown') if isinstance(camera_info, dict) else 'Unknown'
+        }
+        
+        # Get recent detections for this camera (if available)
+        recent_detections = []
+        try:
+            from src.web.main_routes import db_manager
+            if db_manager:
+                # Limit to 4 most recent detections
+                detections = db_manager.get_recent_detections(camera_id=camera_id, limit=4)
+                if detections:
+                    for detection in detections:
+                        recent_detections.append({
+                            'id': detection.get('id', ''),
+                            'plate_number': detection.get('plate_number', 'Unknown'),
+                            'timestamp': detection.get('timestamp', ''),
+                            'image': detection.get('image_path', ''),
+                            'confidence': detection.get('confidence', 0),
+                            'authorized': detection.get('authorized', False)
+                        })
+        except Exception as e:
+            logger.warning(f"Error getting recent detections: {str(e)}")
+        
+        # Render the comprehensive camera view template
+        return render_template('camera_view.html', 
+                              camera=camera, 
+                              stream_url=stream_url,
+                              recent_detections=recent_detections)
     except Exception as e:
         logger.error(f"Error rendering camera view: {str(e)}")
         return "Error rendering camera view", 500
