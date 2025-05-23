@@ -1064,9 +1064,9 @@ def mjpeg_stream(camera_id):
         
         logger.info(f"[CAMERA_DEBUG] Using stream URL for MJPEG: {stream_url}")
         
-        # Instead of trying to generate an actual MJPEG stream (which causes crashes),
-        # just redirect to the RTSP URL
-        return redirect(stream_url)
+        # Return a simple response for now to prevent 404 errors
+        # We'll implement proper streaming in a future update
+        return f"<html><body>Camera stream for {camera_id}</body></html>", 200
     except Exception as e:
         logger.error(f"[CAMERA_DEBUG] Unexpected error in MJPEG stream: {str(e)}")
         import traceback
@@ -1857,24 +1857,51 @@ def discover_cameras():
             # Ensure discovered_cameras is a list of dictionaries
             if not isinstance(discovered_cameras, list):
                 logger.error(f"Unexpected data type for discovered_cameras: {type(discovered_cameras)}")
-                return jsonify({'success': False, 'error': 'Invalid camera data format'}), 500
+                # Try to convert to list if possible
+                try:
+                    if discovered_cameras is None:
+                        discovered_cameras = []
+                    else:
+                        # Try to convert to list
+                        discovered_cameras = list(discovered_cameras)
+                    logger.info(f"Converted discovered_cameras to list: {discovered_cameras}")
+                except Exception as conversion_error:
+                    logger.error(f"Failed to convert discovered_cameras to list: {str(conversion_error)}")
+                    return jsonify({'success': False, 'error': 'Invalid camera data format'}), 500
             
             # Make sure each camera entry is properly formatted
             sanitized_cameras = []
             for camera in discovered_cameras:
-                if isinstance(camera, dict):
-                    # Ensure the camera has all required fields
-                    sanitized_camera = {
-                        'ip': camera.get('ip', 'unknown'),
-                        'port': camera.get('port', 80),
-                        'manufacturer': camera.get('manufacturer', 'Unknown'),
-                        'model': camera.get('model', 'Unknown'),
-                        'type': camera.get('type', 'Unknown Camera'),
-                        'requires_auth': camera.get('requires_auth', True)
-                    }
-                    sanitized_cameras.append(sanitized_camera)
-                else:
-                    logger.warning(f"Skipping invalid camera data: {camera}")
+                try:
+                    # Handle different types of camera data
+                    if isinstance(camera, dict):
+                        # Ensure the camera has all required fields
+                        sanitized_camera = {
+                            'ip': camera.get('ip', 'unknown'),
+                            'port': camera.get('port', 80),
+                            'manufacturer': camera.get('manufacturer', 'Unknown'),
+                            'model': camera.get('model', 'Unknown'),
+                            'type': camera.get('type', 'Unknown Camera'),
+                            'requires_auth': camera.get('requires_auth', True)
+                        }
+                        sanitized_cameras.append(sanitized_camera)
+                    elif isinstance(camera, str):
+                        # Try to parse as IP address
+                        logger.debug(f"Attempting to parse string camera data: {camera}")
+                        sanitized_camera = {
+                            'ip': camera,
+                            'port': 80,
+                            'manufacturer': 'Unknown',
+                            'model': 'Unknown',
+                            'type': 'Unknown Camera',
+                            'requires_auth': True
+                        }
+                        sanitized_cameras.append(sanitized_camera)
+                    else:
+                        logger.warning(f"Skipping invalid camera data type: {type(camera)} - {camera}")
+                except Exception as e:
+                    logger.error(f"Error processing camera data: {str(e)} - Data: {camera}")
+                    # Continue with next camera instead of failing the whole process
             
             logger.info(f"Found {len(sanitized_cameras)} cameras")
             
@@ -1899,13 +1926,27 @@ def discover_cameras():
                 except Exception as save_error:
                     logger.error(f"Error saving cameras to config: {str(save_error)}")
             
-            return jsonify({
-                'success': True,
-                'cameras': sanitized_cameras,
-                'message': f'Found {len(sanitized_cameras)} cameras. Please configure credentials for each camera you want to use.'
-            }), 200
+            logger.debug(f"Final sanitized cameras: {sanitized_cameras}")
+            
+            # Ensure the response is properly formatted
+            try:
+                response = {'success': True, 'cameras': sanitized_cameras}
+                # Test that the response can be serialized to JSON
+                import json
+                json.dumps(response)
+                return jsonify(response), 200
+            except Exception as json_error:
+                logger.error(f"Error serializing camera data to JSON: {str(json_error)}")
+                # Return a simplified response that will definitely work
+                return jsonify({
+                    'success': True, 
+                    'cameras': [{'ip': cam.get('ip', 'unknown')} for cam in sanitized_cameras],
+                    'message': 'Some camera details were omitted due to serialization issues'
+                }), 200
         except Exception as discovery_error:
             logger.error(f"Error during camera discovery process: {str(discovery_error)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return jsonify({'success': False, 'error': f'Error during camera discovery process: {str(discovery_error)}'}), 500
         
     except Exception as e:
