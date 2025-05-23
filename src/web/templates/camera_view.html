@@ -220,185 +220,78 @@
             statusBadge.innerText = 'Starting stream...';
         }
         
-        // Show overlay during initialization
-        const overlay = document.getElementById('camera-overlay');
-        if (overlay) {
-            overlay.classList.remove('d-none');
-            const overlayContent = overlay.querySelector('.camera-overlay-content');
-            if (overlayContent) {
-                overlayContent.innerHTML = `
-                    <i class="bi bi-camera-video fa-3x mb-3"></i>
-                    <h4>Starting Camera Stream</h4>
-                    <p>Initializing video feed...</p>
-                    <div class="spinner-border text-light mt-3" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                `;
+        // Continue with MJPEG stream setup
+        if (statusBadge) {
+            statusBadge.className = 'badge bg-success me-2';
+            statusBadge.innerText = 'Connected';
+        }
+        
+        // Get MJPEG URL
+        const mjpegUrl = '/camera/mjpeg-stream/{{ camera.id }}';
+        console.log('Using MJPEG stream:', mjpegUrl);
+        
+        // Hide video player
+        const videoElement = document.getElementById('camera-video');
+        if (videoElement) {
+            videoElement.style.display = 'none';
+        }
+        
+        // Remove any existing MJPEG stream
+        const existingStream = document.getElementById('mjpeg-stream');
+        if (existingStream) {
+            existingStream.remove();
+        }
+        
+        // Create image element for MJPEG stream
+        const imgElement = document.createElement('img');
+        imgElement.id = 'mjpeg-stream';
+        imgElement.src = mjpegUrl;
+        imgElement.style.width = '100%';
+        imgElement.style.height = 'auto';
+        imgElement.style.display = 'block';
+        imgElement.onerror = function() {
+            console.error('MJPEG stream error');
+            showStreamError('Failed to load MJPEG stream');
+        };
+        imgElement.onload = function() {
+            console.log('MJPEG stream loaded successfully');
+            document.getElementById('camera-overlay').classList.add('d-none');
+        };
+        
+        // Add the image element to the container
+        const videoContainer = document.querySelector('.camera-feed-container');
+        if (videoContainer) {
+            videoContainer.appendChild(imgElement);
+        } else if (videoElement && videoElement.parentNode) {
+            videoElement.parentNode.insertBefore(imgElement, videoElement.nextSibling);
+        }
+        
+        // Set up retry mechanism
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        function retryStream() {
+            if (retryCount < maxRetries) {
+                retryCount++;
+                console.log('Retrying MJPEG stream (' + retryCount + '/' + maxRetries + ')...');
+                setTimeout(function() {
+                    imgElement.src = mjpegUrl + '?retry=' + retryCount;
+                }, 2000);
+            } else {
+                showStreamError('Failed to load stream after multiple attempts');
             }
         }
         
-        // Make an AJAX request to start the HLS stream conversion
-        fetch('/camera/hls-stream/{{ camera.id }}')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success && data.playlist_url) {
-                    // Update status badge
-                    if (statusBadge) {
-                        statusBadge.className = 'badge bg-success me-2';
-                        statusBadge.innerText = 'Connected';
-                    }
-                    
-                    // Use a more direct approach to load the HLS stream
-                    if (Hls.isSupported()) {
-                        console.log('Using HLS.js to play stream:', data.playlist_url);
-                        // Use HLS.js for better browser support
-                        const videoElement = document.getElementById('camera-video');
-                        
-                        // Destroy previous HLS instance if exists
-                        if (window.hlsPlayer) {
-                            window.hlsPlayer.destroy();
-                        }
-                        
-                        // Create new HLS instance with optimized settings
-                        const hls = new Hls({
-                            debug: false,  // Set to false in production
-                            enableWorker: true,
-                            lowLatencyMode: true,
-                            startLevel: -1,  // Auto select quality level
-                            maxBufferLength: 10,  // Reduce buffer to decrease latency
-                            maxMaxBufferLength: 30,
-                            backBufferLength: 30,
-                            manifestLoadingTimeOut: 10000,  // Longer timeout for manifest loading
-                            manifestLoadingMaxRetry: 5,
-                            levelLoadingTimeOut: 10000,
-                            fragLoadingTimeOut: 10000,
-                            fragLoadingMaxRetry: 6
-                        });
-                        
-                        // Store for later use
-                        window.hlsPlayer = hls;
-                        
-                        // Add error handling with MJPEG fallback
-                        hls.on(Hls.Events.ERROR, function(event, data) {
-                            console.error('HLS detailed error:', data);
-                            if (data.fatal) {
-                                switch(data.type) {
-                                    case Hls.ErrorTypes.NETWORK_ERROR:
-                                        // Try to recover network error
-                                        console.log('Fatal network error encountered, trying to recover');
-                                        hls.startLoad();
-                                        break;
-                                    case Hls.ErrorTypes.MEDIA_ERROR:
-                                        console.log('Fatal media error encountered, trying to recover');
-                                        hls.recoverMediaError();
-                                        break;
-                                    default:
-                                        // Cannot recover from HLS error, try MJPEG fallback
-                                        console.log('Fatal HLS error, switching to MJPEG fallback');
-                                        switchToMjpegFallback();
-                                        break;
-                                }
-                            }
-                            
-                            // Count errors to detect persistent problems
-                            window.hlsErrorCount = (window.hlsErrorCount || 0) + 1;
-                            if (window.hlsErrorCount > 5) {
-                                console.log('Too many HLS errors, switching to MJPEG fallback');
-                                switchToMjpegFallback();
-                            }
-                        });
-                        
-                        // Function to switch to MJPEG fallback
-                        function switchToMjpegFallback() {
-                            // Only switch once
-                            if (window.usingMjpegFallback) return;
-                            window.usingMjpegFallback = true;
-                            
-                            console.log('Switching to MJPEG fallback stream');
-                            
-                            // Clean up HLS player
-                            if (window.hlsPlayer) {
-                                window.hlsPlayer.destroy();
-                                window.hlsPlayer = null;
-                            }
-                            
-                            // Get MJPEG URL
-                            const mjpegUrl = '/camera/mjpeg-stream/' + '{{ camera.id }}';
-                            
-                            // Set up MJPEG stream
-                            const videoElement = document.getElementById('camera-video');
-                            const imgElement = document.createElement('img');
-                            imgElement.id = 'mjpeg-stream';
-                            imgElement.src = mjpegUrl;
-                            imgElement.style.width = '100%';
-                            imgElement.style.height = 'auto';
-                            imgElement.style.display = 'block';
-                            
-                            // Replace video with image
-                            videoElement.style.display = 'none';
-                            videoElement.parentNode.insertBefore(imgElement, videoElement.nextSibling);
-                            
-                            // Hide loading overlay
-                            document.getElementById('camera-overlay').classList.add('d-none');
-                        }
-                        
-                        // Clear any existing sources and reset player
-                        player.pause();
-                        player.src('');
-                        player.reset();
-                        
-                        // Load the source and attach to video element
-                        hls.loadSource(data.playlist_url);
-                        hls.attachMedia(videoElement);
-                        
-                        hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                            console.log('HLS manifest parsed, starting playback');
-                            
-                            // Make sure the player is not in an error state
-                            player.error(null);
-                            
-                            // Force play() after a slight delay to ensure HLS is ready
-                            setTimeout(function() {
-                                var playPromise = player.play();
-                                if (playPromise !== undefined) {
-                                    playPromise.then(function() {
-                                        console.log('Playback started successfully');
-                                    }).catch(function(error) {
-                                        console.error('Playback failed:', error);
-                                        // Try one more time after a short delay
-                                        setTimeout(function() {
-                                            player.play();
-                                        }, 1000);
-                                    });
-                                }
-                                document.getElementById('camera-overlay').classList.add('d-none');
-                            }, 500);
-                        });
-                    } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
-                        // For Safari with native HLS support
-                        player.src({
-                            src: data.playlist_url,
-                            type: 'application/x-mpegURL'
-                        });
-                        player.play();
-                        document.getElementById('camera-overlay').classList.add('d-none');
-                    } else {
-                        showStreamError('Your browser does not support HLS streaming');
-                    }
-                } else {
-                    // Show error if stream URL not available
-                    showStreamError(data.message || 'Failed to get stream URL');
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching stream URL:', error);
-                showStreamError('Failed to connect to camera stream');
-            });
+        // Add error event listener
+        imgElement.addEventListener('error', retryStream);
+        
+        // Hide loading overlay after a short delay
+        setTimeout(function() {
+            const overlay = document.getElementById('camera-overlay');
+            if (overlay) {
+                overlay.classList.add('d-none');
+            }
+        }, 1000);
     }
     
     // Function to show stream errors with retry button
