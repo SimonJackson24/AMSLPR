@@ -143,6 +143,7 @@ def init_camera_manager(config):
                         
                     # Call the dedicated function to load cameras consistently
                     reload_cameras_from_database()
+                    logger.info("[CAMERA_PERSISTENCE] Successfully loaded cameras from database")
                 except Exception as e:
                     logger.error(f"[CAMERA_PERSISTENCE] ERROR: Failed to load cameras from database: {str(e)}")
                     import traceback

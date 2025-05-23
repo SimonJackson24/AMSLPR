@@ -844,6 +844,26 @@ class DatabaseManager:
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='cameras'")
             if not cursor.fetchone():
                 logger.error("Cameras table does not exist in the database")
+                # Create cameras table
+                logger.info("Creating cameras table")
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS cameras (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ip TEXT UNIQUE NOT NULL,
+                        port INTEGER DEFAULT 80,
+                        username TEXT,
+                        password TEXT,
+                        stream_uri TEXT,
+                        manufacturer TEXT,
+                        model TEXT,
+                        name TEXT,
+                        location TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+                conn.commit()
+                logger.info("Cameras table created successfully")
                 conn.close()
                 return []
             

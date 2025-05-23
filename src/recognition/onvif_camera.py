@@ -657,46 +657,44 @@ class ONVIFCameraManager:
                     import traceback
                     logger.error(f"Traceback: {traceback.format_exc()}")
                     
-                    # Save camera to database using the db_manager
+                    # Save camera to database
                     try:
-                        # Use the db_manager that was imported at the module level
-                        if db_manager and hasattr(db_manager, 'add_camera'):
-                            logger.info(f"Saving camera {ip} to database using global db_manager")
-                            db_camera_info = {
-                                'ip': ip,
-                                'port': port,
-                                'username': username,
-                                'password': password,
-                                'stream_uri': camera_info.get('stream_uri', ''),
-                                'name': camera_info.get('name', f'Camera {ip}'),
-                                'location': camera_info.get('location', 'Unknown'),
-                                'manufacturer': camera_info.get('manufacturer', 'Unknown'),
-                                'model': camera_info.get('model', 'ONVIF Camera')
-                            }
-                            db_manager.add_camera(db_camera_info)
-                            logger.info(f"Camera {ip} saved to database successfully")
-                        else:
-                            logger.warning(f"Global database manager not available, camera {ip} not saved to database")
-                            # Try to get db_manager from camera_routes as fallback
-                            try:
-                                from src.web.camera_routes import db_manager as routes_db_manager
-                                if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
-                                    logger.info(f"Saving camera {ip} to database using routes_db_manager")
-                                    db_camera_info = {
-                                        'ip': ip,
-                                        'port': port,
-                                        'username': username,
-                                        'password': password,
-                                        'stream_uri': camera_info.get('stream_uri', ''),
-                                        'name': camera_info.get('name', f'Camera {ip}'),
-                                        'location': camera_info.get('location', 'Unknown'),
-                                        'manufacturer': camera_info.get('manufacturer', 'Unknown'),
-                                        'model': camera_info.get('model', 'ONVIF Camera')
-                                    }
-                                    routes_db_manager.add_camera(db_camera_info)
-                                    logger.info(f"Camera {ip} saved to database using routes_db_manager")
-                            except Exception as e:
-                                logger.error(f"Error saving camera {ip} to database using routes_db_manager: {str(e)}")
+                        # Prepare camera info for database
+                        db_camera_info = {
+                            'ip': ip,
+                            'port': port,
+                            'username': username,
+                            'password': password,
+                            'stream_uri': camera_info.get('stream_uri', ''),
+                            'name': camera_info.get('name', f'Camera {ip}'),
+                            'location': camera_info.get('location', 'Unknown'),
+                            'manufacturer': camera_info.get('manufacturer', 'Unknown'),
+                            'model': camera_info.get('model', 'ONVIF Camera')
+                        }
+                        
+                        # Try to get db_manager from camera_routes
+                        try:
+                            from src.web.camera_routes import db_manager as routes_db_manager
+                            if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
+                                logger.info(f"Saving camera {ip} to database")
+                                routes_db_manager.add_camera(db_camera_info)
+                                logger.info(f"Camera {ip} saved to database successfully")
+                            else:
+                                logger.error(f"Database manager not available in camera_routes")
+                                
+                                # Try to import directly as fallback
+                                try:
+                                    from src.database.db_manager import DatabaseManager
+                                    config = {'database': {'path': os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'amslpr.db')}}
+                                    direct_db_manager = DatabaseManager(config)
+                                    if hasattr(direct_db_manager, 'add_camera'):
+                                        logger.info(f"Saving camera {ip} to database using direct DatabaseManager")
+                                        direct_db_manager.add_camera(db_camera_info)
+                                        logger.info(f"Camera {ip} saved to database using direct DatabaseManager")
+                                except Exception as e:
+                                    logger.error(f"Error using direct DatabaseManager: {str(e)}")
+                        except Exception as e:
+                            logger.error(f"Error getting db_manager from camera_routes: {str(e)}")
                     except Exception as e:
                         logger.error(f"Error saving camera {ip} to database: {str(e)}")
                         import traceback
@@ -821,9 +819,8 @@ class ONVIFCameraManager:
                     import traceback
                     logger.error(f"Traceback: {traceback.format_exc()}")
                 
-                # Save camera to database using the db_manager
+                # Save camera to database
                 try:
-                    # Use the db_manager that was imported at the module level
                     # Get stream URI if available
                     stream_uri = ''
                     try:
@@ -854,22 +851,29 @@ class ONVIFCameraManager:
                         'model': camera_details.get('model', 'ONVIF Camera')
                     }
                     
-                    # First try with global db_manager
-                    if db_manager and hasattr(db_manager, 'add_camera'):
-                        logger.info(f"Saving camera {ip} to database using global db_manager")
-                        db_manager.add_camera(db_camera_info)
-                        logger.info(f"Camera {ip} saved to database successfully")
-                    else:
-                        logger.warning(f"Global database manager not available, camera {ip} not saved to database")
-                        # Try to get db_manager from camera_routes as fallback
-                        try:
-                            from src.web.camera_routes import db_manager as routes_db_manager
-                            if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
-                                logger.info(f"Saving camera {ip} to database using routes_db_manager")
-                                routes_db_manager.add_camera(db_camera_info)
-                                logger.info(f"Camera {ip} saved to database using routes_db_manager")
-                        except Exception as e:
-                            logger.error(f"Error saving camera {ip} to database using routes_db_manager: {str(e)}")
+                    # Try to get db_manager from camera_routes
+                    try:
+                        from src.web.camera_routes import db_manager as routes_db_manager
+                        if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
+                            logger.info(f"Saving camera {ip} to database")
+                            routes_db_manager.add_camera(db_camera_info)
+                            logger.info(f"Camera {ip} saved to database successfully")
+                        else:
+                            logger.error(f"Database manager not available in camera_routes")
+                            
+                            # Try to import directly as fallback
+                            try:
+                                from src.database.db_manager import DatabaseManager
+                                config = {'database': {'path': os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'amslpr.db')}}
+                                direct_db_manager = DatabaseManager(config)
+                                if hasattr(direct_db_manager, 'add_camera'):
+                                    logger.info(f"Saving camera {ip} to database using direct DatabaseManager")
+                                    direct_db_manager.add_camera(db_camera_info)
+                                    logger.info(f"Camera {ip} saved to database using direct DatabaseManager")
+                            except Exception as e:
+                                logger.error(f"Error using direct DatabaseManager: {str(e)}")
+                    except Exception as e:
+                        logger.error(f"Error getting db_manager from camera_routes: {str(e)}")
                 except Exception as e:
                     logger.error(f"Error saving camera {ip} to database: {str(e)}")
                     import traceback
