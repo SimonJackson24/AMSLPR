@@ -1386,9 +1386,10 @@ def hls_segments(camera_id, filename):
 def mjpeg_stream(camera_id):
     """Stream camera feed as MJPEG."""
     try:
-        # Get camera info
+        # Get camera info - with more detailed logging
         if camera_id not in onvif_camera_manager.cameras:
-            logger.error(f"Camera {camera_id} not found")
+            logger.error(f"Camera {camera_id} not found in onvif_camera_manager.cameras")
+            logger.debug(f"Available cameras: {list(onvif_camera_manager.cameras.keys())}")
             return jsonify({"success": False, "message": "Camera not found"}), 404
             
         camera_info = onvif_camera_manager.cameras[camera_id]

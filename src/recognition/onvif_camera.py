@@ -413,7 +413,7 @@ class ONVIFCameraManager:
                 logger.error(error_msg)
                 return False, error_msg
                 
-            # Check if camera is reachable
+            # Check if camera is reachable - only log warnings but don't fail
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.settimeout(2)
@@ -421,13 +421,13 @@ class ONVIFCameraManager:
                 sock.close()
                 
                 if result != 0:
-                    error_msg = f"Camera at {ip}:{port} is not reachable"
-                    logger.error(error_msg)
-                    return False, error_msg
+                    warning_msg = f"Warning: Camera at {ip}:{port} may not be reachable on this port"
+                    logger.warning(warning_msg)
+                    # Continue anyway - the RTSP URL might still work
             except Exception as e:
-                error_msg = f"Network error when checking camera reachability: {str(e)}"
-                logger.error(error_msg)
-                return False, error_msg
+                warning_msg = f"Warning: Network check error for camera at {ip}:{port}: {str(e)}"
+                logger.warning(warning_msg)
+                # Continue anyway - the RTSP URL might still work
             
             # Create camera with explicit WSDL files
             try:
@@ -454,15 +454,28 @@ class ONVIFCameraManager:
                     logger.info(f"Added camera at {ip} with direct RTSP URL")
                     return True
                 else:
-                    # Create ONVIF camera object
-                    camera = ONVIFCamera(
-                        ip, 
-                        port,
-                        username, 
-                        password,
-                        self.wsdl_dir,
-                        encrypt=True
-                    )
+                    # Create ONVIF camera object with multiple attempts
+                    try:
+                        # First try with encryption
+                        camera = ONVIFCamera(
+                            ip, 
+                            port,
+                            username, 
+                            password,
+                            self.wsdl_dir,
+                            encrypt=True
+                        )
+                    except Exception as encrypt_error:
+                        logger.warning(f"Failed to connect with encryption, trying without: {str(encrypt_error)}")
+                        # Try again without encryption
+                        camera = ONVIFCamera(
+                            ip, 
+                            port,
+                            username, 
+                            password,
+                            self.wsdl_dir,
+                            encrypt=False
+                        )
             except Exception as e:
                 error_msg = f"Failed to create ONVIF camera object: {str(e)}"
                 logger.error(error_msg)
