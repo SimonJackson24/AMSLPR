@@ -19,7 +19,6 @@ import asyncio
 import numpy as np
 from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, Response, current_app, send_file
-from flask_cors import cross_origin
 from functools import wraps
 
 from src.utils.security import CredentialManager
