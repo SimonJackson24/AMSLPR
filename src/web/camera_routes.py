@@ -1384,7 +1384,6 @@ def hls_segments(camera_id, filename):
 
 # MJPEG streaming route as fallback
 @camera_bp.route('/camera/mjpeg-stream/<camera_id>')
-@cross_origin()  # Add CORS support
 def mjpeg_stream(camera_id):
     """Stream camera feed as MJPEG."""
     try:
