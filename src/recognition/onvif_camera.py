@@ -10,6 +10,12 @@ import logging
 import time
 import threading
 import os
+import socket
+import ipaddress
+import concurrent.futures
+import re
+import requests
+from urllib.parse import urlparse
 from typing import Dict, Any, Optional, List, Union
 
 # Import database manager directly
