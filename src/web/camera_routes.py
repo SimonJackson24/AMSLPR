@@ -958,7 +958,7 @@ def camera_stream(camera_id):
 @camera_bp.route('/camera/view/<camera_id>')
 @login_required(user_manager)
 def camera_view_stream(camera_id):
-    """Render a dedicated page for viewing a camera stream."""
+    """Render a dedicated page for viewing a camera stream with analytics overlay."""
     try:
         # Check if camera manager is available
         if not onvif_camera_manager:
@@ -984,10 +984,43 @@ def camera_view_stream(camera_id):
         if not stream_url:
             logger.warning(f"Stream URL not available for camera: {camera_id}")
             return "Stream not available", 404
-            
-        camera_name = camera_info.get('name', camera_id) if isinstance(camera_info, dict) else camera_id
         
-        return render_template('camera_stream.html', camera_id=camera_id, stream_url=stream_url, camera_name=camera_name)
+        # Prepare camera object for template
+        camera = {
+            'id': camera_id,
+            'name': camera_info.get('name', camera_id) if isinstance(camera_info, dict) else camera_id,
+            'location': camera_info.get('location', 'Unknown') if isinstance(camera_info, dict) else 'Unknown',
+            'model': camera_info.get('model', 'Unknown') if isinstance(camera_info, dict) else 'Unknown',
+            'resolution': camera_info.get('resolution', '1920x1080') if isinstance(camera_info, dict) else '1920x1080',
+            'frame_rate': camera_info.get('frame_rate', '25') if isinstance(camera_info, dict) else '25',
+            'uptime': camera_info.get('uptime', 'Unknown') if isinstance(camera_info, dict) else 'Unknown'
+        }
+        
+        # Get recent detections for this camera (if available)
+        recent_detections = []
+        try:
+            from src.web.main_routes import db_manager
+            if db_manager:
+                # Limit to 4 most recent detections
+                detections = db_manager.get_recent_detections(camera_id=camera_id, limit=4)
+                if detections:
+                    for detection in detections:
+                        recent_detections.append({
+                            'id': detection.get('id', ''),
+                            'plate_number': detection.get('plate_number', 'Unknown'),
+                            'timestamp': detection.get('timestamp', ''),
+                            'image': detection.get('image_path', ''),
+                            'confidence': detection.get('confidence', 0),
+                            'authorized': detection.get('authorized', False)
+                        })
+        except Exception as e:
+            logger.warning(f"Error getting recent detections: {str(e)}")
+        
+        # Render the comprehensive camera view template
+        return render_template('camera_view.html', 
+                              camera=camera, 
+                              stream_url=stream_url,
+                              recent_detections=recent_detections)
     except Exception as e:
         logger.error(f"Error rendering camera view: {str(e)}")
         return "Error rendering camera view", 500
@@ -1080,12 +1113,17 @@ def start_ffmpeg_stream(camera_id, rtsp_url):
             '-ac', '2',            # 2 audio channels
             '-b:a', '128k',        # Audio bitrate
             '-f', 'hls',           # Output format is HLS
-            '-hls_time', '0.5',    # Each segment is 0.5 seconds (reduced from 2)
-            '-hls_list_size', '2', # Keep only 2 segments in the playlist (reduced from 3)
-            '-hls_flags', 'delete_segments+append_list+omit_endlist',  # Delete old segments and use low-latency flags
-            '-hls_segment_type', 'fmp4', # Use fragmented MP4 segments for lower latency
+            '-hls_time', '2',      # Each segment is 2 seconds (more compatible)
+            '-hls_list_size', '3', # Keep only 3 segments in the playlist
+            '-hls_flags', 'delete_segments',  # Delete old segments
+            '-hls_allow_cache', '1',  # Allow caching
+            '-hls_segment_filename', os.path.join(hls_dir, 'segment_%03d.ts'),  # Segment naming pattern
             os.path.join(hls_dir, 'stream.m3u8')
         ]
+        
+        # Log the full command for debugging
+        logger.info(f"FFmpeg command: {' '.join(cmd)}")
+        logger.info(f"HLS output directory: {hls_dir}")
         
         logger.info(f"FFmpeg command: {' '.join(cmd)}")
         
@@ -1263,18 +1301,38 @@ def hls_segments(camera_id, filename):
         
         # Construct the full path to the requested file
         file_path = os.path.join(hls_dir, filename)
+        logger.info(f"Serving HLS file: {file_path}")
         
         # Check if the file exists
         if not os.path.exists(file_path):
             logger.warning(f"Requested HLS file not found: {file_path}")
-            
-            # If the playlist is requested but not yet created (FFmpeg might still be starting up)
-            # return an empty playlist instead of 404
             if filename.endswith('.m3u8'):
-                empty_playlist = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-ENDLIST\n"
-                return Response(empty_playlist, mimetype='application/vnd.apple.mpegurl')
-            
-            return "File not found", 404
+                # For playlist files, check if FFmpeg is still running
+                if camera_id in ffmpeg_processes and ffmpeg_processes[camera_id].poll() is None:
+                    logger.info(f"FFmpeg is still running for camera {camera_id}, returning empty playlist")
+                    # FFmpeg is running but playlist not yet created, return temporary playlist
+                    empty_playlist = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-ENDLIST\n"
+                    return Response(empty_playlist, mimetype='application/vnd.apple.mpegurl')
+                else:
+                    # FFmpeg not running, try to restart it
+                    logger.warning(f"FFmpeg not running for camera {camera_id}, attempting to restart")
+                    if camera_id in onvif_camera_manager.cameras:
+                        camera_info = onvif_camera_manager.cameras[camera_id]
+                        stream_url = ''
+                        if isinstance(camera_info, dict):
+                            stream_url = camera_info.get('stream_uri', '')
+                        else:
+                            stream_url = getattr(camera_info, 'stream_uri', '')
+                            
+                        if stream_url:
+                            start_ffmpeg_stream(camera_id, stream_url)
+                            
+                    # Return empty playlist while restarting
+                    empty_playlist = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-ENDLIST\n"
+                    return Response(empty_playlist, mimetype='application/vnd.apple.mpegurl')
+            else:
+                # For segment files, return a 404
+                return "File not found", 404
         
         # Determine the correct MIME type
         mime_type = 'application/vnd.apple.mpegurl' if filename.endswith('.m3u8') else 'video/mp2t'

@@ -396,12 +396,18 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize video.js player only if not already initialized
         if (!playerInitialized) {
+            console.log('Initializing video.js player');
             playerInitialized = true;
-            // Destroy any existing player
+            
+            // Start the HLS stream after player initialization
+            startHLSStream();
+            
+            // Destroy any existing player if needed
             if (player) {
                 player.dispose();
             }
             
+            // Initialize the video player
             player = videojs('camera-video', {
                 autoplay: false, // Don't autoplay until HLS is attached
                 controls: true,
