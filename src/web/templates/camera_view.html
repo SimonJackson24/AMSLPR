@@ -226,8 +226,8 @@
             statusBadge.innerText = 'Connected';
         }
         
-        // Get MJPEG URL
-        const mjpegUrl = '/camera/mjpeg-stream/{{ camera.id }}';
+        // Get MJPEG URL - use window.location.origin to ensure correct domain
+        const mjpegUrl = window.location.origin + '/camera/mjpeg-stream/{{ camera.id }}';
         console.log('Using MJPEG stream:', mjpegUrl);
         
         // Hide video player

@@ -19,6 +19,7 @@ import asyncio
 import numpy as np
 from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, Response, current_app, send_file
+from flask_cors import cross_origin
 from functools import wraps
 
 from src.utils.security import CredentialManager
@@ -1383,6 +1384,7 @@ def hls_segments(camera_id, filename):
 
 # MJPEG streaming route as fallback
 @camera_bp.route('/camera/mjpeg-stream/<camera_id>')
+@cross_origin()  # Add CORS support
 def mjpeg_stream(camera_id):
     """Stream camera feed as MJPEG."""
     try:
@@ -1403,17 +1405,18 @@ def mjpeg_stream(camera_id):
             logger.error(f"Stream URL not found for camera {camera_id}")
             return jsonify({"success": False, "message": "Stream URL not found"}), 404
         
-        # FFmpeg command for MJPEG streaming
+        # FFmpeg command for MJPEG streaming - simplified for maximum compatibility
         cmd = [
             'ffmpeg',
             '-y',                  # Overwrite output files
-            '-loglevel', 'error',  # Only show errors
-            '-rtsp_transport', 'tcp',  # Use TCP for RTSP
+            '-loglevel', 'warning',  # Show warnings and errors for debugging
+            '-rtsp_transport', 'tcp',  # Use TCP for RTSP (more reliable than UDP)
             '-i', stream_url,      # Input URL
-            '-q:v', '5',          # Quality level (1-31, lower is better)
+            '-c:v', 'mjpeg',       # Use MJPEG codec
+            '-q:v', '10',          # Medium quality (1-31, lower is better quality)
+            '-vf', 'scale=640:-1', # Scale to reasonable size for streaming
             '-f', 'mjpeg',        # Output format is MJPEG
-            '-update', '1',        # Update mode
-            '-r', '10',           # Reduced frame rate for better reliability
+            '-r', '5',            # Lower frame rate (5 fps) for better reliability
             '-'                    # Output to stdout
         ]
         
@@ -1425,44 +1428,64 @@ def mjpeg_stream(camera_id):
             bufsize=10**8          # Large buffer
         )
         
-        # Generator function to yield frames
+        # Generator function to yield frames - simplified and more robust
         def generate_frames():
             try:
-                # MJPEG boundary
+                # MJPEG boundary - standard boundary name
                 boundary = b'--mjpegboundary'
-                separator = b'\r\n'
                 
-                # MJPEG header
+                # Initial MJPEG header
                 yield b'--mjpegboundary\r\n'
                 yield b'Content-Type: image/jpeg\r\n\r\n'
                 
                 # Buffer for reading JPEG data
                 buffer = b''
-                jpeg_start = b'\xff\xd8'
-                jpeg_end = b'\xff\xd9'
+                jpeg_start = b'\xff\xd8'  # JPEG start marker
+                jpeg_end = b'\xff\xd9'    # JPEG end marker
                 
+                # Read with a larger buffer for better performance
                 while True:
-                    # Read chunk from FFmpeg
-                    chunk = process.stdout.read(4096)
+                    # Read chunk from FFmpeg with larger buffer
+                    chunk = process.stdout.read(8192)  # Increased buffer size
                     if not chunk:
+                        logger.warning(f"No more data from FFmpeg for camera {camera_id}")
                         break
-                        
+                    
                     buffer += chunk
                     
-                    # Find JPEG start and end markers
-                    start_pos = buffer.find(jpeg_start)
-                    if start_pos >= 0:
+                    # Process all complete frames in the buffer
+                    while True:
+                        # Find JPEG start marker
+                        start_pos = buffer.find(jpeg_start)
+                        if start_pos < 0:
+                            # No start marker found, clear invalid data
+                            if len(buffer) > 1000000:  # Safety limit to prevent memory issues
+                                buffer = buffer[-1000:]  # Keep only the last 1000 bytes
+                                logger.warning(f"Buffer overflow in MJPEG stream for camera {camera_id}, clearing")
+                            break
+                        
+                        # Find JPEG end marker after the start marker
                         end_pos = buffer.find(jpeg_end, start_pos)
-                        if end_pos >= 0:
-                            # Extract complete JPEG frame
-                            frame = buffer[start_pos:end_pos+2]
-                            buffer = buffer[end_pos+2:]
-                            
-                            # Yield the frame with MJPEG headers
-                            yield b'\r\n--mjpegboundary\r\n'
-                            yield b'Content-Type: image/jpeg\r\n'
-                            yield f'Content-Length: {len(frame)}\r\n\r\n'.encode()
-                            yield frame
+                        if end_pos < 0:
+                            # No end marker found yet, wait for more data
+                            break
+                        
+                        # Extract complete JPEG frame (including markers)
+                        frame = buffer[start_pos:end_pos+2]
+                        
+                        # Remove the processed frame from buffer
+                        buffer = buffer[end_pos+2:]
+                        
+                        # Skip empty or tiny frames (likely corrupted)
+                        if len(frame) < 100:
+                            logger.warning(f"Skipping small frame ({len(frame)} bytes) in MJPEG stream")
+                            continue
+                        
+                        # Yield the frame with proper MJPEG headers
+                        yield b'\r\n--mjpegboundary\r\n'
+                        yield b'Content-Type: image/jpeg\r\n'
+                        yield f'Content-Length: {len(frame)}\r\n\r\n'.encode()
+                        yield frame
             except Exception as e:
                 logger.error(f"Error in MJPEG generator: {str(e)}")
             finally:
