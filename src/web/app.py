@@ -109,7 +109,12 @@ def create_app(config=None):
         from src.database.db_manager import DatabaseManager
         from src.recognition.detector import LicensePlateDetector
         
-        db_manager = DatabaseManager(config.get('database', {})) if config else None
+        # Always initialize the database manager with default settings
+        # This ensures we always use the same database path
+        db_manager = DatabaseManager()
+        logger.info(f"Database initialized with path: {db_manager.db_path}")
+        
+        # Initialize detector with config if available
         detector = LicensePlateDetector(config.get('recognition', {})) if config else None
         logger.info("Database and detector initialized")
     except Exception as e:
