@@ -1402,17 +1402,38 @@ def mjpeg_stream(camera_id):
             
         # Log available cameras for debugging
         logger.info(f"MJPEG stream requested for camera_id: {camera_id}")
-        logger.info(f"Available cameras: {list(onvif_camera_manager.cameras.keys()) if onvif_camera_manager and hasattr(onvif_camera_manager, 'cameras') else 'None'}")
         
         # Get camera info - with more detailed logging
         if not onvif_camera_manager or not hasattr(onvif_camera_manager, 'cameras'):
             logger.error("Camera manager not initialized or missing cameras attribute")
             return jsonify({"success": False, "message": "Camera manager not available"}), 500
-            
-        if camera_id not in onvif_camera_manager.cameras:
-            logger.error(f"Camera {camera_id} not found in onvif_camera_manager.cameras")
-            logger.debug(f"Available cameras: {list(onvif_camera_manager.cameras.keys())}")
+        
+        # Log available cameras for debugging
+        available_cameras = list(onvif_camera_manager.cameras.keys())
+        logger.info(f"Available cameras: {available_cameras}")
+        
+        # Try to find the camera by exact match or partial match
+        matching_camera_id = None
+        
+        # First try exact match
+        if camera_id in onvif_camera_manager.cameras:
+            matching_camera_id = camera_id
+            logger.info(f"Found exact match for camera ID: {camera_id}")
+        else:
+            # Try to find a camera ID that contains the requested ID (for IP address matching)
+            for cam_id in available_cameras:
+                if camera_id in cam_id or cam_id in camera_id:
+                    matching_camera_id = cam_id
+                    logger.info(f"Found partial match: requested={camera_id}, matched={matching_camera_id}")
+                    break
+        
+        if not matching_camera_id:
+            logger.error(f"No matching camera found for {camera_id}")
+            logger.debug(f"Available cameras: {available_cameras}")
             return jsonify({"success": False, "message": "Camera not found"}), 404
+            
+        # Use the matched camera ID for the rest of the function
+        camera_id = matching_camera_id
             
         camera_info = onvif_camera_manager.cameras[camera_id]
         stream_url = ''

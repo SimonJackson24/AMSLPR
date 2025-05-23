@@ -227,7 +227,8 @@
         }
         
         // Get MJPEG URL - use window.location.origin to ensure correct domain
-        const mjpegUrl = window.location.origin + '/camera/mjpeg-stream/{{ camera.id }}';
+        const cameraId = '{{ camera.id }}';
+        const mjpegUrl = window.location.origin + '/camera/mjpeg-stream/' + encodeURIComponent(cameraId);
         console.log('Using MJPEG stream:', mjpegUrl);
         
         // Hide video player
