@@ -246,6 +246,15 @@ def create_app(config=None):
     except Exception as e:
         logger.error(f"Failed to register direct OCR test fix: {e}")
         logger.error(traceback.format_exc())
+        
+    # Register direct camera fix blueprint as a fallback for /cameras
+    try:
+        from src.web.direct_camera_fix import register_direct_camera_fix
+        app = register_direct_camera_fix(app)
+        logger.info("Direct camera fix registered successfully")
+    except Exception as e:
+        logger.error(f"Failed to register direct camera fix: {e}")
+        logger.error(traceback.format_exc())
     
     if OTHER_ROUTES_AVAILABLE:
         # Initialize any additional controllers or integrations needed
