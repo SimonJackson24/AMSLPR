@@ -22,5 +22,39 @@
         "port": 5000,
         "debug": false,
         "secret_key": "change-this-in-production"
+    },
+    "camera_sync": {
+        "enabled": true,
+        "ntp_servers": ["pool.ntp.org", "time.nist.gov", "time.google.com"],
+        "sync_interval": 300,
+        "max_drift": 0.1,
+        "buffer_size": 30
+    },
+    "plate_tracking": {
+        "enabled": true,
+        "max_track_age": 30,
+        "max_correlation_distance": 50,
+        "min_correlation_frames": 3,
+        "prediction_horizon": 10
+    },
+    "regional_ocr": {
+        "enabled": true,
+        "default_region": "US",
+        "models": {}
+    },
+    "confidence_scoring": {
+        "enabled": true,
+        "weights": {
+            "ocr_confidence": 0.4,
+            "image_quality": 0.3,
+            "format_validation": 0.2,
+            "consistency": 0.1
+        },
+        "quality": {
+            "blur_threshold": 100,
+            "brightness_range": [50, 200],
+            "contrast_threshold": 30,
+            "min_resolution": [50, 20]
+        }
     }
 }

@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  visiongate:
+    build: .
+    container_name: visiongate-app
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config:/app/config
+      - ./models:/app/models
+      - ./uploads:/app/uploads
+    environment:
+      - TZ=UTC
+      - PYTHONUNBUFFERED=1
+      - HAILO_ENABLED=false  # Set to false for VPS without Hailo TPU
+      - PORT=5001
+      - FLASK_ENV=production
+    networks:
+      - visiongate-network
+
+networks:
+  visiongate-network:
+    driver: bridge

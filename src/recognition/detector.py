@@ -16,13 +16,22 @@ from datetime import datetime
 import json
 
 # Add imports for deep learning OCR
-import tensorflow as tf
+try:
+    import tensorflow as tf
+    TENSORFLOW_AVAILABLE = True
+except ImportError:
+    TENSORFLOW_AVAILABLE = False
+    logging.getLogger('AMSLPR.recognition').warning("TensorFlow not available, deep learning OCR will be disabled")
 try:
     # Import Hailo-specific libraries if available
-    import hailo_platform
+    try:
+        import hailo_platform  # type: ignore
+    except ImportError:
+        raise ImportError("hailo_platform not available")
+
     try:
         # Optional: model zoo provides convenience utilities but is not strictly required
-        import hailo_model_zoo
+        import hailo_model_zoo  # type: ignore
     except ImportError:
         # Log a warning but do not fail TPU availability if model zoo is missing
         logging.getLogger('AMSLPR.recognition').warning(

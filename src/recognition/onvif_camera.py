@@ -73,20 +73,21 @@ class ONVIFCameraManager:
     def get_all_cameras(self):
         """
         Get all registered cameras.
-        
+
         Returns:
             dict: Dictionary of all registered cameras with their information
         """
-        
+        return self.cameras
+
     def get_all_cameras_list(self):
         """
         Get all registered cameras as a list.
-        
+
         Returns:
             list: List of all registered cameras with their information in a standardized format
         """
         cameras_list = []
-        
+
         try:
             for camera_id, camera_data in self.cameras.items():
                 try:
@@ -95,7 +96,7 @@ class ONVIFCameraManager:
                         camera_info = camera_data['info']
                     else:
                         camera_info = camera_data
-                    
+
                     # Handle different data structures
                     if isinstance(camera_info, dict):
                         camera = {
@@ -116,48 +117,28 @@ class ONVIFCameraManager:
                             'manufacturer': getattr(camera_info, 'manufacturer', 'Unknown'),
                             'model': getattr(camera_info, 'model', 'Unknown')
                         }
-                    
+
                     cameras_list.append(camera)
                 except Exception as e:
                     logger.error(f"Error processing camera {camera_id} in get_all_cameras_list: {str(e)}")
         except Exception as e:
             logger.error(f"Error in get_all_cameras_list: {str(e)}")
-        
+
         return cameras_list
-        
-        # Make a copy of the cameras dictionary to avoid modifying the original
-        cameras_with_thumbnails = {}
-        
-        # Ensure all cameras have the required attributes
-        for camera_id, camera_info in self.cameras.items():
-            # Create a copy of the camera info
-            camera_copy = camera_info.copy() if isinstance(camera_info, dict) else {}
-            
-            # Ensure the camera has an info dictionary
-            if 'info' not in camera_copy:
-                camera_copy['info'] = {}
-            
-            # Ensure the info dictionary has a thumbnail attribute
-            if 'thumbnail' not in camera_copy['info']:
-                camera_copy['info']['thumbnail'] = 'default_camera.jpg'
-            
-            cameras_with_thumbnails[camera_id] = camera_copy
-        
-        return cameras_with_thumbnails
 
     def try_connect_camera(self, ip, port=80):
         """
         Try to detect a camera at a specific IP and port without authentication.
-        
+
         Args:
             ip (str): IP address of the camera
             port (int): Port number to try
-            
+
         Returns:
             dict: Camera information if detected, None otherwise
         """
         logger.debug(f"Checking for camera at {ip}:{port}")
-        
+
         # For RTSP port, just check if the port is open
         if port == 554:
             try:
@@ -165,7 +146,7 @@ class ONVIFCameraManager:
                 sock.settimeout(1)
                 result = sock.connect_ex((ip, port))
                 sock.close()
-                
+
                 if result == 0:
                     logger.info(f"Found potential RTSP camera at {ip}:{port}")
                     return {
@@ -180,7 +161,7 @@ class ONVIFCameraManager:
             except Exception as e:
                 logger.debug(f"Error checking RTSP port at {ip}:{port}: {str(e)}")
                 return None
-        
+
         # For other ports, try ONVIF device discovery without auth
         try:
             # Try to connect to device service endpoint
@@ -188,16 +169,16 @@ class ONVIFCameraManager:
             headers = {
                 'Content-Type': 'application/soap+xml; charset=utf-8'
             }
-            
+
             # First try a HEAD request to get server info
             try:
                 head_response = requests.head(f"http://{ip}:{port}", timeout=1)
                 manufacturer = 'Unknown'
-                
+
                 if 'Server' in head_response.headers:
                     server = head_response.headers['Server']
                     logger.debug(f"Server header: {server}")
-                    
+
                     # Extract manufacturer from server header
                     if 'hikvision' in server.lower():
                         manufacturer = 'Hikvision'
@@ -207,10 +188,10 @@ class ONVIFCameraManager:
                         manufacturer = 'Dahua'
             except:
                 manufacturer = 'Unknown'
-            
+
             # Now try the ONVIF endpoint
             response = requests.get(url, timeout=1, headers=headers)
-            
+
             if response.status_code in [401, 403]:  # Authentication required
                 logger.info(f"Found potential ONVIF camera at {ip}:{port}")
                 return {
@@ -225,7 +206,7 @@ class ONVIFCameraManager:
         except requests.exceptions.RequestException as e:
             logger.debug(f"Error checking ONVIF endpoint at {ip}:{port}: {str(e)}")
             return None
-        
+
         return None
 
     def get_local_network(self):
@@ -236,7 +217,7 @@ class ONVIFCameraManager:
             s.connect(("8.8.8.8", 80))
             local_ip = s.getsockname()[0]
             s.close()
-            
+
             # Get network address range (assuming /24 subnet)
             network = ipaddress.IPv4Network(f"{local_ip}/24", strict=False)
             return network
@@ -247,19 +228,19 @@ class ONVIFCameraManager:
     def scan_network(self, timeout=2):
         """
         Scan the local network for potential cameras.
-        
+
         Args:
             timeout (int): Timeout in seconds for each connection attempt
-            
+
         Returns:
             list: List of discovered camera information dictionaries
         """
         discovered_cameras = []
         network = self.get_local_network()
-        
+
         if not network:
             return []
-        
+
         # Use a thread pool to scan IPs in parallel - increased max_workers for faster scanning
         with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
             futures = []
@@ -268,11 +249,11 @@ class ONVIFCameraManager:
                 # Skip broadcast and network addresses
                 if ip_str.endswith('.0') or ip_str.endswith('.255'):
                     continue
-                    
+
                 # Only check standard RTSP and ONVIF ports for faster scanning
                 futures.append(executor.submit(self.try_connect_camera, ip_str, 554))  # RTSP port
                 futures.append(executor.submit(self.try_connect_camera, ip_str, 80))   # HTTP/ONVIF port
-            
+
             for future in concurrent.futures.as_completed(futures):
                 try:
                     result = future.result()
@@ -280,29 +261,45 @@ class ONVIFCameraManager:
                         # Skip metadata gathering during initial discovery
                         result['manufacturer'] = 'Unknown'  # Will be populated later
                         result['model'] = 'Unknown'         # Will be populated later
-                        
+
                         # Only add if we haven't found this IP yet
                         if not any(cam['ip'] == result['ip'] for cam in discovered_cameras):
                             discovered_cameras.append(result)
-                            
-                            # No callback functionality needed
                 except Exception as e:
                     logger.debug(f"Error in scan task: {str(e)}")
-        
+
         return discovered_cameras
 
     def discover_cameras(self, timeout=2):
         """
         Discover cameras on the network using both WS-Discovery and network scanning.
-        
+
         Args:
             timeout (int): Timeout in seconds for discovery (reduced from 5 to 2 for faster scanning)
-            
+
         Returns:
             list: List of discovered camera information dictionaries
         """
+        # Enhanced discovery with better logging
+        logger.info("[CAMERA_DEBUG] Starting enhanced camera discovery process")
+        logger.info(f"[CAMERA_DEBUG] Timeout: {timeout} seconds")
+
         discovered_cameras = []
-        
+
+        # Log network connectivity status
+        logger.info("[CAMERA_DEBUG] Checking network connectivity for camera discovery")
+        try:
+            import socket
+            test_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            test_sock.connect(("8.8.8.8", 80))
+            local_ip = test_sock.getsockname()[0]
+            test_sock.close()
+            logger.info(f"[CAMERA_DEBUG] Local IP detected: {local_ip}")
+        except Exception as net_error:
+            logger.error(f"[CAMERA_DEBUG] Network connectivity issue: {str(net_error)}")
+            logger.error("[CAMERA_DEBUG] This may prevent camera discovery")
+
+        # First, try WS-Discovery with reduced timeout
         try:
             # First, try WS-Discovery with reduced timeout
             logger.info("Starting WS-Discovery...")
@@ -314,9 +311,9 @@ class ONVIFCameraManager:
 
                 message = """<?xml version="1.0" encoding="UTF-8"?>
                 <e:Envelope xmlns:e="http://www.w3.org/2003/05/soap-envelope"
-                           xmlns:w="http://schemas.xmlsoap.org/ws/2004/08/addressing"
-                           xmlns:d="http://schemas.xmlsoap.org/ws/2005/04/discovery"
-                           xmlns:dn="http://www.onvif.org/ver10/network/wsdl">
+                            xmlns:w="http://schemas.xmlsoap.org/ws/2004/08/addressing"
+                            xmlns:d="http://schemas.xmlsoap.org/ws/2005/04/discovery"
+                            xmlns:dn="http://www.onvif.org/ver10/network/wsdl">
                     <e:Header>
                         <w:MessageID>uuid:84ede3de-7dec-11d0-c360-f01234567890</w:MessageID>
                         <w:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</w:To>
@@ -339,11 +336,11 @@ class ONVIFCameraManager:
                             ip = addr[0]
                             if not any(cam['ip'] == ip for cam in discovered_cameras):
                                 logger.info(f"Found camera via WS-Discovery at {ip}")
-                                
+
                                 # Extract minimal info for fast discovery - skip metadata gathering
                                 device_url = None
                                 port = 80
-                                
+
                                 # Basic extraction of port from response if available
                                 response_str = data.decode('utf-8')
                                 xaddrs_match = re.search(r'<d:XAddrs>(.*?)</d:XAddrs>', response_str)
@@ -354,7 +351,7 @@ class ONVIFCameraManager:
                                         device_url = device_urls[0]
                                         parsed_url = urlparse(device_url)
                                         port = parsed_url.port or 80
-                                
+
                                 # Create camera info with minimal data
                                 camera_info = {
                                     'ip': ip,
@@ -365,7 +362,7 @@ class ONVIFCameraManager:
                                     'requires_auth': True,
                                     'status': 'detected'
                                 }
-                                
+
                                 # Add to results
                                 discovered_cameras.append(camera_info)
                     except socket.timeout:
@@ -379,7 +376,7 @@ class ONVIFCameraManager:
             # Then, perform network scan with the optimized settings
             logger.info("Starting network scan...")
             scan_results = self.scan_network(timeout)
-            
+
             # Merge results from network scan
             for camera in scan_results:
                 if not any(cam['ip'] == camera['ip'] for cam in discovered_cameras):
@@ -395,17 +392,17 @@ class ONVIFCameraManager:
     def add_camera(self, camera_info):
         """
         Add a camera to the manager.
-        
+
         Args:
             camera_info (dict): Camera information including connection details
-            
+
         Returns:
             bool: True if camera was added successfully, or a tuple (False, error_message) if failed
         """
         try:
             # Validate required fields
             required_fields = ['ip', 'username', 'password']
-            
+
             # Check if RTSP URL is provided
             rtsp_url = camera_info.get('rtsp_url')
             if rtsp_url:
@@ -413,20 +410,20 @@ class ONVIFCameraManager:
                 # (which might have been extracted from the RTSP URL)
                 required_fields = ['ip']
                 logger.info(f"RTSP URL provided: {rtsp_url}. Only IP is required.")
-            
+
             for field in required_fields:
                 if field not in camera_info:
                     error_msg = f"Missing required field: {field}"
                     logger.error(error_msg)
                     return False, error_msg
-                    
+
             ip = camera_info['ip']
             port = camera_info.get('port', 80)
             username = camera_info.get('username')
             password = camera_info.get('password')
-            
+
             logger.info(f"Adding camera at {ip}:{port}")
-            
+
             # Check if IP is valid
             try:
                 ipaddress.ip_address(ip)
@@ -434,20 +431,20 @@ class ONVIFCameraManager:
                 error_msg = f"Invalid IP address format: {ip}"
                 logger.error(error_msg)
                 return False, error_msg
-            
+
             # Check if port is valid
             if not isinstance(port, int) or port < 1 or port > 65535:
                 error_msg = f"Invalid port number: {port}"
                 logger.error(error_msg)
                 return False, error_msg
-                
+
             # Check if camera is reachable - only log warnings but don't fail
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.settimeout(2)
                 result = sock.connect_ex((ip, port))
                 sock.close()
-                
+
                 if result != 0:
                     warning_msg = f"Warning: Camera at {ip}:{port} may not be reachable on this port"
                     logger.warning(warning_msg)
@@ -456,7 +453,7 @@ class ONVIFCameraManager:
                 warning_msg = f"Warning: Network check error for camera at {ip}:{port}: {str(e)}"
                 logger.warning(warning_msg)
                 # Continue anyway - the RTSP URL might still work
-            
+
             # Create camera with explicit WSDL files
             try:
                 # Check if RTSP URL is provided
@@ -471,7 +468,7 @@ class ONVIFCameraManager:
                         'rtsp_url': rtsp_url,
                         'status': 'connected'
                     }
-                    
+
                     # Store camera in manager
                     self.cameras[ip] = {
                         'camera': None,  # No ONVIF camera object
@@ -479,81 +476,32 @@ class ONVIFCameraManager:
                         'stream': None
                     }
 
-                # Save camera to database
-                try:
-                    # Try to get db_manager from camera_routes
-                    from src.web.camera_routes import db_manager as routes_db_manager
-                    if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
-                        logger.info(f"Saving camera {ip} to database")
-                        db_camera_info = {
-                            'ip': ip,
-                            'port': camera_info.get('port', 80),
-                            'username': camera_info.get('username', ''),
-                            'password': camera_info.get('password', ''),
-                            'stream_uri': camera_info.get('stream_uri', ''),
-                            'name': camera_info.get('name', f'Camera {ip}'),
-                            'location': camera_info.get('location', 'Unknown'),
-                            'manufacturer': camera_info.get('manufacturer', 'Unknown'),
-                            'model': camera_info.get('model', 'ONVIF Camera')
-                        }
-                        routes_db_manager.add_camera(db_camera_info)
-                        logger.info(f"Camera {ip} saved to database")
-                    else:
-                        logger.warning(f"Database manager not available, camera {ip} not saved to database")
-                except Exception as e:
-                    logger.error(f"Error saving camera {ip} to database: {str(e)}")
-                    import traceback
-                    logger.error(f"Traceback: {traceback.format_exc()}")
-
-                # Save camera to database
-                try:
-                    # Try to get db_manager from camera_routes
-                    from src.web.camera_routes import db_manager as routes_db_manager
-                    if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
-                        logger.info(f"Saving camera {ip} to database")
-                        db_camera_info = {
-                            'ip': ip,
-                            'port': camera_info.get('port', 80),
-                            'username': camera_info.get('username', ''),
-                            'password': camera_info.get('password', ''),
-                            'stream_uri': camera_info.get('stream_uri', ''),
-                            'name': camera_info.get('name', f'Camera {ip}'),
-                            'location': camera_info.get('location', 'Unknown'),
-                            'manufacturer': camera_info.get('manufacturer', 'Unknown'),
-                            'model': camera_info.get('model', 'ONVIF Camera')
-                        }
-                        routes_db_manager.add_camera(db_camera_info)
-                        logger.info(f"Camera {ip} saved to database")
-                    else:
-                        logger.warning(f"Database manager not available, camera {ip} not saved to database")
-                except Exception as e:
-                    logger.error(f"Error saving camera {ip} to database: {str(e)}")
-                    import traceback
-                    logger.error(f"Traceback: {traceback.format_exc()}")
-                    
-                    # Save camera to database if db_manager is available
+                    # Save camera to database
                     try:
-                        from src.web.camera_routes import db_manager
-                        if db_manager and hasattr(db_manager, 'add_camera'):
+                        # Try to get db_manager from camera_routes
+                        from src.web.camera_routes import db_manager as routes_db_manager
+                        if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
                             logger.info(f"Saving camera {ip} to database")
                             db_camera_info = {
                                 'ip': ip,
-                                'port': port,
-                                'username': username,
-                                'password': password,
-                                'stream_uri': rtsp_url,
+                                'port': camera_info.get('port', 80),
+                                'username': camera_info.get('username', ''),
+                                'password': camera_info.get('password', ''),
+                                'stream_uri': camera_info.get('stream_uri', ''),
                                 'name': camera_info.get('name', f'Camera {ip}'),
                                 'location': camera_info.get('location', 'Unknown'),
                                 'manufacturer': camera_info.get('manufacturer', 'Unknown'),
-                                'model': camera_info.get('model', 'RTSP Camera')
+                                'model': camera_info.get('model', 'ONVIF Camera')
                             }
-                            db_manager.add_camera(db_camera_info)
+                            routes_db_manager.add_camera(db_camera_info)
                             logger.info(f"Camera {ip} saved to database")
                         else:
                             logger.warning(f"Database manager not available, camera {ip} not saved to database")
                     except Exception as e:
                         logger.error(f"Error saving camera {ip} to database: {str(e)}")
-                    
+                        import traceback
+                        logger.error(f"Traceback: {traceback.format_exc()}")
+
                     logger.info(f"Added camera at {ip} with direct RTSP URL")
                     return True
                 else:
@@ -561,9 +509,9 @@ class ONVIFCameraManager:
                     try:
                         # First try with encryption
                         camera = ONVIFCamera(
-                            ip, 
+                            ip,
                             port,
-                            username, 
+                            username,
                             password,
                             self.wsdl_dir,
                             encrypt=True
@@ -572,9 +520,9 @@ class ONVIFCameraManager:
                         logger.warning(f"Failed to connect with encryption, trying without: {str(encrypt_error)}")
                         # Try again without encryption
                         camera = ONVIFCamera(
-                            ip, 
+                            ip,
                             port,
-                            username, 
+                            username,
                             password,
                             self.wsdl_dir,
                             encrypt=False
@@ -583,7 +531,7 @@ class ONVIFCameraManager:
                 error_msg = f"Failed to create ONVIF camera object: {str(e)}"
                 logger.error(error_msg)
                 return False, error_msg
-            
+
             # Test connection by getting device info
             try:
                 # Special case for known camera at 192.168.1.222
@@ -598,123 +546,54 @@ class ONVIFCameraManager:
                         'status': 'connected',
                         'stream_uri': f"rtsp://{ip}:554/profile1"
                     }
-                    
+
                     self.cameras[ip] = {
                         'camera': camera,  # Keep the camera object for potential future use
                         'info': camera_info,
                         'stream': None
                     }
 
-                # Save camera to database
-                try:
-                    # Try to get db_manager from camera_routes
-                    from src.web.camera_routes import db_manager as routes_db_manager
-                    if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
-                        logger.info(f"Saving camera {ip} to database")
-                        db_camera_info = {
-                            'ip': ip,
-                            'port': camera_info.get('port', 80),
-                            'username': camera_info.get('username', ''),
-                            'password': camera_info.get('password', ''),
-                            'stream_uri': camera_info.get('stream_uri', ''),
-                            'name': camera_info.get('name', f'Camera {ip}'),
-                            'location': camera_info.get('location', 'Unknown'),
-                            'manufacturer': camera_info.get('manufacturer', 'Unknown'),
-                            'model': camera_info.get('model', 'ONVIF Camera')
-                        }
-                        routes_db_manager.add_camera(db_camera_info)
-                        logger.info(f"Camera {ip} saved to database")
-                    else:
-                        logger.warning(f"Database manager not available, camera {ip} not saved to database")
-                except Exception as e:
-                    logger.error(f"Error saving camera {ip} to database: {str(e)}")
-                    import traceback
-                    logger.error(f"Traceback: {traceback.format_exc()}")
-
-                # Save camera to database
-                try:
-                    # Try to get db_manager from camera_routes
-                    from src.web.camera_routes import db_manager as routes_db_manager
-                    if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
-                        logger.info(f"Saving camera {ip} to database")
-                        db_camera_info = {
-                            'ip': ip,
-                            'port': camera_info.get('port', 80),
-                            'username': camera_info.get('username', ''),
-                            'password': camera_info.get('password', ''),
-                            'stream_uri': camera_info.get('stream_uri', ''),
-                            'name': camera_info.get('name', f'Camera {ip}'),
-                            'location': camera_info.get('location', 'Unknown'),
-                            'manufacturer': camera_info.get('manufacturer', 'Unknown'),
-                            'model': camera_info.get('model', 'ONVIF Camera')
-                        }
-                        routes_db_manager.add_camera(db_camera_info)
-                        logger.info(f"Camera {ip} saved to database")
-                    else:
-                        logger.warning(f"Database manager not available, camera {ip} not saved to database")
-                except Exception as e:
-                    logger.error(f"Error saving camera {ip} to database: {str(e)}")
-                    import traceback
-                    logger.error(f"Traceback: {traceback.format_exc()}")
-                    
                     # Save camera to database
                     try:
-                        # Prepare camera info for database
-                        db_camera_info = {
-                            'ip': ip,
-                            'port': port,
-                            'username': username,
-                            'password': password,
-                            'stream_uri': camera_info.get('stream_uri', ''),
-                            'name': camera_info.get('name', f'Camera {ip}'),
-                            'location': camera_info.get('location', 'Unknown'),
-                            'manufacturer': camera_info.get('manufacturer', 'Unknown'),
-                            'model': camera_info.get('model', 'ONVIF Camera')
-                        }
-                        
                         # Try to get db_manager from camera_routes
-                        try:
-                            from src.web.camera_routes import db_manager as routes_db_manager
-                            if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
-                                logger.info(f"Saving camera {ip} to database")
-                                routes_db_manager.add_camera(db_camera_info)
-                                logger.info(f"Camera {ip} saved to database successfully")
-                            else:
-                                logger.error(f"Database manager not available in camera_routes")
-                                
-                                # Try to import directly as fallback
-                                try:
-                                    from src.database.db_manager import DatabaseManager
-                                    config = {'database': {'path': os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'amslpr.db')}}
-                                    direct_db_manager = DatabaseManager(config)
-                                    if hasattr(direct_db_manager, 'add_camera'):
-                                        logger.info(f"Saving camera {ip} to database using direct DatabaseManager")
-                                        direct_db_manager.add_camera(db_camera_info)
-                                        logger.info(f"Camera {ip} saved to database using direct DatabaseManager")
-                                except Exception as e:
-                                    logger.error(f"Error using direct DatabaseManager: {str(e)}")
-                        except Exception as e:
-                            logger.error(f"Error getting db_manager from camera_routes: {str(e)}")
+                        from src.web.camera_routes import db_manager as routes_db_manager
+                        if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
+                            logger.info(f"Saving camera {ip} to database")
+                            db_camera_info = {
+                                'ip': ip,
+                                'port': camera_info.get('port', 80),
+                                'username': camera_info.get('username', ''),
+                                'password': camera_info.get('password', ''),
+                                'stream_uri': camera_info.get('stream_uri', ''),
+                                'name': camera_info.get('name', f'Camera {ip}'),
+                                'location': camera_info.get('location', 'Unknown'),
+                                'manufacturer': camera_info.get('manufacturer', 'Unknown'),
+                                'model': camera_info.get('model', 'ONVIF Camera')
+                            }
+                            routes_db_manager.add_camera(db_camera_info)
+                            logger.info(f"Camera {ip} saved to database")
+                        else:
+                            logger.warning(f"Database manager not available, camera {ip} not saved to database")
                     except Exception as e:
                         logger.error(f"Error saving camera {ip} to database: {str(e)}")
                         import traceback
                         logger.error(f"Traceback: {traceback.format_exc()}")
-                    
+
                     logger.info(f"Added camera at {ip} with special handling")
                     return True
-                
+
                 # For other cameras, proceed with normal authentication test
                 # First try a simple GetSystemDateAndTime call which often works with limited permissions
                 try:
                     camera.devicemgmt.GetSystemDateAndTime()
                 except Exception as date_error:
                     logger.warning(f"GetSystemDateAndTime failed, but will try GetDeviceInformation: {str(date_error)}")
-                    
+
                 # Now try to get device information
                 try:
                     device_info = camera.devicemgmt.GetDeviceInformation()
                     logger.info(f"Successfully connected to camera at {ip}. Device info: {device_info}")
-                    
+
                     # Extract device information and add to camera_info
                     # Handle device_info as an object, not a dictionary
                     try:
@@ -730,6 +609,14 @@ class ONVIFCameraManager:
                         logger.warning(f"Error extracting device attributes: {str(attr_error)}")
                         # Continue anyway, this is not critical
                 except Exception as dev_error:
+                    logger.info(f"[CAMERA_DEBUG] Attempting to get device information for camera {ip}")
+                    logger.info(f"[CAMERA_DEBUG] Using credentials: username='{username}', password='{'*' * len(password) if password else 'None'}'")
+                    if 'Sender not Authorized' in str(dev_error) or 'Not Authorized' in str(dev_error):
+                        error_msg = f"Authentication failed: Username or password is incorrect. The camera rejected the credentials."
+                        logger.error(f"[CAMERA_DEBUG] {error_msg}")
+                        logger.error(f"[CAMERA_DEBUG] Full error details: {str(dev_error)}")
+                        return False, error_msg
+                except Exception as dev_error:
                     if 'Sender not Authorized' in str(dev_error) or 'Not Authorized' in str(dev_error):
                         error_msg = f"Authentication failed: Username or password is incorrect. The camera rejected the credentials."
                         logger.error(error_msg)
@@ -738,7 +625,7 @@ class ONVIFCameraManager:
                         # Some cameras don't support GetDeviceInformation but may still work
                         logger.warning(f"Device info not available: {str(dev_error)}")
                         # Continue anyway since the camera might still work
-                
+
                 # Store camera in manager
                 camera_details = {
                     'ip': ip,
@@ -747,7 +634,7 @@ class ONVIFCameraManager:
                     'password': password,
                     'status': 'connected'
                 }
-                
+
                 # If we have device information, add it to the camera details
                 try:
                     if 'manufacturer' in locals():
@@ -760,65 +647,13 @@ class ONVIFCameraManager:
                         camera_details['serial'] = locals()['serial']
                 except Exception as e:
                     logger.warning(f"Error copying device attributes: {str(e)}")
-                
+
                 self.cameras[ip] = {
                     'camera': camera,
                     'info': camera_details,
                     'stream': None
                 }
 
-                # Save camera to database
-                try:
-                    # Try to get db_manager from camera_routes
-                    from src.web.camera_routes import db_manager as routes_db_manager
-                    if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
-                        logger.info(f"Saving camera {ip} to database")
-                        db_camera_info = {
-                            'ip': ip,
-                            'port': camera_info.get('port', 80),
-                            'username': camera_info.get('username', ''),
-                            'password': camera_info.get('password', ''),
-                            'stream_uri': camera_info.get('stream_uri', ''),
-                            'name': camera_info.get('name', f'Camera {ip}'),
-                            'location': camera_info.get('location', 'Unknown'),
-                            'manufacturer': camera_info.get('manufacturer', 'Unknown'),
-                            'model': camera_info.get('model', 'ONVIF Camera')
-                        }
-                        routes_db_manager.add_camera(db_camera_info)
-                        logger.info(f"Camera {ip} saved to database")
-                    else:
-                        logger.warning(f"Database manager not available, camera {ip} not saved to database")
-                except Exception as e:
-                    logger.error(f"Error saving camera {ip} to database: {str(e)}")
-                    import traceback
-                    logger.error(f"Traceback: {traceback.format_exc()}")
-
-                # Save camera to database
-                try:
-                    # Try to get db_manager from camera_routes
-                    from src.web.camera_routes import db_manager as routes_db_manager
-                    if routes_db_manager and hasattr(routes_db_manager, 'add_camera'):
-                        logger.info(f"Saving camera {ip} to database")
-                        db_camera_info = {
-                            'ip': ip,
-                            'port': camera_info.get('port', 80),
-                            'username': camera_info.get('username', ''),
-                            'password': camera_info.get('password', ''),
-                            'stream_uri': camera_info.get('stream_uri', ''),
-                            'name': camera_info.get('name', f'Camera {ip}'),
-                            'location': camera_info.get('location', 'Unknown'),
-                            'manufacturer': camera_info.get('manufacturer', 'Unknown'),
-                            'model': camera_info.get('model', 'ONVIF Camera')
-                        }
-                        routes_db_manager.add_camera(db_camera_info)
-                        logger.info(f"Camera {ip} saved to database")
-                    else:
-                        logger.warning(f"Database manager not available, camera {ip} not saved to database")
-                except Exception as e:
-                    logger.error(f"Error saving camera {ip} to database: {str(e)}")
-                    import traceback
-                    logger.error(f"Traceback: {traceback.format_exc()}")
-                
                 # Save camera to database
                 try:
                     # Get stream URI if available
@@ -837,7 +672,7 @@ class ONVIFCameraManager:
                             camera_details['stream_uri'] = stream_uri
                     except Exception as e:
                         logger.warning(f"Error getting stream URI: {str(e)}")
-                        
+
                     # Prepare camera info for database
                     db_camera_info = {
                         'ip': ip,
@@ -850,7 +685,7 @@ class ONVIFCameraManager:
                         'manufacturer': camera_details.get('manufacturer', 'Unknown'),
                         'model': camera_details.get('model', 'ONVIF Camera')
                     }
-                    
+
                     # First try to import directly - this is the most reliable method
                     try:
                         from src.database.db_manager import DatabaseManager
@@ -885,24 +720,28 @@ class ONVIFCameraManager:
                             else:
                                 logger.error(f"Database manager not available in camera_routes")
                         except Exception as e:
+                            logger.info(f"[CAMERA_DEBUG] Final authentication attempt failed for camera {ip}")
+                            logger.info(f"[CAMERA_DEBUG] Using credentials: username='{username}', password='{'*' * len(password) if password else 'None'}'")
+                            if 'Sender not Authorized' in str(e) or 'Not Authorized' in str(e):
+                                error_msg = f"Authentication failed: Username or password is incorrect. The camera rejected the credentials."
+                                logger.error(f"[CAMERA_DEBUG] {error_msg}")
+                                logger.error(f"[CAMERA_DEBUG] Full error details: {str(e)}")
+                                return False, error_msg
                             logger.error(f"Error getting db_manager from camera_routes: {str(e)}")
+                        except Exception as e:
+                            logger.error(f"Error saving camera {ip} to database: {str(e)}")
+                            import traceback
+                            logger.error(f"Traceback: {traceback.format_exc()}")
                 except Exception as e:
-                    logger.error(f"Error saving camera {ip} to database: {str(e)}")
-                    import traceback
-                    logger.error(f"Traceback: {traceback.format_exc()}")
-                
+                    logger.error(f"Error in database operations: {str(e)}")
+
                 logger.info(f"Added camera at {ip}")
                 return True
             except Exception as e:
-                if 'Sender not Authorized' in str(e) or 'Not Authorized' in str(e):
-                    error_msg = f"Authentication failed: Username or password is incorrect. The camera rejected the credentials."
-                    logger.error(error_msg)
-                    return False, error_msg
-                else:
-                    error_msg = f"Authentication failed or device info not available: {str(e)}"
-                    logger.error(error_msg)
-                    return False, error_msg
-                
+                error_msg = f"Authentication failed or device info not available: {str(e)}"
+                logger.error(error_msg)
+                return False, error_msg
+
         except Exception as e:
             error_msg = f"Unexpected error adding camera: {str(e)}"
             logger.error(error_msg)
@@ -913,26 +752,26 @@ class ONVIFCameraManager:
     def delete_camera(self, camera_id):
         """
         Delete a camera from the manager.
-        
+
         Args:
             camera_id (str): ID of the camera to delete (usually the IP address)
-            
+
         Returns:
             bool: True if camera was deleted successfully, False otherwise
         """
         try:
             logger.info(f"Deleting camera with ID: {camera_id}")
-            
+
             # Check if camera exists
             if camera_id not in self.cameras:
                 logger.error(f"Camera with ID {camera_id} not found")
                 return False
-                
+
             # Remove camera from manager
             del self.cameras[camera_id]
             logger.info(f"Camera with ID {camera_id} deleted successfully")
             return True
-            
+
         except Exception as e:
             logger.error(f"Error deleting camera: {str(e)}")
             return False
@@ -943,44 +782,44 @@ class ONVIFCameraManager:
             if ip not in self.cameras:
                 logger.error(f"Camera {ip} not found")
                 return None
-            
+
             camera_info = self.cameras[ip]
-            
+
             # If we already have a stream URI, return it
             if 'stream_uri' in camera_info['info']:
                 return camera_info['info']['stream_uri']
-            
+
             # If we have an RTSP URL directly, use it
             if 'rtsp_url' in camera_info['info']:
                 return camera_info['info']['rtsp_url']
-            
+
             # If no camera object, we can't get stream URI
             if not camera_info['camera']:
                 logger.error(f"No camera object for {ip}")
                 return None
-            
+
             camera = camera_info['camera']
-            
+
             # Create media service
             try:
                 media_service = camera.create_media_service()
             except Exception as e:
                 logger.error(f"Failed to create media service: {str(e)}")
-                
+
                 # Try a direct RTSP URL as fallback
                 username = camera_info['info'].get('username', '')
                 password = camera_info['info'].get('password', '')
                 port = camera_info['info'].get('port', 554)
-                
+
                 # For ONVIF 20.06 cameras, try profile1 path first
                 auth_str = f"{username}:{password}@" if username and password else ""
                 rtsp_uri = f"rtsp://{auth_str}{ip}:{port}/profile1"
                 logger.info(f"Using fallback RTSP URL for ONVIF 20.06 camera: {rtsp_uri}")
-                
+
                 # Store in camera info
                 camera_info['info']['stream_uri'] = rtsp_uri
                 return rtsp_uri
-            
+
             # Get profiles
             try:
                 profiles = media_service.GetProfiles()
@@ -989,24 +828,24 @@ class ONVIFCameraManager:
                     return None
             except Exception as e:
                 logger.error(f"Failed to get profiles: {str(e)}")
-                
+
                 # Try a direct RTSP URL as fallback
                 username = camera_info['info'].get('username', '')
                 password = camera_info['info'].get('password', '')
                 port = camera_info['info'].get('port', 554)
-                
+
                 auth_str = f"{username}:{password}@" if username and password else ""
                 rtsp_uri = f"rtsp://{auth_str}{ip}:{port}/profile1"
                 logger.info(f"Using fallback RTSP URL after profile error: {rtsp_uri}")
-                
+
                 # Store in camera info
                 camera_info['info']['stream_uri'] = rtsp_uri
                 return rtsp_uri
-            
+
             # Get stream URI using the first profile
             try:
                 token = profiles[0].token
-                
+
                 # For ONVIF 20.06, try the specific approach
                 try:
                     # Try using the ONVIF 20.06 approach
@@ -1020,55 +859,55 @@ class ONVIFCameraManager:
                     rtsp_uri = stream_uri.Uri
                 except Exception as e:
                     logger.warning(f"ONVIF 20.06 approach failed: {str(e)}")
-                    
+
                     # Try alternative approaches
                     try:
                         # Try with StreamSetup object
                         stream_uri_request = media_service.create_type('GetStreamUri')
                         stream_uri_request.ProfileToken = token
-                        
+
                         stream_setup = media_service.create_type('StreamSetup')
                         stream_setup.Stream = 'RTP-Unicast'
                         stream_setup.Transport = media_service.create_type('Transport')
                         stream_setup.Transport.Protocol = 'RTSP'
                         stream_uri_request.StreamSetup = stream_setup
-                        
+
                         stream_uri = media_service.GetStreamUri(stream_uri_request)
                         rtsp_uri = stream_uri.Uri
                     except Exception as e2:
                         logger.warning(f"StreamSetup approach failed: {str(e2)}")
-                        
+
                         # Try simpler approach
                         try:
                             stream_uri = media_service.GetStreamUri({'ProfileToken': token})
                             rtsp_uri = stream_uri.Uri
                         except Exception as e3:
                             logger.warning(f"Simple GetStreamUri approach failed: {str(e3)}")
-                            
+
                             # Try direct token approach
                             try:
                                 stream_uri = media_service.GetStreamUri(token)
                                 rtsp_uri = stream_uri.Uri
                             except Exception as e4:
                                 logger.warning(f"Direct token approach failed: {str(e4)}")
-                                
+
                                 # Use fallback RTSP URL
                                 username = camera_info['info'].get('username', '')
                                 password = camera_info['info'].get('password', '')
                                 port = camera_info['info'].get('port', 554)
-                                
+
                                 auth_str = f"{username}:{password}@" if username and password else ""
                                 rtsp_uri = f"rtsp://{auth_str}{ip}:{port}/profile1"
                                 logger.info(f"Using fallback RTSP URL: {rtsp_uri}")
-                
+
                 # Store stream URI in camera info
                 camera_info['info']['stream_uri'] = rtsp_uri
                 return rtsp_uri
-                
+
             except Exception as e:
                 logger.error(f"Failed to get stream URI: {str(e)}")
                 return None
-                
+
         except Exception as e:
             logger.error(f"Unexpected error in get_stream_uri: {str(e)}")
             return None
@@ -1076,17 +915,17 @@ class ONVIFCameraManager:
     def get_camera_stream(self, ip):
         """
         Get the RTSP stream URL for a camera.
-        
+
         Args:
             ip (str): IP address of the camera
-            
+
         Returns:
             str: RTSP stream URL
         """
         if ip not in self.cameras:
             logger.error(f"Camera {ip} not found")
             return None
-            
+
         return self.get_stream_uri(ip)
 
     def test_common_credentials(self, ip, port=80):
@@ -1097,10 +936,10 @@ class ONVIFCameraManager:
 def init_camera_manager(config):
     """
     Initialize the camera manager with the application configuration.
-    
+
     Args:
         config (dict): Application configuration
-        
+
     Returns:
         ONVIFCameraManager: Initialized camera manager instance
     """

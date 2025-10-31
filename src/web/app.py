@@ -93,12 +93,12 @@ def create_app(config=None):
     
     # Initialize session handling
     try:
-        app.config['SESSION_TYPE'] = 'redis'
-        app.config['SESSION_REDIS'] = redis.from_url('redis://localhost:6379')
+        app.config['SESSION_TYPE'] = 'filesystem'
+        app.config['SESSION_FILE_DIR'] = os.path.join(os.getcwd(), 'flask_session')
         Session(app)
-        logger.info("Redis session initialized")
+        logger.info("Filesystem session initialized")
     except Exception as e:
-        logger.error(f"Failed to initialize Redis session: {e}")
+        logger.error(f"Failed to initialize filesystem session: {e}")
         logger.error(traceback.format_exc())
     
     # Set secret key for session management
