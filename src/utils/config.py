@@ -61,6 +61,7 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
     config.setdefault('ocr', {})
     config['ocr'].setdefault('confidence_threshold', 0.7)
     config['ocr'].setdefault('use_gpu', False)
+    config['ocr'].setdefault('use_hailo_tpu', True)  # Enable Hailo TPU by default when available
     
     # Database settings
     config.setdefault('database', {})

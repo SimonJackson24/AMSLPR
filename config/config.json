@@ -9,7 +9,10 @@
         "processing_interval": 0.5,
         "save_images": true,
         "image_path": "data/images",
-        "enabled": true
+        "enabled": true,
+        "use_hailo_tpu": true,
+        "ocr_method": "hybrid",
+        "ocr_config_path": "config/ocr_config.json"
     },
     "barrier": {
         "type": "mock",

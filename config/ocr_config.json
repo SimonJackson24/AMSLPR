@@ -1,7 +1,7 @@
 {
-    "confidence_threshold": 0.7,
     "ocr_method": "hybrid",
     "use_hailo_tpu": true,
+    "confidence_threshold": 0.7,
     "tesseract_config": {
         "psm_mode": 7,
         "oem_mode": 1,
@@ -13,9 +13,8 @@
         "input_height": 32,
         "tf_ocr_model_path": "models/ocr_crnn.h5",
         "hailo_ocr_model_path": "models/lprnet_vehicle_license_recognition.hef",
-        "char_map_path": "models/char_map.json",
         "hailo_detector_model_path": "models/yolov5m_license_plates.hef",
-        "use_hailo_detector": true
+        "char_map_path": "models/char_map.json"
     },
     "preprocessing": {
         "resize_factor": 2.0,
