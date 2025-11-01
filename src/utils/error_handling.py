@@ -1,13 +1,13 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
 
 #!/usr/bin/env python3
 """
-Error handling utilities for the AMSLPR system.
+Error handling utilities for the VisiGate system.
 """
 
 import os
@@ -17,14 +17,14 @@ import traceback
 import json
 from datetime import datetime
 
-logger = logging.getLogger('AMSLPR.error_handling')
+logger = logging.getLogger('VisiGate.error_handling')
 
 class ErrorHandler:
     """
-    Error handler for the AMSLPR system.
+    Error handler for the VisiGate system.
     """
     
-    def __init__(self, log_dir='/var/log/amslpr', notification_manager=None):
+    def __init__(self, log_dir='/var/log/visigate', notification_manager=None):
         """
         Initialize error handler.
         
@@ -146,13 +146,13 @@ class ErrorHandler:
                 return
             
             # Create error message
-            error_message = f"AMSLPR Error: {exc_type.__name__}: {exc_value}\n\n"
+            error_message = f"VisiGate Error: {exc_type.__name__}: {exc_value}\n\n"
             error_message += "Traceback (most recent call last):\n"
             error_message += traceback_text
             
             # Send email notification
             self.notification_manager.send_email_notification(
-                subject="AMSLPR System Error",
+                subject="VisiGate System Error",
                 message=error_message
             )
             
@@ -160,7 +160,7 @@ class ErrorHandler:
         except Exception as e:
             logger.error(f"Failed to send error notification: {e}")
 
-def setup_error_handler(notification_manager=None, log_dir='/var/log/amslpr'):
+def setup_error_handler(notification_manager=None, log_dir='/var/log/visigate'):
     """
     Set up global exception handler.
     
@@ -181,7 +181,7 @@ def setup_error_handler(notification_manager=None, log_dir='/var/log/amslpr'):
     
     return error_handler
 
-def get_error_logs(log_dir='/var/log/amslpr', limit=10):
+def get_error_logs(log_dir='/var/log/visigate', limit=10):
     """
     Get recent error logs.
     

@@ -8,11 +8,11 @@ This script modifies the cameras.html template to handle missing stats variable.
 import os
 
 # Create a backup of the template
-os.system("sudo cp /opt/amslpr/src/web/templates/cameras.html /opt/amslpr/src/web/templates/cameras.html.backup_fix")
+os.system("sudo cp /opt/visigate/src/web/templates/cameras.html /opt/visigate/src/web/templates/cameras.html.backup_fix")
 print("Created backup of cameras.html template")
 
 # Read the current template
-with open("/opt/amslpr/src/web/templates/cameras.html", "r") as f:
+with open("/opt/visigate/src/web/templates/cameras.html", "r") as f:
     template_content = f.read()
 
 # Replace all instances of {{ stats.xxx }} with {{ stats.xxx|default(value) }}
@@ -27,11 +27,11 @@ with open("/tmp/fixed_cameras.html", "w") as f:
     f.write(fixed_content)
 
 # Apply the fix
-os.system("sudo cp /tmp/fixed_cameras.html /opt/amslpr/src/web/templates/cameras.html")
+os.system("sudo cp /tmp/fixed_cameras.html /opt/visigate/src/web/templates/cameras.html")
 print("Applied fix to cameras.html template")
 
 # Restart the service
-os.system("sudo systemctl restart amslpr")
-print("Restarted AMSLPR service")
+os.system("sudo systemctl restart visigate")
+print("Restarted VisiGate service")
 
 print("Fix applied. The cameras page should now work without errors.")

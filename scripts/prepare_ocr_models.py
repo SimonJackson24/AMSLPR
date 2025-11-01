@@ -1,6 +1,6 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
@@ -25,7 +25,7 @@ logging.basicConfig(
         logging.StreamHandler(sys.stdout)
     ]
 )
-logger = logging.getLogger('AMSLPR.prepare_ocr')
+logger = logging.getLogger('VisiGate.prepare_ocr')
 
 # Get project root
 project_root = Path(__file__).parent.parent
@@ -235,7 +235,7 @@ def main():
     """
     Main function.
     """
-    parser = argparse.ArgumentParser(description='Prepare OCR models for AMSLPR')
+    parser = argparse.ArgumentParser(description='Prepare OCR models for VisiGate')
     parser.add_argument('--tensorflow', action='store_true', help='Prepare TensorFlow model')
     parser.add_argument('--hailo', action='store_true', help='Prepare Hailo model')
     parser.add_argument('--all', action='store_true', help='Prepare all models')

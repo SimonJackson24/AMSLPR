@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# AMSLPR Troubleshooting Script
-# This script helps diagnose issues with the AMSLPR installation
+# VisiGate Troubleshooting Script
+# This script helps diagnose issues with the VisiGate installation
 
-echo "=== AMSLPR Troubleshooting ==="
+echo "=== VisiGate Troubleshooting ==="
 echo "Checking service status..."
-sudo systemctl status amslpr.service
+sudo systemctl status visigate.service
 
 echo "\nChecking service logs..."
-sudo journalctl -u amslpr.service --no-pager -n 50
+sudo journalctl -u visigate.service --no-pager -n 50
 
 echo "\nChecking if port 5001 is listening..."
 sudo netstat -tuln | grep 5001
@@ -17,10 +17,10 @@ echo "\nChecking firewall status..."
 sudo ufw status
 
 echo "\nChecking run_server.py exists..."
-ls -la /opt/amslpr/run_server.py
+ls -la /opt/visigate/run_server.py
 
 echo "\nChecking Python virtual environment..."
-ls -la /opt/amslpr/venv/bin/python
+ls -la /opt/visigate/venv/bin/python
 
 echo "\nChecking network interfaces..."
 ip addr

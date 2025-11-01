@@ -2,7 +2,7 @@
 
 ## Overview
 
-The AMSLPR system uses an advanced OCR (Optical Character Recognition) system for license plate recognition. The system supports multiple OCR methods and can be configured to use hardware acceleration via the Hailo TPU for improved performance and reliability.
+The VisiGate system uses an advanced OCR (Optical Character Recognition) system for license plate recognition. The system supports multiple OCR methods and can be configured to use hardware acceleration via the Hailo TPU for improved performance and reliability.
 
 ## OCR Methods
 
@@ -165,7 +165,7 @@ This tests the API endpoints for updating and reloading the OCR configuration.
 
 ### Logging
 
-The OCR system logs detailed information about the recognition process. Logs are stored in `data/logs/amslpr.log` and can be viewed through the admin dashboard under System > Logs.
+The OCR system logs detailed information about the recognition process. Logs are stored in `data/logs/visigate.log` and can be viewed through the admin dashboard under System > Logs.
 
 ## Model Management
 

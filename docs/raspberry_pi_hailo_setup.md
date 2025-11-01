@@ -1,6 +1,6 @@
-# Setting up AMSLPR with Hailo TPU on Raspberry Pi
+# Setting up VisiGate with Hailo TPU on Raspberry Pi
 
-This guide provides instructions for setting up the AMSLPR system on a Raspberry Pi with Hailo TPU acceleration.
+This guide provides instructions for setting up the VisiGate system on a Raspberry Pi with Hailo TPU acceleration.
 
 ## Hardware Requirements
 
@@ -12,11 +12,11 @@ This guide provides instructions for setting up the AMSLPR system on a Raspberry
 
 ## Automated Installation
 
-The AMSLPR installation script now handles the entire setup process automatically, including Hailo TPU configuration:
+The VisiGate installation script now handles the entire setup process automatically, including Hailo TPU configuration:
 
 ```bash
-git clone https://github.com/yourusername/AMSLPR.git
-cd AMSLPR
+git clone https://github.com/yourusername/VisiGate.git
+cd VisiGate
 sudo ./scripts/install_on_raspberry_pi.sh
 ```
 
@@ -38,8 +38,8 @@ After installation, the script will automatically verify the Hailo TPU setup. If
 You can manually verify the Hailo TPU installation at any time by running:
 
 ```bash
-sudo systemctl stop amslpr  # Stop the service if it's running
-cd /opt/amslpr
+sudo systemctl stop visigate  # Stop the service if it's running
+cd /opt/visigate
 source venv/bin/activate
 python scripts/verify_hailo_installation.py
 ```
@@ -117,25 +117,25 @@ EOL'
 
 1. Create a models directory:
    ```bash
-   mkdir -p /opt/amslpr/models
+   mkdir -p /opt/visigate/models
    ```
 
 2. Download the LPRNet model (for license plate recognition):
    ```bash
-   wget -O /opt/amslpr/models/lprnet_vehicle_license_recognition.hef \
+   wget -O /opt/visigate/models/lprnet_vehicle_license_recognition.hef \
        https://hailo-model-zoo.s3.eu-west-2.amazonaws.com/HailoNets/LPR/ocr/lprnet/2022-03-09/lprnet.hef
    ```
 
 3. Download the YOLOv5m and Tiny YOLOv4 models from the Hailo Developer Zone and place them in the models directory:
    ```bash
    # After downloading from Hailo Developer Zone
-   mv /path/to/downloaded/yolov5m.hef /opt/amslpr/models/yolov5m_license_plates.hef
-   mv /path/to/downloaded/tiny_yolov4.hef /opt/amslpr/models/tiny_yolov4_license_plate_detection.hef
+   mv /path/to/downloaded/yolov5m.hef /opt/visigate/models/yolov5m_license_plates.hef
+   mv /path/to/downloaded/tiny_yolov4.hef /opt/visigate/models/tiny_yolov4_license_plate_detection.hef
    ```
 
 4. Create the character map for OCR:
    ```bash
-   cat > /opt/amslpr/models/char_map.json << EOL
+   cat > /opt/visigate/models/char_map.json << EOL
 {
     "0": 0,
     "1": 1,
@@ -177,11 +177,11 @@ EOL'
 EOL
    ```
 
-### Step 5: Enable Hailo TPU in AMSLPR
+### Step 5: Enable Hailo TPU in VisiGate
 
 1. Run the Hailo TPU setup script:
    ```bash
-   cd /opt/amslpr
+   cd /opt/visigate
    source venv/bin/activate
    sudo python scripts/enable_hailo_tpu.py --auto-approve
    ```
@@ -227,7 +227,7 @@ If you encounter an error about missing models:
 
 1. Check if the models are in the correct location:
    ```bash
-   ls -l /opt/amslpr/models/*.hef
+   ls -l /opt/visigate/models/*.hef
    ```
 
 2. Make sure the models have the correct names:

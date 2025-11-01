@@ -1,12 +1,12 @@
 # System Monitoring and Maintenance Guide
 
-This guide covers comprehensive monitoring setup, maintenance procedures, and alerting configuration for AMSLPR systems.
+This guide covers comprehensive monitoring setup, maintenance procedures, and alerting configuration for VisiGate systems.
 
 ## Monitoring Architecture
 
 ### Monitoring Stack Components
 
-1. **Application Metrics:** Performance and health metrics from AMSLPR
+1. **Application Metrics:** Performance and health metrics from VisiGate
 2. **System Metrics:** CPU, memory, disk, and network statistics
 3. **Infrastructure Metrics:** Container and orchestration metrics
 4. **Business Metrics:** License plate recognition success rates and throughput
@@ -25,7 +25,7 @@ rule_files:
   - "alert_rules.yml"
 
 scrape_configs:
-  - job_name: 'amslpr'
+  - job_name: 'visigate'
     static_configs:
       - targets: ['localhost:5001']
     metrics_path: '/metrics'
@@ -67,36 +67,36 @@ from prometheus_client import Counter, Histogram, Gauge
 
 # OCR metrics
 ocr_processing_time = Histogram(
-    'amslpr_ocr_processing_time_seconds',
+    'visigate_ocr_processing_time_seconds',
     'Time spent processing OCR requests',
     ['method', 'status']
 )
 
 ocr_requests_total = Counter(
-    'amslpr_ocr_requests_total',
+    'visigate_ocr_requests_total',
     'Total number of OCR requests',
     ['method', 'status']
 )
 
 # Camera metrics
 camera_connections_active = Gauge(
-    'amslpr_camera_connections_active',
+    'visigate_camera_connections_active',
     'Number of active camera connections'
 )
 
 camera_frames_processed = Counter(
-    'amslpr_camera_frames_processed_total',
+    'visigate_camera_frames_processed_total',
     'Total number of camera frames processed'
 )
 
 # Database metrics
 db_connections_active = Gauge(
-    'amslpr_db_connections_active',
+    'visigate_db_connections_active',
     'Number of active database connections'
 )
 
 db_query_duration = Histogram(
-    'amslpr_db_query_duration_seconds',
+    'visigate_db_query_duration_seconds',
     'Database query duration',
     ['query_type']
 )
@@ -137,10 +137,10 @@ db_query_duration = Histogram(
 ```yaml
 # alert_rules.yml
 groups:
-  - name: amslpr_application
+  - name: visigate_application
     rules:
       - alert: OCRProcessingSlow
-        expr: histogram_quantile(0.95, rate(amslpr_ocr_processing_time_seconds_bucket[5m])) > 1
+        expr: histogram_quantile(0.95, rate(visigate_ocr_processing_time_seconds_bucket[5m])) > 1
         for: 5m
         labels:
           severity: warning
@@ -149,7 +149,7 @@ groups:
           description: "95th percentile OCR processing time is {{ $value }}s"
 
       - alert: OCRSuccessRateLow
-        expr: rate(amslpr_ocr_requests_total{status="success"}[5m]) / rate(amslpr_ocr_requests_total[5m]) < 0.95
+        expr: rate(visigate_ocr_requests_total{status="success"}[5m]) / rate(visigate_ocr_requests_total[5m]) < 0.95
         for: 5m
         labels:
           severity: critical
@@ -158,7 +158,7 @@ groups:
           description: "OCR success rate is {{ $value | humanizePercentage }}"
 
       - alert: APIResponseSlow
-        expr: histogram_quantile(0.95, rate(http_request_duration_seconds{job="amslpr"}[5m])) > 0.5
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds{job="visigate"}[5m])) > 0.5
         for: 5m
         labels:
           severity: warning
@@ -166,7 +166,7 @@ groups:
           summary: "API response time is slow"
           description: "95th percentile API response time is {{ $value }}s"
 
-  - name: amslpr_system
+  - name: visigate_system
     rules:
       - alert: HighCPUUsage
         expr: cpu_usage_percent > 85
@@ -196,7 +196,7 @@ groups:
           description: "Disk usage is {{ $value }}%"
 
       - alert: CameraConnectionLost
-        expr: amslpr_camera_connections_active == 0
+        expr: visigate_camera_connections_active == 0
         for: 2m
         labels:
           severity: critical
@@ -211,8 +211,8 @@ groups:
 # alertmanager.yml
 global:
   smtp_smarthost: 'smtp.gmail.com:587'
-  smtp_from: 'alerts@amslpr.com'
-  smtp_auth_username: 'alerts@amslpr.com'
+  smtp_from: 'alerts@visigate.com'
+  smtp_auth_username: 'alerts@visigate.com'
   smtp_auth_password: 'your-password'
 
 route:
@@ -249,8 +249,8 @@ receivers:
 ```json
 {
   "dashboard": {
-    "title": "AMSLPR System Overview",
-    "tags": ["amslpr", "monitoring"],
+    "title": "VisiGate System Overview",
+    "tags": ["visigate", "monitoring"],
     "timezone": "UTC",
     "panels": [
       {
@@ -258,11 +258,11 @@ receivers:
         "type": "graph",
         "targets": [
           {
-            "expr": "histogram_quantile(0.95, rate(amslpr_ocr_processing_time_seconds_bucket[5m]))",
+            "expr": "histogram_quantile(0.95, rate(visigate_ocr_processing_time_seconds_bucket[5m]))",
             "legendFormat": "95th percentile"
           },
           {
-            "expr": "histogram_quantile(0.50, rate(amslpr_ocr_processing_time_seconds_bucket[5m]))",
+            "expr": "histogram_quantile(0.50, rate(visigate_ocr_processing_time_seconds_bucket[5m]))",
             "legendFormat": "50th percentile"
           }
         ]
@@ -290,7 +290,7 @@ receivers:
         "type": "singlestat",
         "targets": [
           {
-            "expr": "rate(amslpr_ocr_requests_total{status=\"success\"}[1h]) / rate(amslpr_ocr_requests_total[1h]) * 100",
+            "expr": "rate(visigate_ocr_requests_total{status=\"success\"}[1h]) / rate(visigate_ocr_requests_total[1h]) * 100",
             "legendFormat": "Success Rate %"
           }
         ]
@@ -317,17 +317,17 @@ receivers:
     Name              tail
     Path              /app/logs/*.log
     Parser            docker
-    Tag               amslpr.*
+    Tag               visigate.*
     Refresh_Interval  5
 
 [OUTPUT]
     Name  elasticsearch
-    Match amslpr.*
+    Match visigate.*
     Host  elasticsearch
     Port  9200
-    Index amslpr
+    Index visigate
     Logstash_Format On
-    Logstash_Prefix amslpr
+    Logstash_Prefix visigate
 ```
 
 #### Logstash Configuration
@@ -341,7 +341,7 @@ input {
 }
 
 filter {
-  if [fields][log_type] == "amslpr" {
+  if [fields][log_type] == "visigate" {
     grok {
       match => { "message" => "%{TIMESTAMP_ISO8601:timestamp} %{LOGLEVEL:level} %{DATA:logger} - %{GREEDYDATA:message}" }
     }
@@ -356,7 +356,7 @@ filter {
 output {
   elasticsearch {
     hosts => ["elasticsearch:9200"]
-    index => "amslpr-%{+YYYY.MM.dd}"
+    index => "visigate-%{+YYYY.MM.dd}"
   }
 }
 ```
@@ -367,16 +367,16 @@ output {
 
 ```bash
 # Search for errors
-grep "ERROR" /app/logs/amslpr.log | tail -20
+grep "ERROR" /app/logs/visigate.log | tail -20
 
 # Count error types
-grep "ERROR" /app/logs/amslpr.log | sed 's/.*ERROR - //' | sort | uniq -c | sort -nr
+grep "ERROR" /app/logs/visigate.log | sed 's/.*ERROR - //' | sort | uniq -c | sort -nr
 
 # Find slow OCR processing
-grep "OCR processing time" /app/logs/amslpr.log | awk '$NF > 1000 {print}'
+grep "OCR processing time" /app/logs/visigate.log | awk '$NF > 1000 {print}'
 
 # Monitor camera connections
-grep "camera.*connected\|camera.*disconnected" /app/logs/amslpr.log
+grep "camera.*connected\|camera.*disconnected" /app/logs/visigate.log
 ```
 
 #### Log Queries in Elasticsearch
@@ -424,13 +424,13 @@ grep "camera.*connected\|camera.*disconnected" /app/logs/amslpr.log
 echo "Starting daily maintenance..."
 
 # 1. Log rotation
-logrotate /etc/logrotate.d/amslpr
+logrotate /etc/logrotate.d/visigate
 
 # 2. Clear old cache entries
-redis-cli KEYS "amslpr:*" | xargs redis-cli DEL
+redis-cli KEYS "visigate:*" | xargs redis-cli DEL
 
 # 3. Database maintenance
-sqlite3 /app/data/amslpr.db "VACUUM;"
+sqlite3 /app/data/visigate.db "VACUUM;"
 
 # 4. Check disk space
 DISK_USAGE=$(df /app | tail -1 | awk '{print $5}' | sed 's/%//')
@@ -444,7 +444,7 @@ curl -f http://localhost:5001/health > /dev/null
 if [ $? -ne 0 ]; then
     echo "ERROR: Service health check failed"
     # Send alert and attempt restart
-    systemctl restart amslpr
+    systemctl restart visigate
 fi
 
 echo "Daily maintenance completed"
@@ -459,8 +459,8 @@ echo "Daily maintenance completed"
 echo "Starting weekly maintenance..."
 
 # 1. Full database optimization
-sqlite3 /app/data/amslpr.db "REINDEX;"
-sqlite3 /app/data/amslpr.db "ANALYZE;"
+sqlite3 /app/data/visigate.db "REINDEX;"
+sqlite3 /app/data/visigate.db "ANALYZE;"
 
 # 2. Clean old images (older than 30 days)
 find /app/data/images -type f -mtime +30 -delete
@@ -515,19 +515,19 @@ echo "Monthly maintenance completed"
 
 BACKUP_DIR="/app/backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="${BACKUP_DIR}/amslpr_db_${TIMESTAMP}.sql"
+BACKUP_FILE="${BACKUP_DIR}/visigate_db_${TIMESTAMP}.sql"
 
 # Create backup directory
 mkdir -p $BACKUP_DIR
 
 # Backup database
-sqlite3 /app/data/amslpr.db ".backup $BACKUP_FILE"
+sqlite3 /app/data/visigate.db ".backup $BACKUP_FILE"
 
 # Compress backup
 gzip $BACKUP_FILE
 
 # Clean old backups (keep last 30 days)
-find $BACKUP_DIR -name "amslpr_db_*.sql.gz" -mtime +30 -delete
+find $BACKUP_DIR -name "visigate_db_*.sql.gz" -mtime +30 -delete
 
 echo "Database backup completed: ${BACKUP_FILE}.gz"
 ```
@@ -540,7 +540,7 @@ echo "Database backup completed: ${BACKUP_FILE}.gz"
 
 BACKUP_DIR="/app/backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="${BACKUP_DIR}/amslpr_config_${TIMESTAMP}.tar.gz"
+BACKUP_FILE="${BACKUP_DIR}/visigate_config_${TIMESTAMP}.tar.gz"
 
 # Create backup
 tar -czf $BACKUP_FILE \
@@ -549,7 +549,7 @@ tar -czf $BACKUP_FILE \
     --exclude="*.tmp"
 
 # Clean old backups
-find $BACKUP_DIR -name "amslpr_config_*.tar.gz" -mtime +30 -delete
+find $BACKUP_DIR -name "visigate_config_*.tar.gz" -mtime +30 -delete
 
 echo "Configuration backup completed: $BACKUP_FILE"
 ```
@@ -563,10 +563,10 @@ echo "Configuration backup completed: $BACKUP_FILE"
 # Database recovery script
 
 BACKUP_FILE=$1
-RECOVERY_DB="/app/data/amslpr_recovered.db"
+RECOVERY_DB="/app/data/visigate_recovered.db"
 
 # Stop application
-systemctl stop amslpr
+systemctl stop visigate
 
 # Extract backup
 gunzip -c $BACKUP_FILE > $RECOVERY_DB
@@ -575,11 +575,11 @@ gunzip -c $BACKUP_FILE > $RECOVERY_DB
 sqlite3 $RECOVERY_DB "PRAGMA integrity_check;"
 
 # Replace current database
-mv /app/data/amslpr.db /app/data/amslpr.db.backup
-mv $RECOVERY_DB /app/data/amslpr.db
+mv /app/data/visigate.db /app/data/visigate.db.backup
+mv $RECOVERY_DB /app/data/visigate.db
 
 # Start application
-systemctl start amslpr
+systemctl start visigate
 
 echo "Database recovery completed"
 ```
@@ -616,7 +616,7 @@ curl -f http://localhost:5001/health
 ```yaml
 # Security monitoring rules
 groups:
-  - name: amslpr_security
+  - name: visigate_security
     rules:
       - alert: MultipleFailedLogins
         expr: rate(failed_login_attempts_total[5m]) > 5
@@ -730,7 +730,7 @@ print(f"Predicted growth (6 months): {analysis['cpu']['growth_rate']}%")
 #### Internal Incident Notification
 
 ```
-Subject: AMSLPR Incident - [Severity] - [Brief Description]
+Subject: VisiGate Incident - [Severity] - [Brief Description]
 
 Incident Details:
 - Start Time: [Timestamp]
@@ -751,11 +751,11 @@ Contact: [Incident response team contact]
 #### External Stakeholder Communication
 
 ```
-Subject: AMSLPR Service Update - [Brief Description]
+Subject: VisiGate Service Update - [Brief Description]
 
 Dear [Stakeholder],
 
-We are currently experiencing [brief description of issue] with our AMSLPR service.
+We are currently experiencing [brief description of issue] with our VisiGate service.
 
 Current Status:
 - Service Impact: [Minimal/Moderate/Severe]
@@ -766,7 +766,7 @@ We apologize for any inconvenience this may cause. Our team is working diligentl
 For updates, please visit: [Status page URL]
 
 Best regards,
-AMSLPR Operations Team
+VisiGate Operations Team
 ```
 
 ## Compliance and Auditing

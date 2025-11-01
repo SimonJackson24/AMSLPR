@@ -1,6 +1,6 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
@@ -13,11 +13,11 @@ import platform
 from pathlib import Path
 
 # Configure logging
-logger = logging.getLogger('AMSLPR.system_integration')
+logger = logging.getLogger('VisiGate.system_integration')
 
 class SystemIntegration:
     """
-    Handles system-level integration tasks for the AMSLPR system.
+    Handles system-level integration tasks for the VisiGate system.
     This includes checking system dependencies, managing services,
     and interacting with the operating system.
     """
@@ -119,7 +119,7 @@ class SystemIntegration:
     
     def install_service(self):
         """
-        Install the AMSLPR service to start on boot.
+        Install the VisiGate service to start on boot.
         
         Returns:
             bool: True if service was installed successfully, False otherwise
@@ -133,8 +133,8 @@ class SystemIntegration:
             project_root = Path(__file__).parent.parent.parent
             
             # Source and destination paths for service file
-            service_src = project_root / 'scripts' / 'amslpr.service'
-            service_dest = '/etc/systemd/system/amslpr.service'
+            service_src = project_root / 'scripts' / 'visigate.service'
+            service_dest = '/etc/systemd/system/visigate.service'
             
             # Check if running as root
             if os.geteuid() != 0:
@@ -146,9 +146,9 @@ class SystemIntegration:
             
             # Reload systemd and enable service
             subprocess.run(['systemctl', 'daemon-reload'], check=True)
-            subprocess.run(['systemctl', 'enable', 'amslpr.service'], check=True)
+            subprocess.run(['systemctl', 'enable', 'visigate.service'], check=True)
             
-            logger.info("AMSLPR service installed successfully")
+            logger.info("VisiGate service installed successfully")
             return True
         except Exception as e:
             logger.error(f"Failed to install service: {e}")
@@ -156,7 +156,7 @@ class SystemIntegration:
     
     def start_service(self):
         """
-        Start the AMSLPR service.
+        Start the VisiGate service.
         
         Returns:
             bool: True if service was started successfully, False otherwise
@@ -166,8 +166,8 @@ class SystemIntegration:
             return False
         
         try:
-            subprocess.run(['systemctl', 'start', 'amslpr.service'], check=True)
-            logger.info("AMSLPR service started successfully")
+            subprocess.run(['systemctl', 'start', 'visigate.service'], check=True)
+            logger.info("VisiGate service started successfully")
             return True
         except Exception as e:
             logger.error(f"Failed to start service: {e}")
@@ -175,7 +175,7 @@ class SystemIntegration:
     
     def stop_service(self):
         """
-        Stop the AMSLPR service.
+        Stop the VisiGate service.
         
         Returns:
             bool: True if service was stopped successfully, False otherwise
@@ -185,8 +185,8 @@ class SystemIntegration:
             return False
         
         try:
-            subprocess.run(['systemctl', 'stop', 'amslpr.service'], check=True)
-            logger.info("AMSLPR service stopped successfully")
+            subprocess.run(['systemctl', 'stop', 'visigate.service'], check=True)
+            logger.info("VisiGate service stopped successfully")
             return True
         except Exception as e:
             logger.error(f"Failed to stop service: {e}")
@@ -194,7 +194,7 @@ class SystemIntegration:
     
     def get_service_status(self):
         """
-        Get the status of the AMSLPR service.
+        Get the status of the VisiGate service.
         
         Returns:
             str: Service status or error message
@@ -204,7 +204,7 @@ class SystemIntegration:
         
         try:
             result = subprocess.run(
-                ['systemctl', 'status', 'amslpr.service'],
+                ['systemctl', 'status', 'visigate.service'],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True

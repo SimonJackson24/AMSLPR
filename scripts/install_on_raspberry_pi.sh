@@ -2,7 +2,7 @@
 
 set -e
 
-echo "AMSLPR Installation Script for Raspberry Pi with Hailo TPU"
+echo "VisiGate Installation Script for Raspberry Pi with Hailo TPU"
 echo "====================================================="
 echo ""
 
@@ -13,7 +13,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # Set up variables
-INSTALL_DIR="/opt/amslpr"
+INSTALL_DIR="/opt/visigate"
 
 # Get the user who executed sudo (the actual user, not root)
 if [ -n "$SUDO_USER" ]; then
@@ -68,12 +68,12 @@ echo "Step 3: Creating application directory..."
 mkdir -p "$INSTALL_DIR"
 chown -R "$APP_USER:$APP_GROUP" "$INSTALL_DIR"
 
-echo "Step 4: Setting up AMSLPR repository..."
+echo "Step 4: Setting up VisiGate repository..."
 
-# Check if we're already in the AMSLPR repository
+# Check if we're already in the VisiGate repository
 CURRENT_DIR=$(pwd)
 if [ -d "$CURRENT_DIR/.git" ] && [ -f "$CURRENT_DIR/scripts/install_on_raspberry_pi.sh" ]; then
-    echo "Running from existing AMSLPR repository, using current directory..."
+    echo "Running from existing VisiGate repository, using current directory..."
     INSTALL_DIR="$CURRENT_DIR"
     echo "Installation directory set to: $INSTALL_DIR"
 else
@@ -87,8 +87,8 @@ else
         git pull
     else
         echo "Cloning fresh repository..."
-        # Clone from the official AMSLPR repository
-        git clone https://github.com/SimonJackson24/AMSLPR.git .
+        # Clone from the official VisiGate repository
+        git clone https://github.com/SimonJackson24/VisiGate.git .
         chown -R "$APP_USER:$APP_GROUP" "$INSTALL_DIR"
     fi
 fi
@@ -417,9 +417,9 @@ echo "Step 9: Setting up systemd service..."
 python_version=$(cd "$INSTALL_DIR" && . venv/bin/activate && python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
 site_packages_dir="$INSTALL_DIR/venv/lib/python$python_version/site-packages"
 
-cat > /etc/systemd/system/amslpr.service << EOL
+cat > /etc/systemd/system/visigate.service << EOL
 [Unit]
-Description=AMSLPR License Plate Recognition Service
+Description=VisiGate License Plate Recognition Service
 After=network.target multi-user.target
 
 [Service]
@@ -441,8 +441,8 @@ WantedBy=multi-user.target
 EOL
 
 systemctl daemon-reload
-systemctl enable amslpr.service
-echo "✅ Enabled AMSLPR service to start automatically at boot"
+systemctl enable visigate.service
+echo "✅ Enabled VisiGate service to start automatically at boot"
 
 echo "Step 10: Running Hailo TPU setup script..."
 # Run the Hailo setup script to configure OCR
@@ -663,13 +663,13 @@ echo "IMPORTANT: A reboot is REQUIRED to complete the installation"
 echo "Run 'sudo reboot' now"
 echo "======================================================================="
 echo ""
-echo "The AMSLPR service is set to start automatically after reboot"
-echo "You can check its status with: sudo systemctl status amslpr"
-echo "View logs with: sudo journalctl -u amslpr -f"
+echo "The VisiGate service is set to start automatically after reboot"
+echo "You can check its status with: sudo systemctl status visigate"
+echo "View logs with: sudo journalctl -u visigate -f"
 echo "If needed, you can manually control the service with:"
-echo "  - Start:   sudo systemctl start amslpr"
-echo "  - Stop:    sudo systemctl stop amslpr"
-echo "  - Restart: sudo systemctl restart amslpr"
+echo "  - Start:   sudo systemctl start visigate"
+echo "  - Stop:    sudo systemctl stop visigate"
+echo "  - Restart: sudo systemctl restart visigate"
 echo ""
 echo "The application will be available at: http://$(hostname -I | awk '{print $1}'):5001"
 echo ""
@@ -680,5 +680,5 @@ if [[ $REBOOT_NOW == "y" || $REBOOT_NOW == "Y" ]]; then
     echo "Rebooting system now..."
     reboot
 else
-    echo "Remember to reboot your system with 'sudo reboot' before using AMSLPR"
+    echo "Remember to reboot your system with 'sudo reboot' before using VisiGate"
 fi

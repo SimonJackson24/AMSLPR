@@ -1,6 +1,6 @@
-# AMSLPR Security Hardening Guide
+# VisiGate Security Hardening Guide
 
-This guide provides recommendations for securing your AMSLPR deployment in a production environment. Following these best practices will help protect your system from common security threats.
+This guide provides recommendations for securing your VisiGate deployment in a production environment. Following these best practices will help protect your system from common security threats.
 
 ## System-Level Security
 
@@ -82,22 +82,22 @@ This guide provides recommendations for securing your AMSLPR deployment in a pro
 
 ### File System Security
 
-1. **Set proper permissions for AMSLPR files**
+1. **Set proper permissions for VisiGate files**
    ```bash
    # Set ownership
-   sudo chown -R root:root /opt/amslpr
-   sudo chown -R root:root /etc/amslpr
+   sudo chown -R root:root /opt/visigate
+   sudo chown -R root:root /etc/visigate
    
    # Set permissions
-   sudo chmod -R 755 /opt/amslpr
-   sudo chmod -R 640 /etc/amslpr/config.json
-   sudo chmod -R 750 /etc/amslpr/ssl
-   sudo chmod 600 /etc/amslpr/ssl/key.pem
+   sudo chmod -R 755 /opt/visigate
+   sudo chmod -R 640 /etc/visigate/config.json
+   sudo chmod -R 750 /etc/visigate/ssl
+   sudo chmod 600 /etc/visigate/ssl/key.pem
    ```
 
 2. **Secure log files**
    ```bash
-   sudo chmod -R 640 /var/log/amslpr
+   sudo chmod -R 640 /var/log/visigate
    ```
 
 3. **Enable disk encryption** (for new installations)
@@ -118,7 +118,7 @@ This guide provides recommendations for securing your AMSLPR deployment in a pro
    - Test your SSL configuration with [SSL Labs](https://www.ssllabs.com/ssltest/)
 
 3. **Configure security headers**
-   The AMSLPR application automatically sets the following security headers:
+   The VisiGate application automatically sets the following security headers:
    - X-Content-Type-Options: nosniff
    - X-Frame-Options: SAMEORIGIN
    - X-XSS-Protection: 1; mode=block
@@ -126,7 +126,7 @@ This guide provides recommendations for securing your AMSLPR deployment in a pro
    - Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';
 
 4. **Enable rate limiting**
-   Rate limiting is enabled by default in the AMSLPR configuration. Adjust the settings in `config.json`:
+   Rate limiting is enabled by default in the VisiGate configuration. Adjust the settings in `config.json`:
    ```json
    "security": {
        "rate_limiting": {
@@ -142,8 +142,8 @@ This guide provides recommendations for securing your AMSLPR deployment in a pro
 1. **Secure the SQLite database**
    ```bash
    # Set proper permissions
-   sudo chmod 640 /var/lib/amslpr/amslpr.db
-   sudo chown root:root /var/lib/amslpr/amslpr.db
+   sudo chmod 640 /var/lib/visigate/visigate.db
+   sudo chown root:root /var/lib/visigate/visigate.db
    ```
 
 2. **Enable database encryption**
@@ -162,7 +162,7 @@ This guide provides recommendations for securing your AMSLPR deployment in a pro
    
    Add:
    ```
-   0 2 * * * /opt/amslpr/venv/bin/python /opt/amslpr/src/utils/backup.py > /dev/null 2>&1
+   0 2 * * * /opt/visigate/venv/bin/python /opt/visigate/src/utils/backup.py > /dev/null 2>&1
    ```
 
 ### Camera Security
@@ -179,18 +179,18 @@ This guide provides recommendations for securing your AMSLPR deployment in a pro
    - Implement firewall rules to restrict camera access
 
 3. **Encrypt camera credentials**
-   AMSLPR encrypts camera credentials using Fernet symmetric encryption. Ensure the encryption key is properly secured.
+   VisiGate encrypts camera credentials using Fernet symmetric encryption. Ensure the encryption key is properly secured.
 
 ## Network Security
 
-1. **Use a separate network for the AMSLPR system**
-   - Create a dedicated VLAN for the AMSLPR system
+1. **Use a separate network for the VisiGate system**
+   - Create a dedicated VLAN for the VisiGate system
    - Implement proper network segmentation
 
 2. **Implement a reverse proxy**
    Nginx is configured as a reverse proxy by default. Ensure it's properly configured:
    ```bash
-   sudo nano /etc/nginx/sites-available/amslpr
+   sudo nano /etc/nginx/sites-available/visigate
    ```
    
    Check for these security settings:
@@ -236,7 +236,7 @@ This guide provides recommendations for securing your AMSLPR deployment in a pro
 ## Regular Security Maintenance
 
 1. **Security updates**
-   - Regularly update the AMSLPR software
+   - Regularly update the VisiGate software
    - Keep the operating system and dependencies updated
    - Subscribe to security mailing lists for relevant components
 
@@ -252,7 +252,7 @@ This guide provides recommendations for securing your AMSLPR deployment in a pro
 
 ## Conclusion
 
-Security is an ongoing process, not a one-time setup. Regularly review and update your security measures to protect against new threats. By following these recommendations, you can significantly improve the security of your AMSLPR deployment.
+Security is an ongoing process, not a one-time setup. Regularly review and update your security measures to protect against new threats. By following these recommendations, you can significantly improve the security of your VisiGate deployment.
 
 For additional security resources, consult the following:
 - [Raspberry Pi Security Guide](https://www.raspberrypi.org/documentation/configuration/security.md)

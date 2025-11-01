@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Fix AMSLPR service to use the virtual environment Python
+Fix VisiGate service to use the virtual environment Python
 """
 
 import os
@@ -42,7 +42,7 @@ def run_command(command, as_root=False):
 
 def get_current_service_file():
     """Get the current service file content"""
-    service_path = '/etc/systemd/system/amslpr.service'
+    service_path = '/etc/systemd/system/visigate.service'
     
     success, output = run_command(f"cat {service_path}", as_root=True)
     if not success:
@@ -52,8 +52,8 @@ def get_current_service_file():
     return output
 
 def update_service_for_venv():
-    """Update the AMSLPR service to use the virtual environment Python"""
-    log.info("\n===== FIXING AMSLPR SERVICE TO USE VIRTUAL ENVIRONMENT =====\n")
+    """Update the VisiGate service to use the virtual environment Python"""
+    log.info("\n===== FIXING VisiGate SERVICE TO USE VIRTUAL ENVIRONMENT =====\n")
     
     # Verify virtual environment exists
     venv_python = VENV_PATH / 'bin' / 'python'
@@ -100,12 +100,12 @@ def update_service_for_venv():
         return False
     
     # Write new service file to temporary location
-    temp_file = '/tmp/amslpr.service'
+    temp_file = '/tmp/visigate.service'
     with open(temp_file, 'w') as f:
         f.write('\n'.join(new_lines))
     
     # Install new service file
-    success, output = run_command(f"cp {temp_file} /etc/systemd/system/amslpr.service", as_root=True)
+    success, output = run_command(f"cp {temp_file} /etc/systemd/system/visigate.service", as_root=True)
     if not success:
         log.error(f"Failed to update service file: {output}")
         return False
@@ -117,17 +117,17 @@ def update_service_for_venv():
         return False
     
     log.info("\n===== SERVICE UPDATED SUCCESSFULLY =====\n")
-    log.info("The AMSLPR service is now configured to use the virtual environment Python.")
+    log.info("The VisiGate service is now configured to use the virtual environment Python.")
     log.info("This will enable detection of TensorFlow and Hailo TPU.")
     
     # Restart service
-    log.info("\nRestarting AMSLPR service...")
-    success, output = run_command("systemctl restart amslpr", as_root=True)
+    log.info("\nRestarting VisiGate service...")
+    success, output = run_command("systemctl restart visigate", as_root=True)
     if not success:
         log.error(f"Failed to restart service: {output}")
         return False
     
-    log.info("AMSLPR service restarted successfully")
+    log.info("VisiGate service restarted successfully")
     log.info("\nThe TPU detection should now work correctly. Please check the OCR settings page.")
     return True
 

@@ -74,7 +74,7 @@ def install_hailo_driver():
         logger.info("Hailo driver package not found. Checking for installation file...")
         # Check for common installation package locations
         locations = [
-            "/home/automate/AMSLPR/drivers/hailort",
+            "/home/automate/VisiGate/drivers/hailort",
             "/home/automate/hailort",
             "./drivers/hailort"
         ]
@@ -226,8 +226,8 @@ def main():
     else:
         logger.info("\n✓ All checks passed! Hailo TPU is properly configured.")
     
-    logger.info("\nTo apply changes, restart the AMSLPR service:")
-    logger.info("sudo systemctl restart amslpr")
+    logger.info("\nTo apply changes, restart the VisiGate service:")
+    logger.info("sudo systemctl restart visigate")
 
 if __name__ == "__main__":
     main()

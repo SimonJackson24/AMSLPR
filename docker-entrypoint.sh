@@ -5,7 +5,7 @@ set -e
 PORT=${PORT:-5001}
 
 # Print startup message
-echo "Starting AMSLPR on port $PORT"
+echo "Starting VisiGate on port $PORT"
 
 # Check if Hailo is enabled
 if [ "$HAILO_ENABLED" = "true" ]; then

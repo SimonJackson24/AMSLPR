@@ -2,7 +2,7 @@
 
 ## Overview
 
-The AMSLPR system includes a comprehensive user management system that provides role-based access control (RBAC) to the application. This system ensures that only authorized users can access specific features and functionality based on their assigned roles and permissions.
+The VisiGate system includes a comprehensive user management system that provides role-based access control (RBAC) to the application. This system ensures that only authorized users can access specific features and functionality based on their assigned roles and permissions.
 
 ## Features
 

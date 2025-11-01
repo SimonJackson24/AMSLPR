@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Pytest configuration and shared fixtures for AMSLPR testing.
+Pytest configuration and shared fixtures for VisiGate testing.
 """
 
 import pytest

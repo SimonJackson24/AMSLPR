@@ -1,20 +1,20 @@
 [Unit]
-Description=AMSLPR - Automated License Plate Recognition
+Description=VisiGate - Automated License Plate Recognition
 After=network.target
 
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/opt/amslpr
-ExecStart=/opt/amslpr/venv/bin/python -m src.main --web-only
+WorkingDirectory=/opt/visigate
+ExecStart=/opt/visigate/venv/bin/python -m src.main --web-only
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
-Environment="PYTHONPATH=/opt/amslpr"
-Environment="AMSLPR_CONFIG_DIR=/etc/amslpr"
-Environment="AMSLPR_LOG_DIR=/var/log/amslpr"
-Environment="AMSLPR_DATA_DIR=/var/lib/amslpr"
+Environment="PYTHONPATH=/opt/visigate"
+Environment="VisiGate_CONFIG_DIR=/etc/visigate"
+Environment="VisiGate_LOG_DIR=/var/log/visigate"
+Environment="VisiGate_DATA_DIR=/var/lib/visigate"
 
 [Install]
 WantedBy=multi-user.target

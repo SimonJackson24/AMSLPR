@@ -14,7 +14,7 @@
         "safety_check": true
     },
     "database": {
-        "path": "data/amslpr.db",
+        "path": "data/visigate.db",
         "backup_interval": 86400
     },
     "web": {
@@ -60,7 +60,7 @@
             "port": 587,
             "username": "user@example.com",
             "password": "password",
-            "from_addr": "amslpr@example.com",
+            "from_addr": "visigate@example.com",
             "to_addrs": ["admin@example.com"]
         }
     }

@@ -8,7 +8,7 @@ that will definitely work without errors.
 import os
 
 # Create a backup of the current file
-os.system("sudo cp /opt/amslpr/src/web/camera_routes.py /opt/amslpr/src/web/camera_routes.py.backup_ultra")
+os.system("sudo cp /opt/visigate/src/web/camera_routes.py /opt/visigate/src/web/camera_routes.py.backup_ultra")
 print("Created backup of camera_routes.py")
 
 # Create an ultra-simple cameras function that works without any dependencies
@@ -34,7 +34,7 @@ def cameras():
 '''
 
 # Find the cameras route in the file
-os.system("sudo grep -n '@camera_bp.route.*cameras' /opt/amslpr/src/web/camera_routes.py > /tmp/camera_route.txt")
+os.system("sudo grep -n '@camera_bp.route.*cameras' /opt/visigate/src/web/camera_routes.py > /tmp/camera_route.txt")
 
 with open("/tmp/camera_route.txt", "r") as f:
     camera_routes = f.readlines()
@@ -45,7 +45,7 @@ if camera_routes:
     print(f"Found first camera route at line {first_line}")
     
     # Find the next route definition after all camera routes
-    os.system(f"sudo grep -n '@camera_bp.route' /opt/amslpr/src/web/camera_routes.py | awk '$1 > {first_line}' | grep -v 'cameras' | head -1 > /tmp/next_route.txt")
+    os.system(f"sudo grep -n '@camera_bp.route' /opt/visigate/src/web/camera_routes.py | awk '$1 > {first_line}' | grep -v 'cameras' | head -1 > /tmp/next_route.txt")
     
     with open("/tmp/next_route.txt", "r") as f:
         next_route = f.read().strip()
@@ -59,8 +59,8 @@ if camera_routes:
             f.write(ultra_simple)
         
         # Replace all camera routes with the ultra-simple version
-        os.system(f"sudo sed -i '{first_line},{next_line-1}d' /opt/amslpr/src/web/camera_routes.py")
-        os.system(f"sudo sed -i '{first_line-1}r /tmp/ultra_simple.py' /opt/amslpr/src/web/camera_routes.py")
+        os.system(f"sudo sed -i '{first_line},{next_line-1}d' /opt/visigate/src/web/camera_routes.py")
+        os.system(f"sudo sed -i '{first_line-1}r /tmp/ultra_simple.py' /opt/visigate/src/web/camera_routes.py")
         
         print("Successfully replaced all camera routes with an ultra-simple version")
     else:
@@ -69,5 +69,5 @@ else:
     print("Could not find any camera routes")
 
 # Restart the service
-os.system("sudo systemctl restart amslpr")
+os.system("sudo systemctl restart visigate")
 print("\nService restarted. The cameras page should now load without errors.")

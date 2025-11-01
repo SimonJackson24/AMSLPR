@@ -23,7 +23,7 @@ try:
     from src.database.db_manager import DatabaseManager
     db_manager = None
     # Initialize database manager with default path
-    db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'amslpr.db')
+    db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'visigate.db')
     if os.path.exists(os.path.dirname(db_path)):
         db_manager = DatabaseManager({'database': {'path': db_path}})
         logging.info(f"Initialized database manager with path: {db_path}")
@@ -51,7 +51,7 @@ import threading
 import requests
 import re
 
-logger = logging.getLogger('AMSLPR.recognition.onvif_camera')
+logger = logging.getLogger('VisiGate.recognition.onvif_camera')
 
 def zeep_pythonvalue(self, xmlvalue):
     """Convert XML values to Python values."""

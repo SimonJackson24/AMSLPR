@@ -7,14 +7,14 @@ Fix for the cameras page by modifying the template to handle undefined variables
 import os
 
 # Create a backup of the template
-os.system("sudo cp /opt/amslpr/src/web/templates/cameras.html /opt/amslpr/src/web/templates/cameras.html.backup")
+os.system("sudo cp /opt/visigate/src/web/templates/cameras.html /opt/visigate/src/web/templates/cameras.html.backup")
 print("Created backup of cameras.html template")
 
 # Create a simple version of the cameras.html template that will work without errors
 simple_template = '''
 {% extends "base.html" %}
 
-{% block title %}Cameras - AMSLPR{% endblock %}
+{% block title %}Cameras - VisiGate{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
@@ -204,10 +204,10 @@ with open("/tmp/simple_cameras.html", "w") as f:
     f.write(simple_template)
 
 # Replace the cameras.html template
-os.system("sudo cp /tmp/simple_cameras.html /opt/amslpr/src/web/templates/cameras.html")
+os.system("sudo cp /tmp/simple_cameras.html /opt/visigate/src/web/templates/cameras.html")
 
 print("Successfully replaced the cameras.html template with a simplified version")
 
 # Restart the service
-os.system("sudo systemctl restart amslpr")
+os.system("sudo systemctl restart visigate")
 print("Service restarted. The cameras page should now work without errors.")

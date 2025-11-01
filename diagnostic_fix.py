@@ -8,7 +8,7 @@ by adding detailed logging throughout the execution path.
 import os
 
 # Create a backup of the current file
-os.system("sudo cp /opt/amslpr/src/web/camera_routes.py /opt/amslpr/src/web/camera_routes.py.backup_diagnostic")
+os.system("sudo cp /opt/visigate/src/web/camera_routes.py /opt/visigate/src/web/camera_routes.py.backup_diagnostic")
 print("Created backup of camera_routes.py")
 
 # Add detailed logging to the cameras function
@@ -113,7 +113,7 @@ def cameras():
 '''
 
 # Find the cameras function in the file
-os.system("sudo grep -n '@camera_bp.route.*cameras' /opt/amslpr/src/web/camera_routes.py > /tmp/camera_route.txt")
+os.system("sudo grep -n '@camera_bp.route.*cameras' /opt/visigate/src/web/camera_routes.py > /tmp/camera_route.txt")
 
 with open("/tmp/camera_route.txt", "r") as f:
     camera_route = f.read().strip()
@@ -123,7 +123,7 @@ if camera_route:
     print(f"Found cameras route at line {line_number}")
     
     # Find the next route or function
-    os.system(f"sudo grep -n '@camera_bp.route\\|def ' /opt/amslpr/src/web/camera_routes.py | awk '$1 > {line_number}' | head -1 > /tmp/next_route.txt")
+    os.system(f"sudo grep -n '@camera_bp.route\\|def ' /opt/visigate/src/web/camera_routes.py | awk '$1 > {line_number}' | head -1 > /tmp/next_route.txt")
     
     with open("/tmp/next_route.txt", "r") as f:
         next_route = f.read().strip()
@@ -137,8 +137,8 @@ if camera_route:
             f.write(diagnostic_cameras)
         
         # Replace the cameras function
-        os.system(f"sudo sed -i '{line_number},{next_line-1}d' /opt/amslpr/src/web/camera_routes.py")
-        os.system(f"sudo sed -i '{line_number-1}r /tmp/diagnostic_cameras.py' /opt/amslpr/src/web/camera_routes.py")
+        os.system(f"sudo sed -i '{line_number},{next_line-1}d' /opt/visigate/src/web/camera_routes.py")
+        os.system(f"sudo sed -i '{line_number-1}r /tmp/diagnostic_cameras.py' /opt/visigate/src/web/camera_routes.py")
         
         print("Successfully added diagnostic logging to the cameras function")
     else:
@@ -147,5 +147,5 @@ else:
     print("Could not find the cameras route")
 
 # Restart the service
-os.system("sudo systemctl restart amslpr")
+os.system("sudo systemctl restart visigate")
 print("Service restarted. Please try accessing the cameras page and then check the logs.")

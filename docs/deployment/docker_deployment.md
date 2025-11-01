@@ -1,6 +1,6 @@
 # Docker Deployment Guide
 
-This guide provides comprehensive instructions for deploying AMSLPR using Docker containers.
+This guide provides comprehensive instructions for deploying VisiGate using Docker containers.
 
 ## Prerequisites
 
@@ -17,7 +17,7 @@ This guide provides comprehensive instructions for deploying AMSLPR using Docker
 1. **Clone the repository:**
    ```bash
    git clone <repository-url>
-   cd amslpr
+   cd visigate
    ```
 
 2. **Start the application:**
@@ -45,7 +45,7 @@ For development and testing purposes:
 version: '3.8'
 
 services:
-  amslpr-dev:
+  visigate-dev:
     build:
       context: .
       dockerfile: Dockerfile
@@ -77,7 +77,7 @@ For production deployment with optimized settings:
 version: '3.8'
 
 services:
-  amslpr-prod:
+  visigate-prod:
     build:
       context: .
       dockerfile: Dockerfile
@@ -115,7 +115,7 @@ For production environments requiring high availability:
 version: '3.8'
 
 services:
-  amslpr-app:
+  visigate-app:
     build:
       context: .
       dockerfile: Dockerfile
@@ -144,8 +144,8 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: amslpr
-      POSTGRES_USER: amslpr
+      POSTGRES_DB: visigate
+      POSTGRES_USER: visigate
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -160,7 +160,7 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf
       - ./ssl:/etc/ssl/certs
     depends_on:
-      - amslpr-app
+      - visigate-app
     restart: unless-stopped
 
 volumes:
@@ -198,10 +198,10 @@ volumes:
 
 ```bash
 # Build with specific Python version
-docker build --build-arg PYTHON_VERSION=3.9 -t amslpr:custom .
+docker build --build-arg PYTHON_VERSION=3.9 -t visigate:custom .
 
 # Build with Hailo TPU support
-docker build --build-arg HAILO_SDK=true -t amslpr:hailo .
+docker build --build-arg HAILO_SDK=true -t visigate:hailo .
 ```
 
 ### Multi-stage Build
@@ -249,7 +249,7 @@ ports:
 version: '3.8'
 
 services:
-  amslpr-ssl:
+  visigate-ssl:
     build: .
     ports:
       - "443:5001"
@@ -268,10 +268,10 @@ services:
 version: '3.8'
 
 services:
-  amslpr-secure:
+  visigate-secure:
     build: .
     networks:
-      - amslpr_network
+      - visigate_network
     security_opt:
       - no-new-privileges:true
     read_only: true
@@ -282,7 +282,7 @@ services:
       - ./logs:/app/logs
 
 networks:
-  amslpr_network:
+  visigate_network:
     driver: bridge
     internal: true
 ```
@@ -307,7 +307,7 @@ healthcheck:
 version: '3.8'
 
 services:
-  amslpr-logging:
+  visigate-logging:
     build: .
     logging:
       driver: "json-file"
@@ -322,7 +322,7 @@ services:
     volumes:
       - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
     depends_on:
-      - amslpr-logging
+      - visigate-logging
 ```
 
 ## Performance Optimization
@@ -347,7 +347,7 @@ deploy:
 version: '3.8'
 
 services:
-  amslpr-scaled:
+  visigate-scaled:
     build: .
     deploy:
       replicas: 3
@@ -388,16 +388,16 @@ services:
 
 ```bash
 # View container logs
-docker-compose logs -f amslpr
+docker-compose logs -f visigate
 
 # Access container shell
-docker-compose exec amslpr bash
+docker-compose exec visigate bash
 
 # Check container resource usage
 docker stats
 
 # Inspect container configuration
-docker inspect amslpr_amslpr_1
+docker inspect visigate_visigate_1
 ```
 
 ## Backup and Recovery
@@ -406,21 +406,21 @@ docker inspect amslpr_amslpr_1
 
 ```bash
 # Backup volumes
-docker run --rm -v amslpr_data:/data -v $(pwd):/backup alpine tar czf /backup/backup.tar.gz -C /data .
+docker run --rm -v visigate_data:/data -v $(pwd):/backup alpine tar czf /backup/backup.tar.gz -C /data .
 ```
 
 ### Database Backup
 
 ```bash
 # Backup PostgreSQL database
-docker-compose exec postgres pg_dump -U amslpr amslpr > backup.sql
+docker-compose exec postgres pg_dump -U visigate visigate > backup.sql
 ```
 
 ### Recovery
 
 ```bash
 # Restore from backup
-docker run --rm -v amslpr_data:/data -v $(pwd):/backup alpine tar xzf /backup/backup.tar.gz -C /data
+docker run --rm -v visigate_data:/data -v $(pwd):/backup alpine tar xzf /backup/backup.tar.gz -C /data
 ```
 
 ## CI/CD Integration
@@ -443,13 +443,13 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Build Docker image
-      run: docker build -t amslpr:${{ github.sha }} .
+      run: docker build -t visigate:${{ github.sha }} .
 
     - name: Push to registry
       run: |
         echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-        docker tag amslpr:${{ github.sha }} myregistry.com/amslpr:latest
-        docker push myregistry.com/amslpr:latest
+        docker tag visigate:${{ github.sha }} myregistry.com/visigate:latest
+        docker push myregistry.com/visigate:latest
 
     - name: Deploy to production
       run: |
@@ -478,4 +478,4 @@ For additional support or questions about Docker deployment:
 
 - Check the [troubleshooting guide](../troubleshooting/docker_issues.md)
 - Review the [configuration reference](../deployment/configuration.md)
-- Contact support at support@automatesystems.com
+- Contact support at support@visigate.com

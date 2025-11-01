@@ -1,13 +1,13 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
 
 #!/usr/bin/env python3
 """
-Operating mode-based permission system for AMSLPR.
+Operating mode-based permission system for VisiGate.
 
 This module provides functionality for controlling access to features
 based on the system's operating mode and user permissions.
@@ -99,7 +99,7 @@ def check_mode_access(feature, user_role):
         bool: True if the user can access the feature, False otherwise
     """
     # Get current operating mode
-    config = current_app.config.get('AMSLPR_CONFIG', {})
+    config = current_app.config.get('VISIGATE_CONFIG', {})
     operating_mode = config.get('operating_mode', 'standalone')
     
     # Determine permission set based on operating mode
@@ -150,7 +150,7 @@ def mode_access_required(feature, user_manager_func):
                 return f(*args, **kwargs)
             
             # Get current operating mode
-            config = current_app.config.get('AMSLPR_CONFIG', {})
+            config = current_app.config.get('VISIGATE_CONFIG', {})
             operating_mode = config.get('operating_mode', 'standalone')
             
             # In parking mode, check if user can access parking features
@@ -199,7 +199,7 @@ def get_visible_features():
                                               list(NAYAX_MODE_PERMISSIONS.keys()))}
     
     # Get current operating mode
-    config = current_app.config.get('AMSLPR_CONFIG', {})
+    config = current_app.config.get('VISIGATE_CONFIG', {})
     operating_mode = config.get('operating_mode', 'standalone')
     
     # Determine permission set based on operating mode

@@ -8,11 +8,11 @@ This script focuses specifically on the issue with the camera manager initializa
 import os
 
 # Create a backup of the current file
-os.system("sudo cp /opt/amslpr/src/web/camera_routes.py /opt/amslpr/src/web/camera_routes.py.backup_minimal")
+os.system("sudo cp /opt/visigate/src/web/camera_routes.py /opt/visigate/src/web/camera_routes.py.backup_minimal")
 print("Created backup of camera_routes.py")
 
 # Check how the camera manager is currently initialized
-os.system("sudo grep -n 'init_camera_manager' /opt/amslpr/src/web/camera_routes.py | head -n 5 > /tmp/init_manager.txt")
+os.system("sudo grep -n 'init_camera_manager' /opt/visigate/src/web/camera_routes.py | head -n 5 > /tmp/init_manager.txt")
 
 with open("/tmp/init_manager.txt", "r") as f:
     init_manager = f.read().strip()
@@ -20,7 +20,7 @@ with open("/tmp/init_manager.txt", "r") as f:
 print(f"Camera manager initialization: {init_manager}")
 
 # Check the global declaration of onvif_camera_manager
-os.system("sudo grep -n 'global onvif_camera_manager' /opt/amslpr/src/web/camera_routes.py | head -n 5 > /tmp/global_manager.txt")
+os.system("sudo grep -n 'global onvif_camera_manager' /opt/visigate/src/web/camera_routes.py | head -n 5 > /tmp/global_manager.txt")
 
 with open("/tmp/global_manager.txt", "r") as f:
     global_manager = f.read().strip()
@@ -88,7 +88,7 @@ def cameras():
 '''
 
 # Find the cameras function in the file
-os.system("sudo grep -n '@camera_bp.route.*cameras$' /opt/amslpr/src/web/camera_routes.py > /tmp/camera_route.txt")
+os.system("sudo grep -n '@camera_bp.route.*cameras$' /opt/visigate/src/web/camera_routes.py > /tmp/camera_route.txt")
 
 with open("/tmp/camera_route.txt", "r") as f:
     camera_route = f.read().strip()
@@ -98,7 +98,7 @@ if camera_route:
     print(f"Found cameras route at line {line_number}")
     
     # Find the next route or function
-    os.system(f"sudo grep -n '@camera_bp.route\\|def ' /opt/amslpr/src/web/camera_routes.py | awk '$1 > {line_number}' | head -1 > /tmp/next_route.txt")
+    os.system(f"sudo grep -n '@camera_bp.route\\|def ' /opt/visigate/src/web/camera_routes.py | awk '$1 > {line_number}' | head -1 > /tmp/next_route.txt")
     
     with open("/tmp/next_route.txt", "r") as f:
         next_route = f.read().strip()
@@ -112,8 +112,8 @@ if camera_route:
             f.write(minimal_fix)
         
         # Replace the cameras function
-        os.system(f"sudo sed -i '{line_number},{next_line-1}d' /opt/amslpr/src/web/camera_routes.py")
-        os.system(f"sudo sed -i '{line_number-1}r /tmp/minimal_fix.py' /opt/amslpr/src/web/camera_routes.py")
+        os.system(f"sudo sed -i '{line_number},{next_line-1}d' /opt/visigate/src/web/camera_routes.py")
+        os.system(f"sudo sed -i '{line_number-1}r /tmp/minimal_fix.py' /opt/visigate/src/web/camera_routes.py")
         
         print("Successfully applied minimal fix to the cameras function")
     else:
@@ -122,5 +122,5 @@ else:
     print("Could not find the cameras route")
 
 # Restart the service
-os.system("sudo systemctl restart amslpr")
+os.system("sudo systemctl restart visigate")
 print("Service restarted. Please try accessing the cameras page now.")

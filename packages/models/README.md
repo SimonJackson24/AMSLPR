@@ -1,6 +1,6 @@
 # Pre-packaged Hailo Models
 
-This directory contains pre-packaged Hailo models for license plate recognition with the AMSLPR system.
+This directory contains pre-packaged Hailo models for license plate recognition with the VisiGate system.
 
 ## Included Models
 
@@ -29,4 +29,4 @@ These models are compiled specifically for the Hailo-8L TPU and are sourced from
 
 ## License
 
-These models are subject to the Hailo license terms and conditions. They are provided for use with the AMSLPR system only.
+These models are subject to the Hailo license terms and conditions. They are provided for use with the VisiGate system only.

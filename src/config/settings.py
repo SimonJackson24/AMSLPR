@@ -1,6 +1,6 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
@@ -9,7 +9,7 @@ import os
 import json
 import logging
 
-logger = logging.getLogger('AMSLPR.config')
+logger = logging.getLogger('VisiGate.config')
 
 def load_config(config_file=None):
     """Load configuration from file."""
@@ -31,7 +31,7 @@ def load_config(config_file=None):
             }
         },
         'database': {
-            'path': os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'amslpr.db')
+            'path': os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'visigate.db')
         },
         'recognition': {
             'enabled': True,

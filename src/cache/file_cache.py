@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Optional, Dict, List
 from .base_cache import BaseCache, CacheEntry, CacheSerializationError
 
-logger = logging.getLogger('AMSLPR.cache')
+logger = logging.getLogger('VisiGate.cache')
 
 class FileCache(BaseCache):
     """

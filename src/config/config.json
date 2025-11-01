@@ -14,7 +14,7 @@
         "safety_check": true
     },
     "database": {
-        "db_path": "data/amslpr.db",
+        "db_path": "data/visigate.db",
         "backup_interval": 86400
     },
     "web": {

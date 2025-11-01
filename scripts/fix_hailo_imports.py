@@ -20,7 +20,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[logging.StreamHandler(sys.stdout)]
 )
-logger = logging.getLogger('AMSLPR.fix_hailo')
+logger = logging.getLogger('VisiGate.fix_hailo')
 
 # Get project root directory
 project_root = Path(__file__).resolve().parent.parent

@@ -1,12 +1,12 @@
-# AMSLPR User Guide
+# VisiGate User Guide
 
-Welcome to the Automate Systems License Plate Recognition (AMSLPR) system user guide. This document will help you understand how to use and manage the system effectively.
+Welcome to the Vision-Based Access Control System (VisiGate) system user guide. This document will help you understand how to use and manage the system effectively.
 
 ## Getting Started
 
 ### Accessing the Web Interface
 
-The AMSLPR system provides a web-based interface for administration and monitoring. To access it:
+The VisiGate system provides a web-based interface for administration and monitoring. To access it:
 
 1. Open a web browser on any device connected to the same network as your Raspberry Pi
 2. Enter the IP address of your Raspberry Pi followed by port 5000 in the address bar:
@@ -102,20 +102,20 @@ The dashboard provides an overview of the system status:
 ### System Access Issues
 
 - **Problem**: Can't access the web interface
-- **Solution**: Verify network connections, check if the AMSLPR service is running
+- **Solution**: Verify network connections, check if the VisiGate service is running
 
 ### Checking System Status
 
-To check if the AMSLPR service is running:
+To check if the VisiGate service is running:
 
 ```bash
-sudo systemctl status amslpr.service
+sudo systemctl status visigate.service
 ```
 
 To restart the service if needed:
 
 ```bash
-sudo systemctl restart amslpr.service
+sudo systemctl restart visigate.service
 ```
 
 ## Best Practices

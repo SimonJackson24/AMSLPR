@@ -39,7 +39,7 @@
     },
     
     "database": {
-        "path": "instance/amslpr.db"
+        "path": "instance/visigate.db"
     },
     
     "parking": {

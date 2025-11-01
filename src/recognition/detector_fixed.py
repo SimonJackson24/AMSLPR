@@ -15,7 +15,7 @@ import threading
 import concurrent.futures
 import queue
 
-logger = logging.getLogger('AMSLPR.recognition')
+logger = logging.getLogger('VisiGate.recognition')
 
 # Advanced features imports
 try:

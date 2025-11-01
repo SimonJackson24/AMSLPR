@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger('onvif_test')
 
 # Add virtual environment site-packages to Python path
-venv_path = "/opt/amslpr/venv/lib/python3.11/site-packages"
+venv_path = "/opt/visigate/venv/lib/python3.11/site-packages"
 if venv_path not in sys.path:
     sys.path.insert(0, venv_path)
 

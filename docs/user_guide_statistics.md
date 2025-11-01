@@ -1,14 +1,14 @@
-# AMSLPR Statistics Module User Guide
+# VisiGate Statistics Module User Guide
 
 ## Introduction
 
-The Statistics Module provides valuable insights into your parking facility's operations. This guide will help you understand how to access and interpret the statistics provided by the AMSLPR system.
+The Statistics Module provides valuable insights into your parking facility's operations. This guide will help you understand how to access and interpret the statistics provided by the VisiGate system.
 
 ## Accessing Statistics
 
 ### Web Interface
 
-1. Open your web browser and navigate to the AMSLPR web interface:
+1. Open your web browser and navigate to the VisiGate web interface:
    ```
    http://<raspberry-pi-ip>:5000
    ```
@@ -127,4 +127,4 @@ If parking durations seem incorrect:
 
 ## Getting Help
 
-If you encounter any issues with the statistics module, please refer to the main [AMSLPR Documentation](README.md) or contact technical support.
+If you encounter any issues with the statistics module, please refer to the main [VisiGate Documentation](README.md) or contact technical support.

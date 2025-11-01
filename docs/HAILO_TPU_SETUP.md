@@ -1,10 +1,10 @@
 # Hailo TPU Setup Guide
 
-This document provides instructions for setting up Hailo TPU acceleration with the AMSLPR system.
+This document provides instructions for setting up Hailo TPU acceleration with the VisiGate system.
 
 ## Overview
 
-The AMSLPR system supports Hailo TPU acceleration for improved license plate recognition performance. When properly configured, the system will automatically detect and use Hailo hardware acceleration when available.
+The VisiGate system supports Hailo TPU acceleration for improved license plate recognition performance. When properly configured, the system will automatically detect and use Hailo hardware acceleration when available.
 
 ## Prerequisites
 
@@ -15,7 +15,7 @@ The AMSLPR system supports Hailo TPU acceleration for improved license plate rec
 
 2. **Software Requirements**
    - Python 3.11 (required for Hailo SDK)
-   - AMSLPR application with Hailo support
+   - VisiGate application with Hailo support
    - Hailo SDK and model files
 
 ## Configuration
@@ -94,10 +94,10 @@ The OCR configuration file should include Hailo-specific settings:
 
 ### 1. Check System Status
 
-1. Start the AMSLPR application
+1. Start the VisiGate application
 2. Check the logs for Hailo TPU detection:
    ```
-   grep "Hailo TPU is AVAILABLE" data/logs/amslpr.log
+   grep "Hailo TPU is AVAILABLE" data/logs/visigate.log
    ```
 
 3. Access the OCR settings page in the web interface

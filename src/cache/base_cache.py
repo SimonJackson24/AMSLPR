@@ -1,5 +1,5 @@
 """
-Base cache interface and utilities for AMSLPR caching system.
+Base cache interface and utilities for VisiGate caching system.
 """
 
 import abc
@@ -9,7 +9,7 @@ import logging
 from typing import Any, Optional, Dict, List
 from dataclasses import dataclass
 
-logger = logging.getLogger('AMSLPR.cache')
+logger = logging.getLogger('VisiGate.cache')
 
 @dataclass
 class CacheEntry:

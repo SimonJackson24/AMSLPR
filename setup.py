@@ -1,6 +1,6 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
@@ -14,14 +14,14 @@ with open('requirements.txt', 'r') as f:
     requirements = f.read().splitlines()
 
 setup(
-    name='amslpr',
+    name='visigate',
     version='0.1.0',
-    author='Automate Systems',
+    author='VisiGate',
     author_email='info@automatesystems.com',
     description='License Plate Recognition System for Barrier Control',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/automatesystems/amslpr',
+    url='https://github.com/visigate/visigate',
     packages=find_packages(),
     classifiers=[
         'Programming Language :: Python :: 3',
@@ -32,7 +32,7 @@ setup(
     install_requires=requirements,
     entry_points={
         'console_scripts': [
-            'amslpr=src.main:main',
+            'visigate=src.main:main',
         ],
     },
 )

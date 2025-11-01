@@ -8,11 +8,11 @@ This is a minimal change that should resolve the internal server error.
 import os
 
 # Create a backup of the template
-os.system("sudo cp /opt/amslpr/src/web/templates/cameras.html /opt/amslpr/src/web/templates/cameras.html.backup")
+os.system("sudo cp /opt/visigate/src/web/templates/cameras.html /opt/visigate/src/web/templates/cameras.html.backup")
 print("Created backup of cameras.html template")
 
 # Check how the stats variable is used in the template
-os.system("sudo grep -n '{{ stats' /opt/amslpr/src/web/templates/cameras.html > /tmp/stats_usage.txt")
+os.system("sudo grep -n '{{ stats' /opt/visigate/src/web/templates/cameras.html > /tmp/stats_usage.txt")
 
 with open("/tmp/stats_usage.txt", "r") as f:
     stats_usage = f.readlines()
@@ -35,7 +35,7 @@ for line in stats_usage:
             print(f"Adding default value for stats.{stat_name} at line {line_number}")
             
             # Replace the reference with one that includes a default value
-            os.system(f"sudo sed -i '{line_number}s/{{ stats.{stat_name} }}/{{ stats.{stat_name}|default(0) }}/g' /opt/amslpr/src/web/templates/cameras.html")
+            os.system(f"sudo sed -i '{line_number}s/{{ stats.{stat_name} }}/{{ stats.{stat_name}|default(0) }}/g' /opt/visigate/src/web/templates/cameras.html")
 
 # Create a minimal cameras function that works without any dependencies
 simple_cameras = '''
@@ -50,7 +50,7 @@ def cameras():
 '''
 
 # Find the cameras function in the file
-os.system("sudo grep -n 'def cameras' /opt/amslpr/src/web/camera_routes.py > /tmp/cameras_line.txt")
+os.system("sudo grep -n 'def cameras' /opt/visigate/src/web/camera_routes.py > /tmp/cameras_line.txt")
 
 with open("/tmp/cameras_line.txt", "r") as f:
     cameras_line = f.read().strip()
@@ -60,7 +60,7 @@ if cameras_line:
     print(f"Found cameras function at line {line_number}")
     
     # Find the next function definition
-    os.system(f"sudo grep -n '^def ' /opt/amslpr/src/web/camera_routes.py | awk '$1 > {line_number}' | head -1 > /tmp/next_function.txt")
+    os.system(f"sudo grep -n '^def ' /opt/visigate/src/web/camera_routes.py | awk '$1 > {line_number}' | head -1 > /tmp/next_function.txt")
     
     with open("/tmp/next_function.txt", "r") as f:
         next_function = f.read().strip()
@@ -74,8 +74,8 @@ if cameras_line:
             f.write(simple_cameras)
         
         # Replace the cameras function
-        os.system(f"sudo sed -i '{line_number},{next_line-1}d' /opt/amslpr/src/web/camera_routes.py")
-        os.system(f"sudo sed -i '{line_number-1}r /tmp/simple_cameras.py' /opt/amslpr/src/web/camera_routes.py")
+        os.system(f"sudo sed -i '{line_number},{next_line-1}d' /opt/visigate/src/web/camera_routes.py")
+        os.system(f"sudo sed -i '{line_number-1}r /tmp/simple_cameras.py' /opt/visigate/src/web/camera_routes.py")
         
         print("Successfully replaced the cameras function with a simple version")
     else:
@@ -84,5 +84,5 @@ else:
     print("Could not find the cameras function")
 
 # Restart the service
-os.system("sudo systemctl restart amslpr")
+os.system("sudo systemctl restart visigate")
 print("\nService restarted. The cameras page should now load without errors.")

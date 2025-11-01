@@ -11,7 +11,7 @@ import re
 import pytesseract
 from typing import Dict, List, Optional, Tuple
 
-logger = logging.getLogger('AMSLPR.regional_ocr')
+logger = logging.getLogger('VisiGate.regional_ocr')
 
 class RegionalOCRAdapter:
     """

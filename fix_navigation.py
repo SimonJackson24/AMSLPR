@@ -7,7 +7,7 @@ Script to fix the navigation menu to ensure the cameras link is correctly define
 import os
 
 # Create a backup of the base.html template
-os.system("sudo cp /opt/amslpr/src/web/templates/base.html /opt/amslpr/src/web/templates/base.html.backup_nav 2>/dev/null || true")
+os.system("sudo cp /opt/visigate/src/web/templates/base.html /opt/visigate/src/web/templates/base.html.backup_nav 2>/dev/null || true")
 print("Created backup of base.html template")
 
 # Create a simple script to check and fix the navigation menu
@@ -15,13 +15,13 @@ check_script = '''
 #!/bin/bash
 
 # Check if the cameras link is correctly defined in the base.html template
-if grep -q 'href="/cameras"' /opt/amslpr/src/web/templates/base.html; then
+if grep -q 'href="/cameras"' /opt/visigate/src/web/templates/base.html; then
     echo "Cameras link is correctly defined in the base.html template"
 else
     echo "Cameras link is not correctly defined in the base.html template"
     
     # Find the navigation menu in the base.html template
-    if grep -q '<nav' /opt/amslpr/src/web/templates/base.html; then
+    if grep -q '<nav' /opt/visigate/src/web/templates/base.html; then
         echo "Found navigation menu in the base.html template"
         
         # Create a temporary file with the fixed navigation menu
@@ -56,14 +56,14 @@ else
 EOL
         
         # Find the navigation menu in the base.html template and replace it with the fixed version
-        if grep -q '<ul class="nav flex-column">' /opt/amslpr/src/web/templates/base.html; then
+        if grep -q '<ul class="nav flex-column">' /opt/visigate/src/web/templates/base.html; then
             echo "Found navigation menu items in the base.html template"
             
             # Create a temporary file with the fixed base.html template
-            awk '/<ul class="nav flex-column">/{system("cat /tmp/nav_fix.html"); skip=1; next} skip && /<\/ul>/{skip=0; next} !skip{print}' /opt/amslpr/src/web/templates/base.html > /tmp/fixed_base.html
+            awk '/<ul class="nav flex-column">/{system("cat /tmp/nav_fix.html"); skip=1; next} skip && /<\/ul>/{skip=0; next} !skip{print}' /opt/visigate/src/web/templates/base.html > /tmp/fixed_base.html
             
             # Replace the base.html template with the fixed version
-            sudo cp /tmp/fixed_base.html /opt/amslpr/src/web/templates/base.html
+            sudo cp /tmp/fixed_base.html /opt/visigate/src/web/templates/base.html
             echo "Applied fix to the navigation menu in the base.html template"
         else
             echo "Could not find navigation menu items in the base.html template"
@@ -86,15 +86,15 @@ os.system("sudo /tmp/check_nav.sh")
 
 # Create a minimal version of camera_routes.py that just returns a simple page
 minimal_routes = '''
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
 
 #!/usr/bin/env python3
 """
-Minimal camera routes for the AMSLPR web application.
+Minimal camera routes for the VisiGate web application.
 """
 
 import logging
@@ -102,7 +102,7 @@ from flask import Blueprint, render_template
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger('AMSLPR.web.cameras')
+logger = logging.getLogger('VisiGate.web.cameras')
 
 # Create blueprint
 camera_bp = Blueprint('camera', __name__, url_prefix='/cameras')
@@ -140,11 +140,11 @@ with open("/tmp/minimal_camera_routes.py", "w") as f:
     f.write(minimal_routes)
 
 # Replace the camera_routes.py file
-os.system("sudo cp /tmp/minimal_camera_routes.py /opt/amslpr/src/web/camera_routes.py")
+os.system("sudo cp /tmp/minimal_camera_routes.py /opt/visigate/src/web/camera_routes.py")
 print("Applied minimal version of camera_routes.py")
 
 # Restart the service
-os.system("sudo systemctl restart amslpr")
-print("Restarted AMSLPR service")
+os.system("sudo systemctl restart visigate")
+print("Restarted VisiGate service")
 
 print("Fix applied. The cameras page should now work without errors.")

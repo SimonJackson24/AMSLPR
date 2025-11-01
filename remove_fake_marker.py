@@ -20,4 +20,4 @@ else:
     logger.info("Marker file not found")
 
 logger.info("Please restart the service to restore proper error reporting:")  
-logger.info("sudo systemctl restart amslpr")
+logger.info("sudo systemctl restart visigate")

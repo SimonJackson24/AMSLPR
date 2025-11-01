@@ -1,12 +1,12 @@
-# AMSLPR Testing Framework
+# VisiGate Testing Framework
 
 ## Overview
 
-This document describes the testing framework for the AMSLPR system. The testing framework is designed to ensure that the system is reliable, secure, and performs as expected in a production environment.
+This document describes the testing framework for the VisiGate system. The testing framework is designed to ensure that the system is reliable, secure, and performs as expected in a production environment.
 
 ## Test Structure
 
-The AMSLPR testing framework is organized into the following categories:
+The VisiGate testing framework is organized into the following categories:
 
 1. **Unit Tests**: Tests for individual components and functions in isolation.
 2. **Integration Tests**: Tests for interactions between components.
@@ -36,7 +36,7 @@ tests/
 
 ## Running Tests
 
-The AMSLPR system includes a test runner script (`run_tests.py`) that can be used to run tests. The script supports various command-line options to control which tests are run.
+The VisiGate system includes a test runner script (`run_tests.py`) that can be used to run tests. The script supports various command-line options to control which tests are run.
 
 ### Basic Usage
 
@@ -80,7 +80,7 @@ python run_tests.py --skip-integration
 
 ## Production Tests
 
-The AMSLPR system includes a comprehensive suite of tests specifically designed to verify production-ready features. These tests cover:
+The VisiGate system includes a comprehensive suite of tests specifically designed to verify production-ready features. These tests cover:
 
 1. **Security**:
    - SSL/TLS configuration
@@ -164,17 +164,17 @@ These dependencies are included in the project's requirements.txt file.
 
 ## Continuous Integration
 
-The AMSLPR testing framework is designed to be used in a continuous integration (CI) environment. The tests can be run automatically on each commit to ensure that changes do not break existing functionality.
+The VisiGate testing framework is designed to be used in a continuous integration (CI) environment. The tests can be run automatically on each commit to ensure that changes do not break existing functionality.
 
 ## Adding New Tests
 
-When adding new features to the AMSLPR system, corresponding tests should be added to verify that the features work correctly. Tests should be added to the appropriate directory based on whether they are unit tests or integration tests.
+When adding new features to the VisiGate system, corresponding tests should be added to verify that the features work correctly. Tests should be added to the appropriate directory based on whether they are unit tests or integration tests.
 
 For production-ready features, tests should be added to verify that the features meet the requirements for security, reliability, and performance.
 
 ## Test Coverage
 
-The AMSLPR testing framework aims to achieve high test coverage to ensure that all parts of the system are tested. Test coverage can be measured using tools like `coverage.py`.
+The VisiGate testing framework aims to achieve high test coverage to ensure that all parts of the system are tested. Test coverage can be measured using tools like `coverage.py`.
 
 To run tests with coverage:
 
@@ -187,4 +187,4 @@ This will generate a report showing which parts of the code are covered by tests
 
 ## Conclusion
 
-The AMSLPR testing framework provides a comprehensive suite of tests to ensure that the system is reliable, secure, and performs as expected in a production environment. By running these tests regularly, developers can be confident that changes to the system do not break existing functionality and that the system meets the requirements for production use.
+The VisiGate testing framework provides a comprehensive suite of tests to ensure that the system is reliable, secure, and performs as expected in a production environment. By running these tests regularly, developers can be confident that changes to the system do not break existing functionality and that the system meets the requirements for production use.

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Statistics Module is a key component of the AMSLPR system, providing valuable insights into parking facility operations. This document outlines the implementation details, features, and usage of the statistics module.
+The Statistics Module is a key component of the VisiGate system, providing valuable insights into parking facility operations. This document outlines the implementation details, features, and usage of the statistics module.
 
 ## Implementation Details
 

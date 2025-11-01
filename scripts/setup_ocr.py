@@ -1,13 +1,13 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
 
 #!/usr/bin/env python3
 """
-OCR Setup and Testing Script for AMSLPR
+OCR Setup and Testing Script for VisiGate
 
 This script helps administrators set up and test the OCR system, including the Hailo TPU integration.
 It performs the following tasks:
@@ -368,14 +368,14 @@ def provide_optimization_guidance(hailo_available):
     logger.info("3. Using the API: POST to /ocr/api/config endpoint")
 
 def main():
-    parser = argparse.ArgumentParser(description='OCR Setup and Testing Script for AMSLPR')
+    parser = argparse.ArgumentParser(description='OCR Setup and Testing Script for VisiGate')
     parser.add_argument('--skip-deps', action='store_true', help='Skip dependency checking')
     parser.add_argument('--skip-config', action='store_true', help='Skip configuration verification')
     parser.add_argument('--skip-models', action='store_true', help='Skip model checking')
     parser.add_argument('--skip-test', action='store_true', help='Skip OCR testing')
     args = parser.parse_args()
     
-    logger.info("=== AMSLPR OCR Setup and Testing Script ===")
+    logger.info("=== VisiGate OCR Setup and Testing Script ===")
     
     # Check dependencies
     deps_ok = True

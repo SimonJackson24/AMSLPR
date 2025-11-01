@@ -2,13 +2,13 @@
 
 ## Overview
 
-This guide provides instructions for monitoring the health and performance of the AMSLPR system. Effective monitoring is essential for identifying and addressing issues before they impact system availability or performance.
+This guide provides instructions for monitoring the health and performance of the VisiGate system. Effective monitoring is essential for identifying and addressing issues before they impact system availability or performance.
 
-The AMSLPR system includes a comprehensive monitoring module that tracks system resources, logs metrics, and provides alerts when thresholds are exceeded.
+The VisiGate system includes a comprehensive monitoring module that tracks system resources, logs metrics, and provides alerts when thresholds are exceeded.
 
 ## Monitoring Components
 
-The AMSLPR monitoring system includes the following components:
+The VisiGate monitoring system includes the following components:
 
 1. **Resource Monitoring**: Tracks CPU, memory, disk usage, and system uptime.
 2. **Application Monitoring**: Monitors application-specific metrics such as recognition performance and database operations.
@@ -17,7 +17,7 @@ The AMSLPR monitoring system includes the following components:
 
 ## Monitoring Dashboard
 
-The AMSLPR system includes a web-based monitoring dashboard that provides real-time information about system health and performance. The dashboard is accessible at:
+The VisiGate system includes a web-based monitoring dashboard that provides real-time information about system health and performance. The dashboard is accessible at:
 
 ```
 http://<your-server-address>/admin/monitoring
@@ -33,7 +33,7 @@ http://<your-server-address>/admin/monitoring
 
 ## Monitoring API
 
-The AMSLPR system also provides a monitoring API that allows you to access monitoring data programmatically. The API is accessible at:
+The VisiGate system also provides a monitoring API that allows you to access monitoring data programmatically. The API is accessible at:
 
 ```
 http://<your-server-address>/api/system/status
@@ -56,7 +56,7 @@ This endpoint returns a JSON object containing current system metrics:
 
 ## Alert Configuration
 
-The AMSLPR monitoring system can be configured to send alerts when thresholds are exceeded or errors occur. Alerts can be sent via email, SMS, or webhook.
+The VisiGate monitoring system can be configured to send alerts when thresholds are exceeded or errors occur. Alerts can be sent via email, SMS, or webhook.
 
 ### Configuring Alert Thresholds
 
@@ -89,11 +89,11 @@ The following alert destinations are supported:
 
 ## Log Files
 
-The AMSLPR monitoring system logs metrics and events to log files for historical analysis. Log files are stored in the following directories:
+The VisiGate monitoring system logs metrics and events to log files for historical analysis. Log files are stored in the following directories:
 
-- **Metrics Logs**: `/var/lib/amslpr/logs/metrics`
-- **Error Logs**: `/var/lib/amslpr/logs/errors`
-- **Application Logs**: `/var/lib/amslpr/logs/app`
+- **Metrics Logs**: `/var/lib/visigate/logs/metrics`
+- **Error Logs**: `/var/lib/visigate/logs/errors`
+- **Application Logs**: `/var/lib/visigate/logs/app`
 
 ### Log Rotation
 
@@ -101,49 +101,49 @@ Log files are automatically rotated to prevent them from consuming too much disk
 
 ## External Monitoring
 
-In addition to the built-in monitoring system, the AMSLPR system can be monitored using external monitoring tools such as Nagios, Zabbix, or Prometheus.
+In addition to the built-in monitoring system, the VisiGate system can be monitored using external monitoring tools such as Nagios, Zabbix, or Prometheus.
 
 ### Nagios Integration
 
-The AMSLPR system includes a Nagios plugin that can be used to monitor system health and performance. The plugin is located at:
+The VisiGate system includes a Nagios plugin that can be used to monitor system health and performance. The plugin is located at:
 
 ```
-/opt/amslpr/scripts/check_amslpr.py
+/opt/visigate/scripts/check_visigate.py
 ```
 
 To use the plugin, add the following to your Nagios configuration:
 
 ```
 define command {
-  command_name check_amslpr
-  command_line $USER1$/check_amslpr.py -H $HOSTADDRESS$ -p $ARG1$ -w $ARG2$ -c $ARG3$
+  command_name check_visigate
+  command_line $USER1$/check_visigate.py -H $HOSTADDRESS$ -p $ARG1$ -w $ARG2$ -c $ARG3$
 }
 
 define service {
-  host_name amslpr-server
-  service_description AMSLPR CPU Usage
-  check_command check_amslpr!cpu!80!90
+  host_name visigate-server
+  service_description VisiGate CPU Usage
+  check_command check_visigate!cpu!80!90
   use generic-service
 }
 
 define service {
-  host_name amslpr-server
-  service_description AMSLPR Memory Usage
-  check_command check_amslpr!memory!80!90
+  host_name visigate-server
+  service_description VisiGate Memory Usage
+  check_command check_visigate!memory!80!90
   use generic-service
 }
 
 define service {
-  host_name amslpr-server
-  service_description AMSLPR Disk Usage
-  check_command check_amslpr!disk!80!90
+  host_name visigate-server
+  service_description VisiGate Disk Usage
+  check_command check_visigate!disk!80!90
   use generic-service
 }
 ```
 
 ### Prometheus Integration
 
-The AMSLPR system can expose metrics in Prometheus format at:
+The VisiGate system can expose metrics in Prometheus format at:
 
 ```
 http://<your-server-address>/metrics
@@ -153,7 +153,7 @@ To configure Prometheus to scrape these metrics, add the following to your Prome
 
 ```yaml
 scrape_configs:
-  - job_name: 'amslpr'
+  - job_name: 'visigate'
     scrape_interval: 15s
     static_configs:
       - targets: ['<your-server-address>']
@@ -161,7 +161,7 @@ scrape_configs:
 
 ## Performance Tuning
 
-Based on monitoring data, you may need to tune the AMSLPR system for optimal performance. For guidance on performance tuning, refer to the [Performance Tuning Guide](performance_tuning.md).
+Based on monitoring data, you may need to tune the VisiGate system for optimal performance. For guidance on performance tuning, refer to the [Performance Tuning Guide](performance_tuning.md).
 
 ## Troubleshooting
 
@@ -169,9 +169,9 @@ Based on monitoring data, you may need to tune the AMSLPR system for optimal per
 
 If the monitoring system is not working correctly, check the following:
 
-1. **Service Status**: Ensure that the AMSLPR service is running.
+1. **Service Status**: Ensure that the VisiGate service is running.
 2. **Log Files**: Check the monitoring log files for errors.
-3. **Permissions**: Ensure that the AMSLPR service has permission to write to the log directories.
+3. **Permissions**: Ensure that the VisiGate service has permission to write to the log directories.
 
 ### Alerts Not Being Sent
 
@@ -179,10 +179,10 @@ If alerts are not being sent, check the following:
 
 1. **Alert Configuration**: Verify that alert thresholds and destinations are configured correctly.
 2. **Email Configuration**: If using email alerts, verify that the SMTP configuration is correct.
-3. **Network Connectivity**: Ensure that the AMSLPR server can connect to the alert destination (SMTP server, SMS gateway, or webhook URL).
+3. **Network Connectivity**: Ensure that the VisiGate server can connect to the alert destination (SMTP server, SMS gateway, or webhook URL).
 
 ## Conclusion
 
-Effective monitoring is essential for maintaining a healthy and performant AMSLPR system. The built-in monitoring system provides comprehensive tracking of system resources, application metrics, and errors, with configurable alerts to notify you of issues before they impact system availability or performance.
+Effective monitoring is essential for maintaining a healthy and performant VisiGate system. The built-in monitoring system provides comprehensive tracking of system resources, application metrics, and errors, with configurable alerts to notify you of issues before they impact system availability or performance.
 
 For additional assistance with monitoring, please refer to the [Troubleshooting Guide](troubleshooting.md) or contact support.

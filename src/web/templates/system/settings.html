@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}System Settings - AMSLPR{% endblock %}
+{% block title %}System Settings - VisiGate{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
@@ -34,8 +34,8 @@
                 <form method="post" action="/system/settings">
                     <div class="mb-3">
                         <label for="systemName" class="form-label">System Name</label>
-                        <input type="text" class="form-control" id="systemName" name="system_name" value="{{ config.get('system_name', 'AMSLPR') }}">
-                        <div class="form-text">The name of your AMSLPR installation</div>
+                        <input type="text" class="form-control" id="systemName" name="system_name" value="{{ config.get('system_name', 'VisiGate') }}">
+                        <div class="form-text">The name of your VisiGate installation</div>
                     </div>
                     
                     <div class="mb-3">
@@ -128,7 +128,7 @@
                     <h6>Version Information</h6>
                     <table class="table table-sm">
                         <tr>
-                            <td>AMSLPR Version</td>
+                            <td>VisiGate Version</td>
                             <td>{{ config.get('version', '1.0.0') }}</td>
                         </tr>
                         <tr>
@@ -171,7 +171,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to restart the AMSLPR system? This will temporarily interrupt all services.</p>
+                <p>Are you sure you want to restart the VisiGate system? This will temporarily interrupt all services.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

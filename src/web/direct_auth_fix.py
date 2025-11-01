@@ -11,7 +11,7 @@ from functools import wraps
 from src.utils.user_management import UserManager, login_required, permission_required
 
 direct_auth_bp = Blueprint('direct_auth', __name__)
-logger = logging.getLogger('AMSLPR.direct_auth_fix')
+logger = logging.getLogger('VisiGate.direct_auth_fix')
 
 # Initialize user manager
 user_manager = UserManager()

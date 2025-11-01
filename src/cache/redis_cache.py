@@ -10,7 +10,7 @@ import logging
 from typing import Any, Optional, Dict
 from .base_cache import BaseCache, CacheConnectionError, CacheSerializationError
 
-logger = logging.getLogger('AMSLPR.cache')
+logger = logging.getLogger('VisiGate.cache')
 
 class RedisCache(BaseCache):
     """

@@ -11,7 +11,7 @@ from .memory_cache import MemoryCache
 from .redis_cache import RedisCache
 from .file_cache import FileCache
 
-logger = logging.getLogger('AMSLPR.cache')
+logger = logging.getLogger('VisiGate.cache')
 
 class OCRResult:
     """Represents an OCR result with metadata."""

@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 from datetime import datetime
 
-logger = logging.getLogger('AMSLPR.recognition.mock_camera')
+logger = logging.getLogger('VisiGate.recognition.mock_camera')
 
 class MockCameraManager:
     """

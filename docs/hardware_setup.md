@@ -1,6 +1,6 @@
-# AMSLPR Hardware Setup Guide
+# VisiGate Hardware Setup Guide
 
-This guide provides instructions for setting up the hardware components of the Automate Systems License Plate Recognition (AMSLPR) system.
+This guide provides instructions for setting up the hardware components of the Vision-Based Access Control System (VisiGate) system.
 
 ## Hardware Requirements
 
@@ -97,7 +97,7 @@ This script will turn on the relay connected to GPIO 17. Press Enter to turn it 
 
 ### Static IP Address (Recommended)
 
-For reliable access to the AMSLPR system, configure a static IP address:
+For reliable access to the VisiGate system, configure a static IP address:
 
 1. Edit the DHCP configuration file:
 
@@ -150,11 +150,11 @@ sudo reboot
 
 ### Backup
 
-Regularly backup the AMSLPR database and configuration:
+Regularly backup the VisiGate database and configuration:
 
 ```bash
-sudo cp /home/pi/AMSLPR/data/database.db /home/pi/AMSLPR/data/database_backup_$(date +%Y%m%d).db
-sudo cp /home/pi/AMSLPR/src/config/config.json /home/pi/AMSLPR/src/config/config_backup_$(date +%Y%m%d).json
+sudo cp /home/pi/VisiGate/data/database.db /home/pi/VisiGate/data/database_backup_$(date +%Y%m%d).db
+sudo cp /home/pi/VisiGate/src/config/config.json /home/pi/VisiGate/src/config/config_backup_$(date +%Y%m%d).json
 ```
 
 Consider automating this process using a cron job.

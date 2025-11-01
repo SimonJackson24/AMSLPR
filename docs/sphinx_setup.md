@@ -1,6 +1,6 @@
 # Sphinx Documentation Setup Guide
 
-This guide provides instructions for setting up and generating the AMSLPR Sphinx documentation site.
+This guide provides instructions for setting up and generating the VisiGate Sphinx documentation site.
 
 ## Prerequisites
 
@@ -31,7 +31,7 @@ pip install sphinxcontrib-openapi sphinxcontrib-redoc
 cd docs
 
 # Initialize Sphinx (if not already done)
-sphinx-quickstart --quiet --project="AMSLPR" --author="Automate Systems" \
+sphinx-quickstart --quiet --project="VisiGate" --author="VisiGate" \
     --release="1.0.0" --language="en" --suffix=".md" --master="index" \
     --ext-autodoc --ext-doctest --ext-intersphinx --ext-todo \
     --ext-coverage --ext-mathjax --ext-ifconfig --ext-githubpages \
@@ -48,9 +48,9 @@ Create the following `conf.py` file in the `docs/` directory:
 # Configuration file for the Sphinx documentation builder.
 
 # -- Project information -----------------------------------------------------
-project = 'AMSLPR'
-copyright = '2025, Automate Systems'
-author = 'Automate Systems'
+project = 'VisiGate'
+copyright = '2025, VisiGate'
+author = 'VisiGate'
 release = '1.0.0'
 version = '1.0.0'
 
@@ -138,13 +138,13 @@ openapi_spec_path = 'api/openapi_spec.md'
 Create the main documentation index:
 
 ```markdown
-# AMSLPR Documentation
+# VisiGate Documentation
 
-Welcome to the AMSLPR (Automate Systems License Plate Recognition) documentation.
+Welcome to the VisiGate (Vision-Based Access Control System) documentation.
 
 ## Overview
 
-AMSLPR is a comprehensive license plate recognition system designed for automated vehicle access control and monitoring.
+VisiGate is a comprehensive license plate recognition system designed for automated vehicle access control and monitoring.
 
 ## Documentation Sections
 
@@ -212,13 +212,13 @@ development/testing
 
 For support and questions:
 
-- **Documentation Issues**: [GitHub Issues](https://github.com/automatesystems/amslpr/issues)
-- **Community Support**: [GitHub Discussions](https://github.com/automatesystems/amslpr/discussions)
-- **Professional Support**: support@automatesystems.com
+- **Documentation Issues**: [GitHub Issues](https://github.com/automatesystems/visigate/issues)
+- **Community Support**: [GitHub Discussions](https://github.com/automatesystems/visigate/discussions)
+- **Professional Support**: support@visigate.com
 
 ## License
 
-This documentation is licensed under the same terms as the AMSLPR project.
+This documentation is licensed under the same terms as the VisiGate project.
 ```
 
 ## Building Documentation
@@ -302,7 +302,7 @@ sphinx-build -b html -D release=1.1 . _build/html/v1.1
 html_context = {
     'display_github': True,
     'github_user': 'automatesystems',
-    'github_repo': 'amslpr',
+    'github_repo': 'visigate',
     'github_version': 'main',
     'conf_py_path': '/docs/',
     'versions': [
@@ -351,7 +351,7 @@ API Vehicles Endpoint
 Create `_static/custom.css`:
 
 ```css
-/* Custom styles for AMSLPR documentation */
+/* Custom styles for VisiGate documentation */
 .wy-nav-content {
     max-width: 1200px;
 }
@@ -376,7 +376,7 @@ Create `_static/custom.css`:
 html_theme_options = {
     'style_nav_header_background': '#2980B9',
     'logo': 'logo.png',
-    'canonical_url': 'https://docs.amslpr.com/',
+    'canonical_url': 'https://docs.visigate.com/',
 }
 ```
 

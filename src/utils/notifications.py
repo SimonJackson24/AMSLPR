@@ -1,6 +1,6 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
@@ -35,7 +35,7 @@ class NotificationManager:
             config: Dictionary containing notification configuration
         """
         self.config = config
-        self.logger = logging.getLogger('amslpr.notifications')
+        self.logger = logging.getLogger('visigate.notifications')
     
     def send_email_notification(self, plate_number, access_time, image_path=None):
         """
@@ -58,7 +58,7 @@ class NotificationManager:
             msg = MIMEMultipart()
             msg['From'] = self.config.get('email_from')
             msg['To'] = self.config.get('email_to')
-            msg['Subject'] = f"AMSLPR Alert: Unauthorized Access Attempt - {plate_number}"
+            msg['Subject'] = f"VisiGate Alert: Unauthorized Access Attempt - {plate_number}"
             
             # Format the time
             if isinstance(access_time, str):
@@ -78,7 +78,7 @@ This vehicle is not authorized to access the facility.
 Please review the attached image (if available) and take appropriate action.
 
 --
-AMSLPR System
+VisiGate System
 """
             msg.attach(MIMEText(body, 'plain'))
             
@@ -129,7 +129,7 @@ AMSLPR System
                 formatted_time = access_time.strftime('%Y-%m-%d %H:%M:%S')
             
             # Create the message
-            message = f"AMSLPR Alert: Unauthorized vehicle {plate_number} detected at {formatted_time}"
+            message = f"VisiGate Alert: Unauthorized vehicle {plate_number} detected at {formatted_time}"
             
             # Use Twilio if configured
             if self.config.get('sms_provider') == 'twilio':

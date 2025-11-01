@@ -1,6 +1,6 @@
-# AMSLPR Production Deployment Guide
+# VisiGate Production Deployment Guide
 
-This guide provides detailed information on deploying the AMSLPR system in a production environment.
+This guide provides detailed information on deploying the VisiGate system in a production environment.
 
 ## Table of Contents
 
@@ -35,7 +35,7 @@ This guide provides detailed information on deploying the AMSLPR system in a pro
 
 ## Installation
 
-The easiest way to install AMSLPR in a production environment is to use the provided installation script:
+The easiest way to install VisiGate in a production environment is to use the provided installation script:
 
 ```bash
 sudo ./install.sh
@@ -45,10 +45,10 @@ The installation script performs the following actions:
 
 1. Installs all required system dependencies
 2. Creates the necessary directory structure:
-   - `/opt/amslpr`: Application files
-   - `/etc/amslpr`: Configuration files
-   - `/var/log/amslpr`: Log files
-   - `/var/lib/amslpr`: Data files
+   - `/opt/visigate`: Application files
+   - `/etc/visigate`: Configuration files
+   - `/var/log/visigate`: Log files
+   - `/var/lib/visigate`: Data files
 3. Sets up a Python virtual environment
 4. Generates SSL/TLS certificates
 5. Configures Nginx as a reverse proxy
@@ -72,57 +72,57 @@ sudo apt-get install -y python3 python3-pip python3-venv libopencv-dev python3-o
 2. Create directory structure:
 
 ```bash
-sudo mkdir -p /opt/amslpr
-sudo mkdir -p /etc/amslpr/ssl
-sudo mkdir -p /var/log/amslpr/errors
-sudo mkdir -p /var/lib/amslpr/images
-sudo mkdir -p /var/lib/amslpr/metrics
-sudo mkdir -p /var/lib/amslpr/reports
+sudo mkdir -p /opt/visigate
+sudo mkdir -p /etc/visigate/ssl
+sudo mkdir -p /var/log/visigate/errors
+sudo mkdir -p /var/lib/visigate/images
+sudo mkdir -p /var/lib/visigate/metrics
+sudo mkdir -p /var/lib/visigate/reports
 ```
 
 3. Set up Python virtual environment:
 
 ```bash
-sudo python3 -m venv /opt/amslpr/venv
-sudo /opt/amslpr/venv/bin/pip install --upgrade pip
-sudo /opt/amslpr/venv/bin/pip install -r requirements.txt
+sudo python3 -m venv /opt/visigate/venv
+sudo /opt/visigate/venv/bin/pip install --upgrade pip
+sudo /opt/visigate/venv/bin/pip install -r requirements.txt
 ```
 
 4. Copy application files:
 
 ```bash
-sudo cp -r src /opt/amslpr/
-sudo cp -r docs /opt/amslpr/
-sudo cp -r tests /opt/amslpr/
-sudo cp run_tests.py /opt/amslpr/
+sudo cp -r src /opt/visigate/
+sudo cp -r docs /opt/visigate/
+sudo cp -r tests /opt/visigate/
+sudo cp run_tests.py /opt/visigate/
 ```
 
 5. Create configuration file:
 
 ```bash
-sudo cp config/config.json.example /etc/amslpr/config.json
+sudo cp config/config.json.example /etc/visigate/config.json
 ```
 
 6. Generate SSL certificate:
 
 ```bash
-sudo openssl req -x509 -newkey rsa:2048 -keyout /etc/amslpr/ssl/key.pem \
-                 -out /etc/amslpr/ssl/cert.pem -days 365 -nodes -subj "/CN=amslpr.local"
+sudo openssl req -x509 -newkey rsa:2048 -keyout /etc/visigate/ssl/key.pem \
+                 -out /etc/visigate/ssl/cert.pem -days 365 -nodes -subj "/CN=visigate.local"
 ```
 
 7. Create systemd service:
 
 ```bash
-sudo cp config/amslpr.service /etc/systemd/system/
+sudo cp config/visigate.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable amslpr.service
+sudo systemctl enable visigate.service
 ```
 
 8. Configure Nginx:
 
 ```bash
-sudo cp config/nginx.conf /etc/nginx/sites-available/amslpr
-sudo ln -sf /etc/nginx/sites-available/amslpr /etc/nginx/sites-enabled/
+sudo cp config/nginx.conf /etc/nginx/sites-available/visigate
+sudo ln -sf /etc/nginx/sites-available/visigate /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo systemctl enable nginx
 sudo systemctl restart nginx
@@ -131,12 +131,12 @@ sudo systemctl restart nginx
 9. Start the service:
 
 ```bash
-sudo systemctl start amslpr.service
+sudo systemctl start visigate.service
 ```
 
 ## SSL/TLS Configuration
 
-The AMSLPR system supports SSL/TLS encryption for secure communication. By default, the installation script generates a self-signed certificate for immediate use.
+The VisiGate system supports SSL/TLS encryption for secure communication. By default, the installation script generates a self-signed certificate for immediate use.
 
 ### Using Self-Signed Certificates
 
@@ -158,10 +158,10 @@ sudo apt-get install certbot python3-certbot-nginx
 sudo certbot --nginx -d your-domain.com
 ```
 
-3. Update the AMSLPR configuration to use the new certificates:
+3. Update the VisiGate configuration to use the new certificates:
 
 ```bash
-sudo nano /etc/amslpr/config.json
+sudo nano /etc/visigate/config.json
 ```
 
 Update the SSL section:
@@ -178,7 +178,7 @@ Update the SSL section:
 4. Restart the service:
 
 ```bash
-sudo systemctl restart amslpr.service
+sudo systemctl restart visigate.service
 ```
 
 ## Nginx Configuration
@@ -191,41 +191,41 @@ Nginx is used as a reverse proxy to provide additional security and performance 
 4. Load balancing (for multi-instance deployments)
 5. Additional security headers
 
-The default Nginx configuration is installed at `/etc/nginx/sites-available/amslpr` and includes:
+The default Nginx configuration is installed at `/etc/nginx/sites-available/visigate` and includes:
 
 - HTTP to HTTPS redirection
 - SSL/TLS configuration with secure ciphers
-- Proxy settings for the AMSLPR application
+- Proxy settings for the VisiGate application
 
 ## System Service
 
-The AMSLPR system runs as a systemd service for automatic startup and management:
+The VisiGate system runs as a systemd service for automatic startup and management:
 
-- Service name: `amslpr.service`
-- Service file: `/etc/systemd/system/amslpr.service`
+- Service name: `visigate.service`
+- Service file: `/etc/systemd/system/visigate.service`
 
 ### Service Management
 
 ```bash
 # Start the service
-sudo systemctl start amslpr.service
+sudo systemctl start visigate.service
 
 # Stop the service
-sudo systemctl stop amslpr.service
+sudo systemctl stop visigate.service
 
 # Restart the service
-sudo systemctl restart amslpr.service
+sudo systemctl restart visigate.service
 
 # Check service status
-sudo systemctl status amslpr.service
+sudo systemctl status visigate.service
 
 # View service logs
-sudo journalctl -u amslpr.service
+sudo journalctl -u visigate.service
 ```
 
 ## Security Features
 
-The AMSLPR system includes several security features for production deployments:
+The VisiGate system includes several security features for production deployments:
 
 ### Rate Limiting
 
@@ -269,7 +269,7 @@ The system includes protection against brute force login attempts:
 
 ## System Monitoring
 
-The AMSLPR system includes comprehensive monitoring features:
+The VisiGate system includes comprehensive monitoring features:
 
 ### Resource Monitoring
 
@@ -292,7 +292,7 @@ Comprehensive error handling includes:
 - Error notifications via email or SMS
 - Automatic recovery from common errors
 
-Error logs are stored in `/var/log/amslpr/errors/` and can be viewed in the web interface.
+Error logs are stored in `/var/log/visigate/errors/` and can be viewed in the web interface.
 
 ### Camera Health Monitoring
 
@@ -318,7 +318,7 @@ sudo crontab -e
 2. Add a daily backup job (runs at 2 AM):
 
 ```
-0 2 * * * /opt/amslpr/venv/bin/python /opt/amslpr/src/utils/backup.py > /dev/null 2>&1
+0 2 * * * /opt/visigate/venv/bin/python /opt/visigate/src/utils/backup.py > /dev/null 2>&1
 ```
 
 ### Manual Backup
@@ -326,17 +326,17 @@ sudo crontab -e
 To perform a manual backup:
 
 ```bash
-sudo /opt/amslpr/venv/bin/python /opt/amslpr/src/utils/backup.py
+sudo /opt/visigate/venv/bin/python /opt/visigate/src/utils/backup.py
 ```
 
-Backups are stored in `/var/backups/amslpr/` by default.
+Backups are stored in `/var/backups/visigate/` by default.
 
 ### Restore from Backup
 
 To restore from a backup:
 
 ```bash
-sudo /opt/amslpr/venv/bin/python /opt/amslpr/src/utils/restore.py /path/to/backup/file.tar.gz
+sudo /opt/visigate/venv/bin/python /opt/visigate/src/utils/restore.py /path/to/backup/file.tar.gz
 ```
 
 ## Troubleshooting
@@ -348,19 +348,19 @@ sudo /opt/amslpr/venv/bin/python /opt/amslpr/src/utils/restore.py /path/to/backu
 1. Check the service status:
 
 ```bash
-sudo systemctl status amslpr.service
+sudo systemctl status visigate.service
 ```
 
 2. Check the logs:
 
 ```bash
-sudo journalctl -u amslpr.service
+sudo journalctl -u visigate.service
 ```
 
 3. Verify the configuration file:
 
 ```bash
-sudo /opt/amslpr/venv/bin/python -c "import json; print(json.load(open('/etc/amslpr/config.json')))"
+sudo /opt/visigate/venv/bin/python -c "import json; print(json.load(open('/etc/visigate/config.json')))"
 ```
 
 #### Nginx Configuration Issues
@@ -382,14 +382,14 @@ sudo tail -f /var/log/nginx/error.log
 1. Verify certificate and key:
 
 ```bash
-sudo openssl verify /etc/amslpr/ssl/cert.pem
-sudo openssl rsa -check -in /etc/amslpr/ssl/key.pem
+sudo openssl verify /etc/visigate/ssl/cert.pem
+sudo openssl rsa -check -in /etc/visigate/ssl/key.pem
 ```
 
 2. Check certificate expiration:
 
 ```bash
-sudo openssl x509 -in /etc/amslpr/ssl/cert.pem -noout -enddate
+sudo openssl x509 -in /etc/visigate/ssl/cert.pem -noout -enddate
 ```
 
 #### Camera Issues
@@ -399,7 +399,7 @@ sudo openssl x509 -in /etc/amslpr/ssl/cert.pem -noout -enddate
 3. Test camera directly with OpenCV
 
 ```bash
-sudo /opt/amslpr/venv/bin/python -c "import cv2; cap = cv2.VideoCapture(0); print(cap.isOpened())"
+sudo /opt/visigate/venv/bin/python -c "import cv2; cap = cv2.VideoCapture(0); print(cap.isOpened())"
 ```
 
 ### Getting Help

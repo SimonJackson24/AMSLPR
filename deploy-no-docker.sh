@@ -53,18 +53,18 @@ pip3 install --user -r requirements.txt
 echo "Creating systemd service file..."
 cat > visiongate.service << 'EOF'
 [Unit]
-Description=VisionGate AMSLPR Service
+Description=VisionGate Service
 After=network.target
 
 [Service]
 Type=simple
 User=visiongate
-WorkingDirectory=/home/visiongate/visiongate-app/AMSLPR
+WorkingDirectory=/home/visiongate/visiongate-app/VisiGate
 Environment=PORT=5001
-Environment=PYTHONPATH=/home/visiongate/visiongate-app/AMSLPR
+Environment=PYTHONPATH=/home/visiongate/visiongate-app/VisiGate
 Environment=PYTHONUNBUFFERED=1
 Environment=HAILO_ENABLED=false
-ExecStart=/usr/bin/python3 /home/visiongate/visiongate-app/AMSLPR/run_server.py --port 5001
+ExecStart=/usr/bin/python3 /home/visiongate/visiongate-app/VisiGate/run_server.py --port 5001
 Restart=always
 RestartSec=10
 

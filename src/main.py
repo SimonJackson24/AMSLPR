@@ -1,6 +1,6 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
@@ -44,11 +44,11 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler(os.path.join('data', 'logs', 'amslpr.log')),
+        logging.FileHandler(os.path.join('data', 'logs', 'visiongate.log')),
         logging.StreamHandler(sys.stdout)
     ]
 )
-logger = logging.getLogger('AMSLPR')
+logger = logging.getLogger('VisiGate')
 
 def recognition_thread(config, db_manager, barrier_controller=None, paxton_integration=None, nayax_integration=None):
     """
@@ -246,14 +246,14 @@ def process_payment(nayax_integration, amount, session_id, plate_number, barrier
 def main():
     """Main entry point for the application."""
     # Parse command-line arguments
-    parser = argparse.ArgumentParser(description='AMSLPR - Automated License Plate Recognition System')
+    parser = argparse.ArgumentParser(description='VisiGate - Vision-Based Access Control System')
     parser.add_argument('--config', help='Path to configuration file')
     args = parser.parse_args()
     
     # Load configuration
     config = load_config(args.config)
     
-    logger.info(f"Starting AMSLPR with configuration from {args.config}")
+    logger.info(f"Starting VisiGate with configuration from {args.config}")
     logger.info(f"Operating mode: {config['operating_mode']}")
     
     # Initialize database manager

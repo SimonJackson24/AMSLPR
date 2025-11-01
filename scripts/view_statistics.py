@@ -1,15 +1,15 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
 
 #!/usr/bin/env python3
 """
-View statistics from the AMSLPR system.
+View statistics from the VisiGate system.
 
-This script displays various statistics from the AMSLPR system.
+This script displays various statistics from the VisiGate system.
 """
 
 import os
@@ -32,9 +32,9 @@ def print_json(data):
     """
     print(json.dumps(data, indent=2, default=str))
 
-def view_statistics(db_path='data/amslpr.db'):
+def view_statistics(db_path='data/visigate.db'):
     """
-    View statistics from the AMSLPR system.
+    View statistics from the VisiGate system.
     
     Args:
         db_path (str): Path to the database file
@@ -74,8 +74,8 @@ def view_statistics(db_path='data/amslpr.db'):
 if __name__ == '__main__':
     import argparse
     
-    parser = argparse.ArgumentParser(description='View statistics from AMSLPR')
-    parser.add_argument('--db-path', type=str, default='data/amslpr.db', help='Path to database file')
+    parser = argparse.ArgumentParser(description='View statistics from VisiGate')
+    parser.add_argument('--db-path', type=str, default='data/visigate.db', help='Path to database file')
     
     args = parser.parse_args()
     

@@ -321,17 +321,17 @@ if __name__ == "__main__":
     success = fix_hailo_detection()
     
     if success:
-        logger.info("\nRestarting the AMSLPR service to apply changes...")
+        logger.info("\nRestarting the VisiGate service to apply changes...")
         try:
             subprocess.run(
-                "sudo systemctl restart amslpr", 
+                "sudo systemctl restart visigate", 
                 shell=True, 
                 check=True, 
                 stdout=subprocess.PIPE, 
                 stderr=subprocess.PIPE
             )
-            logger.info("✓ AMSLPR service restarted successfully")
+            logger.info("✓ VisiGate service restarted successfully")
         except Exception as e:
-            logger.error(f"× Error restarting AMSLPR service: {e}")
+            logger.error(f"× Error restarting VisiGate service: {e}")
     
     sys.exit(0 if success else 1)

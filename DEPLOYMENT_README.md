@@ -1,6 +1,6 @@
 # VisionGate VPS Deployment
 
-This repository contains all necessary files to deploy VisionGate (formerly AMSLPR) to a VPS using Docker with CloudPanel integration.
+This repository contains all necessary files to deploy VisionGate (formerly VisiGate) to a VPS using Docker with CloudPanel integration.
 
 ## Quick Start
 

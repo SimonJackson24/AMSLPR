@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}AMSLPR - Automate Systems License Plate Recognition{% endblock %}</title>
+    <title>{% block title %}VisiGate - Vision-Based Access Control System{% endblock %}</title>
     
     {% include 'favicon.html' %}
     
@@ -28,7 +28,7 @@
         <nav id="sidebar" class="sidebar">
             <div class="sidebar-header">
                 <a href="{{ url_for('main.dashboard') }}" class="d-flex align-items-center justify-content-center logo-container">
-                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="AMSLPR Logo" height="50">
+                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="VisiGate Logo" height="50">
                 </a>
                 <button type="button" id="sidebarCollapseBtn" class="btn btn-sm d-md-none">
                     <i class="bi bi-x-lg"></i>
@@ -139,8 +139,8 @@
             <!-- Footer -->
             <footer class="text-center text-lg-start mt-5">
                 <div class="text-center p-3">
-                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="AMSLPR Logo" height="25" class="d-inline-block align-top me-2">
-                    &copy; 2025 Automate Systems - AMSLPR
+                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="VisiGate Logo" height="25" class="d-inline-block align-top me-2">
+                    &copy; 2025 VisiGate - VisiGate
                 </div>
             </footer>
         </div>

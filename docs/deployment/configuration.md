@@ -1,10 +1,10 @@
 # Configuration Parameter Reference
 
-This document provides a comprehensive reference for all AMSLPR configuration parameters, including descriptions, valid values, and examples.
+This document provides a comprehensive reference for all VisiGate configuration parameters, including descriptions, valid values, and examples.
 
 ## Configuration Files
 
-AMSLPR uses multiple configuration files:
+VisiGate uses multiple configuration files:
 
 - `config/config.json` - Main application configuration
 - `config/ocr_config.json` - OCR-specific configuration
@@ -17,13 +17,13 @@ AMSLPR uses multiple configuration files:
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `database.path` | string | `"data/amslpr.db"` | Path to SQLite database file |
+| `database.path` | string | `"data/visigate.db"` | Path to SQLite database file |
 
 **Example:**
 ```json
 {
   "database": {
-    "path": "/app/data/amslpr.db"
+    "path": "/app/data/visigate.db"
   }
 }
 ```
@@ -114,7 +114,7 @@ AMSLPR uses multiple configuration files:
 | `notifications.email.smtp_port` | integer | `587` | SMTP server port |
 | `notifications.email.username` | string | `"user@example.com"` | SMTP authentication username |
 | `notifications.email.password` | string | `"your-password"` | SMTP authentication password |
-| `notifications.email.from_address` | string | `"amslpr@example.com"` | Email sender address |
+| `notifications.email.from_address` | string | `"visigate@example.com"` | Email sender address |
 | `notifications.email.to_addresses` | array | `["admin@example.com"]` | List of recipient email addresses |
 
 #### SMS Notifications
@@ -144,9 +144,9 @@ AMSLPR uses multiple configuration files:
       "enabled": true,
       "smtp_server": "smtp.gmail.com",
       "smtp_port": 587,
-      "username": "amslpr@example.com",
+      "username": "visigate@example.com",
       "password": "your-app-password",
-      "from_address": "amslpr@example.com",
+      "from_address": "visigate@example.com",
       "to_addresses": ["admin@example.com", "security@example.com"]
     },
     "sms": {
@@ -159,7 +159,7 @@ AMSLPR uses multiple configuration files:
     },
     "webhook": {
       "enabled": true,
-      "url": "https://api.example.com/webhooks/amslpr",
+      "url": "https://api.example.com/webhooks/visigate",
       "headers": {
         "Content-Type": "application/json",
         "Authorization": "Bearer your-webhook-token",
@@ -372,7 +372,7 @@ Each camera in the `camera.cameras` array has the following parameters:
 
 ## Environment Variables
 
-AMSLPR also supports configuration via environment variables:
+VisiGate also supports configuration via environment variables:
 
 | Environment Variable | Configuration Path | Description |
 |---------------------|-------------------|-------------|
@@ -386,7 +386,7 @@ AMSLPR also supports configuration via environment variables:
 
 ## Configuration Validation
 
-AMSLPR validates configuration files at startup. Common validation rules:
+VisiGate validates configuration files at startup. Common validation rules:
 
 - **Port numbers**: Must be between 1-65535
 - **Confidence thresholds**: Must be between 0.0-1.0
@@ -399,8 +399,8 @@ AMSLPR validates configuration files at startup. Common validation rules:
 
 ### Configuration File Locations
 
-- **Linux/macOS**: `/etc/amslpr/`, `~/.config/amslpr/`, `./config/`
-- **Windows**: `%APPDATA%\amslpr\`, `./config/`
+- **Linux/macOS**: `/etc/visigate/`, `~/.config/visigate/`, `./config/`
+- **Windows**: `%APPDATA%\visigate\`, `./config/`
 - **Docker**: `/app/config/`
 
 ### Configuration Reloading
@@ -449,7 +449,7 @@ Enable debug logging to troubleshoot configuration issues:
 Check application logs for configuration-related errors:
 
 ```bash
-tail -f logs/amslpr.log | grep -i config
+tail -f logs/visigate.log | grep -i config
 ```
 
 ## Best Practices
@@ -469,4 +469,4 @@ For additional support with configuration:
 
 - Check the [troubleshooting guide](../troubleshooting/configuration_issues.md)
 - Review the [deployment guides](../deployment/)
-- Contact support at support@automatesystems.com
+- Contact support at support@visigate.com

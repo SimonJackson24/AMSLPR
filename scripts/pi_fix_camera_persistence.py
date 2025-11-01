@@ -17,7 +17,7 @@ logging.basicConfig(
 logger = logging.getLogger('pi_fix')
 
 # Define database path
-DB_PATH = '/home/pi/AMSLPR/data/amslpr.db'
+DB_PATH = '/home/pi/VisiGate/data/visigate.db'
 
 def ensure_cameras_table():
     """Ensure the cameras table exists with the correct structure."""
@@ -87,7 +87,7 @@ def add_camera_loading_code():
     """Add code to camera_routes.py to ensure cameras are loaded from the database."""
     try:
         # Define paths
-        camera_routes_path = '/home/pi/AMSLPR/src/web/camera_routes.py'
+        camera_routes_path = '/home/pi/VisiGate/src/web/camera_routes.py'
         
         # Check if the file exists
         if not os.path.exists(camera_routes_path):
@@ -149,7 +149,7 @@ def add_camera_saving_code():
     """Add code to onvif_camera.py to ensure cameras are saved to the database."""
     try:
         # Define paths
-        onvif_camera_path = '/home/pi/AMSLPR/src/recognition/onvif_camera.py'
+        onvif_camera_path = '/home/pi/VisiGate/src/recognition/onvif_camera.py'
         
         # Check if the file exists
         if not os.path.exists(onvif_camera_path):
@@ -263,8 +263,8 @@ def main():
         logger.error("Step 3 failed")
     
     logger.info("Camera persistence fix complete")
-    logger.info("Please restart the AMSLPR service for the changes to take effect:")
-    logger.info("sudo systemctl restart amslpr")
+    logger.info("Please restart the VisiGate service for the changes to take effect:")
+    logger.info("sudo systemctl restart visigate")
 
 if __name__ == "__main__":
     main()

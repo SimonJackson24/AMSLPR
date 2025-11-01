@@ -1,10 +1,10 @@
-# AMSLPR High Availability and Redundancy Guide
+# VisiGate High Availability and Redundancy Guide
 
-This guide provides strategies for implementing high availability and redundancy in AMSLPR deployments where continuous operation is critical. These configurations are designed to minimize downtime and ensure system reliability.
+This guide provides strategies for implementing high availability and redundancy in VisiGate deployments where continuous operation is critical. These configurations are designed to minimize downtime and ensure system reliability.
 
 ## Overview
 
-High availability (HA) in AMSLPR can be achieved through several complementary approaches:
+High availability (HA) in VisiGate can be achieved through several complementary approaches:
 
 1. **Hardware redundancy** - Duplicate hardware components to eliminate single points of failure
 2. **Data redundancy** - Ensure data is backed up and can be restored quickly
@@ -30,7 +30,7 @@ The simplest HA setup involves a primary system and a backup system:
 
 #### Implementation
 
-1. Set up two identical AMSLPR systems
+1. Set up two identical VisiGate systems
 2. Configure database replication between them
 3. Implement a heartbeat mechanism to detect failures
 4. Create a failover script to activate the backup system
@@ -57,10 +57,10 @@ while true; do
     if [ $failures -ge $MAX_FAILURES ]; then
       # Activate backup system
       echo "Primary system failed. Activating backup system."
-      sudo systemctl start amslpr.service
+      sudo systemctl start visigate.service
       
       # Notify administrators
-      echo "AMSLPR primary system failed. Backup system activated." | mail -s "AMSLPR Failover Alert" admin@example.com
+      echo "VisiGate primary system failed. Backup system activated." | mail -s "VisiGate Failover Alert" admin@example.com
       
       # Exit loop after activation
       break
@@ -87,10 +87,10 @@ A more advanced setup involves multiple active systems working simultaneously:
 
 #### Implementation
 
-1. Set up multiple AMSLPR systems
+1. Set up multiple VisiGate systems
 2. Configure a shared database server
 3. Install and configure a load balancer (e.g., HAProxy or Nginx)
-4. Update the AMSLPR configuration to use the shared database
+4. Update the VisiGate configuration to use the shared database
 
 ```bash
 # Example HAProxy configuration
@@ -121,9 +121,9 @@ frontend http_front
 backend http_back
     balance roundrobin
     option httpchk GET /api/health
-    server amslpr1 192.168.1.101:5000 check
-    server amslpr2 192.168.1.102:5000 check
-    server amslpr3 192.168.1.103:5000 check
+    server visigate1 192.168.1.101:5000 check
+    server visigate2 192.168.1.102:5000 check
+    server visigate3 192.168.1.103:5000 check
 ```
 
 ## Data Redundancy
@@ -153,10 +153,10 @@ sudo nano /etc/litestream/config.yml
 Example configuration:
 ```yaml
 dbs:
-  - path: /var/lib/amslpr/amslpr.db
+  - path: /var/lib/visigate/visigate.db
     replicas:
-      - url: file:///mnt/backup/amslpr.db
-      - url: s3://mybucket/amslpr.db
+      - url: file:///mnt/backup/visigate.db
+      - url: s3://mybucket/visigate.db
         access-key-id: ACCESS_KEY_ID
         secret-access-key: SECRET_ACCESS_KEY
 ```
@@ -175,31 +175,31 @@ dbs:
 
 ```bash
 # Create backup script
-sudo nano /opt/amslpr/scripts/backup.sh
+sudo nano /opt/visigate/scripts/backup.sh
 ```
 
 Example backup script:
 ```bash
 #!/bin/bash
-BACKUP_DIR="/mnt/backup/amslpr"
+BACKUP_DIR="/mnt/backup/visigate"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-DB_PATH="/var/lib/amslpr/amslpr.db"
-CONFIG_PATH="/etc/amslpr"
+DB_PATH="/var/lib/visigate/visigate.db"
+CONFIG_PATH="/etc/visigate"
 
 # Create backup directory if it doesn't exist
 mkdir -p $BACKUP_DIR
 
 # Create database backup
-sqlite3 $DB_PATH ".backup '$BACKUP_DIR/amslpr_$TIMESTAMP.db'"
+sqlite3 $DB_PATH ".backup '$BACKUP_DIR/visigate_$TIMESTAMP.db'"
 
 # Compress database backup
-gzip $BACKUP_DIR/amslpr_$TIMESTAMP.db
+gzip $BACKUP_DIR/visigate_$TIMESTAMP.db
 
 # Backup configuration files
 tar -czf $BACKUP_DIR/config_$TIMESTAMP.tar.gz $CONFIG_PATH
 
 # Remove backups older than 30 days
-find $BACKUP_DIR -name "amslpr_*.db.gz" -mtime +30 -delete
+find $BACKUP_DIR -name "visigate_*.db.gz" -mtime +30 -delete
 find $BACKUP_DIR -name "config_*.tar.gz" -mtime +30 -delete
 ```
 
@@ -302,7 +302,7 @@ sudo nano /etc/apcupsd/apcupsd.conf
 
 Example configuration:
 ```
-UPSNAME AMSLPR_UPS
+UPSNAME VisiGate_UPS
 UPSCLASS standalone
 UPSMODE disable
 DEVICE /dev/ttyUSB0
@@ -334,7 +334,7 @@ TIMEOUT 0
 
 ```bash
 # Edit systemd service file
-sudo nano /etc/systemd/system/amslpr.service
+sudo nano /etc/systemd/system/visigate.service
 ```
 
 Add these lines to the `[Service]` section:
@@ -451,7 +451,7 @@ For critical installations requiring maximum uptime:
 
 ## Conclusion
 
-Implementing high availability for AMSLPR requires careful planning and consideration of hardware, software, network, and power redundancy. By eliminating single points of failure and implementing automatic failover mechanisms, you can achieve near-continuous operation even in the face of component failures.
+Implementing high availability for VisiGate requires careful planning and consideration of hardware, software, network, and power redundancy. By eliminating single points of failure and implementing automatic failover mechanisms, you can achieve near-continuous operation even in the face of component failures.
 
 Remember that high availability is not just about technology—it also involves processes, testing, and ongoing maintenance. Regular testing and validation of your HA setup is essential to ensure it will work when needed.
 

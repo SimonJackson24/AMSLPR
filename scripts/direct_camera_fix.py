@@ -20,7 +20,7 @@ logger = logging.getLogger('direct_fix')
 
 # Define paths
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB_PATH = os.path.join(ROOT_DIR, 'data', 'amslpr.db')
+DB_PATH = os.path.join(ROOT_DIR, 'data', 'visigate.db')
 LOG_PATH = os.path.join(ROOT_DIR, 'camera_fix.log')
 
 # Add file handler for logging
@@ -352,7 +352,7 @@ def fix_onvif_camera():
                     # Try to import database manager directly
                     try:
                         from src.database.db_manager import DatabaseManager
-                        config = {'database': {'path': os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'amslpr.db')}}
+                        config = {'database': {'path': os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'visigate.db')}}
                         direct_db = DatabaseManager(config)
                         
                         # Prepare camera info
@@ -454,8 +454,8 @@ def main():
         logger.warning("Camera manager check failed")
     
     logger.info("Camera persistence fix complete")
-    logger.info("Please restart the AMSLPR service for the changes to take effect:")
-    logger.info("sudo systemctl restart amslpr")
+    logger.info("Please restart the VisiGate service for the changes to take effect:")
+    logger.info("sudo systemctl restart visigate")
     logger.info(f"Check the log file at {LOG_PATH} for details")
 
 if __name__ == "__main__":

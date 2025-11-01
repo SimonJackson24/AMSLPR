@@ -1,7 +1,7 @@
 # VisionGate VPS Deployment Guide
 
 ## Overview
-This guide will help you deploy the VisionGate application (formerly AMSLPR) to your VPS using Docker on the visiongate user with CloudPanel.
+This guide will help you deploy the VisionGate application (formerly VisiGate) to your VPS using Docker on the visiongate user with CloudPanel.
 
 ## Prerequisites
 - SSH access to your VPS as visiongate user

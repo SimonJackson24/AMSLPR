@@ -1,6 +1,6 @@
 # Pre-packaged Hailo SDK
 
-This directory contains pre-packaged Hailo SDK packages for the AMSLPR system.
+This directory contains pre-packaged Hailo SDK packages for the VisiGate system.
 
 ## Included Packages
 
@@ -22,7 +22,7 @@ This directory contains pre-packaged Hailo SDK packages for the AMSLPR system.
 
 ## Python Version Requirement
 
-**IMPORTANT**: Python 3.11 is **REQUIRED** for AMSLPR with Hailo TPU integration. No other Python versions are supported.
+**IMPORTANT**: Python 3.11 is **REQUIRED** for VisiGate with Hailo TPU integration. No other Python versions are supported.
 
 The included Hailo Python SDK wheel file is compiled specifically for Python 3.11. The installation script will check for Python 3.11 and will exit with an error if it's not available.
 
@@ -36,4 +36,4 @@ These packages are sourced from the Hailo Developer Zone. They have been include
 
 ## License
 
-These packages are subject to the Hailo license terms and conditions. They are provided for use with the AMSLPR system only.
+These packages are subject to the Hailo license terms and conditions. They are provided for use with the VisiGate system only.

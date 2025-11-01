@@ -1,12 +1,12 @@
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
 
 #!/usr/bin/env python3
 """
-Camera routes for the AMSLPR web application.
+Camera routes for the VisiGate web application.
 
 This module provides routes for managing ONVIF cameras and viewing license plate recognition results.
 """
@@ -36,7 +36,7 @@ except ImportError as e:
     DETECTOR_AVAILABLE = True
     MOCK_DETECTOR = True
 
-logger = logging.getLogger('AMSLPR.web.cameras')
+logger = logging.getLogger('VisiGate.web.cameras')
 
 # Create blueprint
 camera_bp = Blueprint('camera', __name__)
@@ -921,7 +921,7 @@ def save_camera_settings(camera_id):
     
     if camera_id == 'global':
         # Save global camera settings
-        config = current_app.config.get('AMSLPR_CONFIG', {})
+        config = current_app.config.get('VISIGATE_CONFIG', {})
         camera_config = config.get('camera', {})
         
         # Update settings from form
@@ -1184,7 +1184,7 @@ def ensure_hls_dir(camera_id):
     global hls_dirs
     
     # Use a consistent directory name without random suffixes
-    base_hls_dir = os.path.join(tempfile.gettempdir(), f"amslpr_hls_{camera_id}")
+    base_hls_dir = os.path.join(tempfile.gettempdir(), f"visiongate_hls_{camera_id}")
     
     # Create the directory if it doesn't exist
     if not os.path.exists(base_hls_dir):

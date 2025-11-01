@@ -12,10 +12,10 @@ import json
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger('AMSLPR.diagnostics')
+logger = logging.getLogger('VisiGate.diagnostics')
 
 # Create a file handler for the log file
-log_file = '/tmp/amslpr_diagnostics.log'
+log_file = '/tmp/visigate_diagnostics.log'
 file_handler = logging.FileHandler(log_file)
 file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
@@ -27,7 +27,7 @@ def diagnose_camera_routes():
     
     try:
         # Import the camera_routes module
-        sys.path.append('/opt/amslpr')
+        sys.path.append('/opt/visigate')
         from src.web.camera_routes import camera_bp, init_camera_manager, onvif_camera_manager
         
         logger.info(f"Successfully imported camera_routes module")
@@ -42,7 +42,7 @@ def diagnose_camera_routes():
             try:
                 from flask import Flask
                 app = Flask(__name__)
-                app.config.from_pyfile('/opt/amslpr/config.py')
+                app.config.from_pyfile('/opt/visigate/config.py')
                 init_camera_manager(app.config)
                 logger.info(f"After initialization, onvif_camera_manager: {onvif_camera_manager}")
             except Exception as e:
@@ -85,7 +85,7 @@ def diagnose_templates():
     
     try:
         # Check if the cameras.html template exists
-        template_path = '/opt/amslpr/src/web/templates/cameras.html'
+        template_path = '/opt/visigate/src/web/templates/cameras.html'
         if os.path.exists(template_path):
             logger.info(f"cameras.html template exists")
             
@@ -107,7 +107,7 @@ def diagnose_onvif_camera():
     
     try:
         # Import the onvif_camera module
-        sys.path.append('/opt/amslpr')
+        sys.path.append('/opt/visigate')
         from src.recognition.onvif_camera import ONVIFCameraManager
         
         logger.info(f"Successfully imported ONVIFCameraManager")
@@ -148,7 +148,7 @@ def diagnose_flask_app():
     
     try:
         # Import the app module
-        sys.path.append('/opt/amslpr')
+        sys.path.append('/opt/visigate')
         from src.web.app import app
         
         logger.info(f"Successfully imported app")
@@ -175,7 +175,7 @@ def diagnose_error_logs():
     try:
         # Check the systemd journal for errors
         import subprocess
-        cmd = "journalctl -u amslpr -n 200 | grep -i error"
+        cmd = "journalctl -u visigate -n 200 | grep -i error"
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         
         if result.stdout:
@@ -188,7 +188,7 @@ def diagnose_error_logs():
 
 def main():
     """Main diagnostic function"""
-    logger.info("Starting AMSLPR diagnostics")
+    logger.info("Starting VisiGate diagnostics")
     
     try:
         # Run all diagnostic functions

@@ -1,35 +1,35 @@
 #!/bin/bash
 
-# Emergency fix script for AMSLPR camera routes
+# Emergency fix script for VisiGate camera routes
 # This script will backup the existing camera routes and replace it with a simplified version
 
 set -e
 
-echo "AMSLPR Camera Routes Emergency Fix"
+echo "VisiGate Camera Routes Emergency Fix"
 echo "================================="
 echo ""
 
-# Determine the AMSLPR installation directory
-if [ -d "/opt/amslpr" ]; then
-    AMSLPR_DIR="/opt/amslpr"
-elif [ -d "$HOME/amslpr" ]; then
-    AMSLPR_DIR="$HOME/amslpr"
+# Determine the VisiGate installation directory
+if [ -d "/opt/visigate" ]; then
+    VISIGATE_DIR="/opt/visigate"
+elif [ -d "$HOME/visigate" ]; then
+    VISIGATE_DIR="$HOME/visigate"
 else
-    echo "Could not find AMSLPR installation directory."
-    echo "Please enter the full path to your AMSLPR installation:"
-    read AMSLPR_DIR
+    echo "Could not find VisiGate installation directory."
+    echo "Please enter the full path to your VisiGate installation:"
+    read VisiGate_DIR
     
-    if [ ! -d "$AMSLPR_DIR" ]; then
-        echo "Error: Directory $AMSLPR_DIR does not exist."
+    if [ ! -d "$VisiGate_DIR" ]; then
+        echo "Error: Directory $VisiGate_DIR does not exist."
         exit 1
     fi
 fi
 
-echo "Using AMSLPR installation at: $AMSLPR_DIR"
+echo "Using VisiGate installation at: $VisiGate_DIR"
 echo ""
 
 # Check for src/web/camera_routes.py
-CAMERA_ROUTES_PATH="$AMSLPR_DIR/src/web/camera_routes.py"
+CAMERA_ROUTES_PATH="$VisiGate_DIR/src/web/camera_routes.py"
 if [ ! -f "$CAMERA_ROUTES_PATH" ]; then
     echo "Error: Could not find camera_routes.py at $CAMERA_ROUTES_PATH"
     echo "Please check your installation path."
@@ -47,16 +47,16 @@ echo "Installing emergency fix for camera routes..."
 cp "camera_routes_emergency_fix.py" "$CAMERA_ROUTES_PATH"
 
 # Check if the service needs to be restarted
-if systemctl is-active --quiet amslpr; then
-    echo "Restarting AMSLPR service..."
-    sudo systemctl restart amslpr
-    echo "AMSLPR service restarted."
+if systemctl is-active --quiet visigate; then
+    echo "Restarting VisiGate service..."
+    sudo systemctl restart visigate
+    echo "VisiGate service restarted."
 else
-    echo "AMSLPR service is not running. No need to restart."
+    echo "VisiGate service is not running. No need to restart."
 fi
 
 echo ""
 echo "Emergency fix applied successfully!"
 echo "If you encounter any issues, you can restore the backup with:"
 echo "cp \"$BACKUP_PATH\" \"$CAMERA_ROUTES_PATH\""
-echo "and then restart the AMSLPR service."
+echo "and then restart the VisiGate service."

@@ -1,7 +1,7 @@
 {
     "database": {
         "type": "sqlite",
-        "path": "data/amslpr.db"
+        "path": "data/visigate.db"
     },
     "recognition": {
         "model": "data/models/lpr_model.pth",
@@ -25,8 +25,8 @@
     },
     "ssl": {
         "enabled": false,
-        "cert_file": "/etc/amslpr/ssl/cert.pem",
-        "key_file": "/etc/amslpr/ssl/key.pem",
+        "cert_file": "/etc/visigate/ssl/cert.pem",
+        "key_file": "/etc/visigate/ssl/key.pem",
         "auto_generate": true,
         "days": 365,
         "key_size": 2048
@@ -68,7 +68,7 @@
     },
     "logging": {
         "level": "INFO",
-        "file": "data/logs/amslpr.log",
+        "file": "data/logs/visigate.log",
         "max_size": 10485760,
         "backup_count": 5
     },

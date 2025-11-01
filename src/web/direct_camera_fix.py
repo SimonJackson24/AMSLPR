@@ -3,7 +3,7 @@ import logging
 from flask import Blueprint, render_template, current_app
 from src.utils.user_management import login_required, UserManager
 
-logger = logging.getLogger('AMSLPR.web.direct_camera_fix')
+logger = logging.getLogger('VisiGate.web.direct_camera_fix')
 
 # Create blueprint
 direct_camera_bp = Blueprint('direct_camera', __name__)

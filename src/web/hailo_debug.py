@@ -180,9 +180,9 @@ def main():
     if add_debug_logging():
         logger.info("\n===== Debug Logging Added Successfully =====")
         logger.info("Please restart the application to apply the changes:")
-        logger.info("sudo systemctl restart amslpr")
+        logger.info("sudo systemctl restart visigate")
         logger.info("\nThen check the application logs to see detailed information:")
-        logger.info("journalctl -u amslpr | grep -i \"\[HAILO DEBUG\]\"")
+        logger.info("journalctl -u visigate | grep -i \"\[HAILO DEBUG\]\"")
     else:
         logger.error("\n===== Failed to Add Debug Logging =====")
     

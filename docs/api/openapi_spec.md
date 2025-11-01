@@ -1,23 +1,23 @@
-# AMSLPR OpenAPI Specification
+# VisiGate OpenAPI Specification
 
-This document contains the OpenAPI 3.0.3 specification for the AMSLPR API.
+This document contains the OpenAPI 3.0.3 specification for the VisiGate API.
 
 ```yaml
 openapi: 3.0.3
 info:
-  title: AMSLPR API
+  title: VisiGate API
   description: |
-    AMSLPR (Automate Systems License Plate Recognition) API provides comprehensive endpoints for license plate recognition, vehicle management, access control, and system monitoring.
+    VisiGate (Vision-Based Access Control System) API provides comprehensive endpoints for license plate recognition, vehicle management, access control, and system monitoring.
   version: "1.0.0"
   contact:
-    name: AMSLPR Support
-    email: support@automatesystems.com
+    name: VisiGate Support
+    email: support@visigate.com
   license:
     name: Proprietary
     url: https://www.automatesystems.com/license
 
 servers:
-  - url: https://api.amslpr.local/api
+  - url: https://api.visigate.local/api
     description: Production server
   - url: http://localhost:5000/api
     description: Development server

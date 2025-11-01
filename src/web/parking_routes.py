@@ -1,5 +1,5 @@
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
@@ -16,7 +16,7 @@ import csv
 import xlsxwriter
 from flask import make_response
 
-logger = logging.getLogger('AMSLPR.web.parking')
+logger = logging.getLogger('VisiGate.web.parking')
 
 parking_bp = Blueprint('parking', __name__, url_prefix='/parking')
 
@@ -40,7 +40,7 @@ def parking_dashboard():
     """
     try:
         db_manager = current_app.config.get('DB_MANAGER')
-        app_config = current_app.config.get('AMSLPR_CONFIG', {})
+        app_config = current_app.config.get('VisiGate_CONFIG', {})
         
         # If DB_MANAGER is not available, use mock data
         if not db_manager:
@@ -126,7 +126,7 @@ def parking_settings():
     Parking settings.
     """
     try:
-        app_config = current_app.config.get('AMSLPR_CONFIG', {})
+        app_config = current_app.config.get('VisiGate_CONFIG', {})
         
         # Ensure parking config section exists
         if 'parking' not in app_config:
@@ -219,7 +219,7 @@ def nayax_pricing():
     Configure Nayax pricing tiers and free period settings.
     """
     try:
-        app_config = current_app.config.get('AMSLPR_CONFIG', {})
+        app_config = current_app.config.get('VisiGate_CONFIG', {})
         
         # Ensure the nayax config sections exist
         if 'nayax' not in app_config:
@@ -359,7 +359,7 @@ def parking_sessions():
             pass
         
         # Get the full config object
-        app_config = current_app.config.get('AMSLPR_CONFIG', {})
+        app_config = current_app.config.get('VisiGate_CONFIG', {})
         
         # Ensure the parking config section exists
         if 'parking' not in app_config:
@@ -418,7 +418,7 @@ def view_session(session_id):
             logger.error(f"Error getting payment transactions: {e}")
         
         # Get config for pricing
-        config = current_app.config.get('AMSLPR_CONFIG', {})
+        config = current_app.config.get('VisiGate_CONFIG', {})
         
         return render_template(
             'parking/view_session.html', 
@@ -534,7 +534,7 @@ def parking_reports():
                 daily_data = []
         
         # Get the full config object
-        app_config = current_app.config.get('AMSLPR_CONFIG', {})
+        app_config = current_app.config.get('VisiGate_CONFIG', {})
         
         # Ensure the parking config section exists
         if 'parking' not in app_config:
@@ -587,7 +587,7 @@ def api_calculate_fee():
     """
     try:
         db_manager = current_app.config.get('DB_MANAGER')
-        config = current_app.config.get('AMSLPR_CONFIG', {})
+        config = current_app.config.get('VisiGate_CONFIG', {})
         data = request.json
         
         if not db_manager:

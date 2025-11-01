@@ -32,7 +32,7 @@ python -m pip download --no-binary=:all: --no-deps -r requirements.txt -d $pipDi
 # Create a README file with installation instructions
 $readmePath = Join-Path $offlineDir "README.md"
 $readmeContent = @"
-# AMSLPR Offline Installation Package
+# VisiGate Offline Installation Package
 
 ## Installation Instructions
 

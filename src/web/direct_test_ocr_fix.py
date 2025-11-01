@@ -11,7 +11,7 @@ from functools import wraps
 from src.utils.user_management import UserManager
 
 direct_test_ocr_bp = Blueprint('direct_test_ocr', __name__)
-logger = logging.getLogger('AMSLPR.direct_test_ocr_fix')
+logger = logging.getLogger('VisiGate.direct_test_ocr_fix')
 
 # Initialize user manager for admin_required decorator
 user_manager = UserManager()

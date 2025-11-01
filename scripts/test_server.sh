@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# AMSLPR Test Server Script
-# This script tests if the AMSLPR server can run manually
+# VisiGate Test Server Script
+# This script tests if the VisiGate server can run manually
 
-echo "=== AMSLPR Test Server ==="
+echo "=== VisiGate Test Server ==="
 echo "Activating virtual environment..."
-cd /opt/amslpr
+cd /opt/visigate
 source venv/bin/activate
 
 echo "\nChecking Python version..."

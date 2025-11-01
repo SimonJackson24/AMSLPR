@@ -10,7 +10,7 @@ import logging
 import math
 from typing import Dict, List, Optional, Tuple
 
-logger = logging.getLogger('AMSLPR.confidence_scorer')
+logger = logging.getLogger('VisiGate.confidence_scorer')
 
 class ImageQualityAssessor:
     """

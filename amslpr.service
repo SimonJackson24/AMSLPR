@@ -1,14 +1,14 @@
 [Unit]
-Description=AMSLPR Camera System
+Description=VisiGate Camera System
 After=network.target redis-server.service
 
 [Service]
 User=automate
 Group=automate
-WorkingDirectory=/home/automate/AMSLPR
-Environment="PATH=/home/automate/AMSLPR/venv/bin:/usr/local/bin:/usr/bin:/bin"
-Environment="PYTHONPATH=/home/automate/AMSLPR"
-ExecStart=/home/automate/AMSLPR/venv/bin/gunicorn --workers 1 --bind 0.0.0.0:5000 'src.web.app:create_app()'
+WorkingDirectory=/home/automate/VisiGate
+Environment="PATH=/home/automate/VisiGate/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONPATH=/home/automate/VisiGate"
+ExecStart=/home/automate/VisiGate/venv/bin/gunicorn --workers 1 --bind 0.0.0.0:5000 'src.web.app:create_app()'
 Restart=always
 
 [Install]

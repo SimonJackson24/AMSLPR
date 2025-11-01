@@ -1,6 +1,6 @@
-# AMSLPR Performance Tuning Guide
+# VisiGate Performance Tuning Guide
 
-This guide provides recommendations for optimizing the performance of your AMSLPR system in a production environment. These optimizations can help improve recognition speed, reduce resource usage, and enhance overall system responsiveness.
+This guide provides recommendations for optimizing the performance of your VisiGate system in a production environment. These optimizations can help improve recognition speed, reduce resource usage, and enhance overall system responsiveness.
 
 ## Hardware Optimization
 
@@ -67,7 +67,7 @@ This guide provides recommendations for optimizing the performance of your AMSLP
 
 1. **Frame processing settings**
    ```bash
-   sudo nano /etc/amslpr/config.json
+   sudo nano /etc/visigate/config.json
    ```
    Adjust these settings:
    ```json
@@ -97,7 +97,7 @@ This guide provides recommendations for optimizing the performance of your AMSLP
 
 1. **Nginx caching**
    ```bash
-   sudo nano /etc/nginx/sites-available/amslpr
+   sudo nano /etc/nginx/sites-available/visigate
    ```
    Add caching configuration:
    ```
@@ -110,7 +110,7 @@ This guide provides recommendations for optimizing the performance of your AMSLP
 
 2. **Compress responses**
    ```bash
-   sudo nano /etc/nginx/sites-available/amslpr
+   sudo nano /etc/nginx/sites-available/visigate
    ```
    Add compression settings:
    ```
@@ -140,14 +140,14 @@ This guide provides recommendations for optimizing the performance of your AMSLP
 1. **Regular maintenance**
    ```bash
    # Create a maintenance script
-   sudo nano /opt/amslpr/scripts/db_maintenance.sh
+   sudo nano /opt/visigate/scripts/db_maintenance.sh
    ```
    
    Add these commands:
    ```bash
    #!/bin/bash
    # Path to the database
-   DB_PATH="/var/lib/amslpr/amslpr.db"
+   DB_PATH="/var/lib/visigate/visigate.db"
    
    # Vacuum the database
    sqlite3 $DB_PATH "VACUUM;"
@@ -158,18 +158,18 @@ This guide provides recommendations for optimizing the performance of your AMSLP
    
    Make it executable and schedule it:
    ```bash
-   sudo chmod +x /opt/amslpr/scripts/db_maintenance.sh
+   sudo chmod +x /opt/visigate/scripts/db_maintenance.sh
    sudo crontab -e
    ```
    
    Add a weekly job:
    ```
-   0 3 * * 0 /opt/amslpr/scripts/db_maintenance.sh > /dev/null 2>&1
+   0 3 * * 0 /opt/visigate/scripts/db_maintenance.sh > /dev/null 2>&1
    ```
 
 2. **Indexing**
    - Ensure proper indexes are created for frequently queried fields
-   - The AMSLPR database schema includes indexes for license plate numbers and timestamps
+   - The VisiGate database schema includes indexes for license plate numbers and timestamps
 
 3. **Query optimization**
    - Use parameterized queries to prevent SQL injection and improve performance
@@ -323,6 +323,6 @@ This guide provides recommendations for optimizing the performance of your AMSLP
 
 ## Conclusion
 
-Optimizing the AMSLPR system is an iterative process. Start with the most impactful changes and measure their effect before moving on to more advanced optimizations. Regular monitoring and maintenance are key to maintaining optimal performance over time.
+Optimizing the VisiGate system is an iterative process. Start with the most impactful changes and measure their effect before moving on to more advanced optimizations. Regular monitoring and maintenance are key to maintaining optimal performance over time.
 
 Remember that the optimal configuration depends on your specific hardware, environment, and requirements. Use the system monitoring tools to identify bottlenecks and focus your optimization efforts accordingly.

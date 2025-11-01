@@ -1,11 +1,11 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
 
-"""Database manager for AMSLPR."""
+"""Database manager for VisiGate."""
 import os
 from typing import Optional
 from sqlalchemy import create_engine
@@ -30,7 +30,7 @@ class DatabaseManager:
             # Default to instance directory
             instance_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'instance')
             os.makedirs(instance_dir, exist_ok=True)
-            db_path = os.path.join(instance_dir, 'amslpr.db')
+            db_path = os.path.join(instance_dir, 'visigate.db')
         
         self.db_path = db_path
         self._engine: Optional[Engine] = None

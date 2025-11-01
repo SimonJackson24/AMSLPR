@@ -1,13 +1,13 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
 
 #!/usr/bin/env python3
 """
-System routes for the AMSLPR web interface.
+System routes for the VisiGate web interface.
 """
 
 import os
@@ -22,7 +22,7 @@ from src.utils.error_handling import get_error_logs
 from src.web.security import rate_limit
 from src.utils.user_management import UserManager, login_required, permission_required
 
-logger = logging.getLogger('AMSLPR.web.system')
+logger = logging.getLogger('VisiGate.web.system')
 
 # Create blueprint
 system_bp = Blueprint('system', __name__, url_prefix='/system')
@@ -97,7 +97,7 @@ def system_status():
         status = default_status
     
     # Get recent errors
-    log_dir = os.environ.get('AMSLPR_LOG_DIR', '/var/log/amslpr')
+    log_dir = os.environ.get('VISIGATE_LOG_DIR', '/var/log/visigate')
     errors = get_error_logs(log_dir=log_dir, limit=10)
     
     return render_template('system_status.html', status=status, errors=errors)
@@ -146,7 +146,7 @@ def restart_application():
     """
     try:
         # Check if running as a service
-        service_name = 'amslpr'
+        service_name = 'visigate'
         service_exists = False
         
         try:
@@ -179,10 +179,10 @@ def view_logs():
     View system logs.
     """
     # Get log directory
-    log_dir = os.environ.get('AMSLPR_LOG_DIR', '/var/log/amslpr')
+    log_dir = os.environ.get('VISIGATE_LOG_DIR', '/var/log/visigate')
     
     # Get log file
-    log_file = os.path.join(log_dir, 'amslpr.log')
+    log_file = os.path.join(log_dir, 'visigate.log')
     
     # Check if file exists
     if not os.path.exists(log_file):
@@ -208,7 +208,7 @@ def integration_settings():
     Integration settings page.
     """
     # Get config or create a default one if not available
-    config = current_app.config.get('AMSLPR_CONFIG', {
+    config = current_app.config.get('VISIGATE_CONFIG', {
         'operating_mode': 'standalone',
         'paxton': {
             'enabled': False,
@@ -294,12 +294,12 @@ def system_settings():
     """
     try:
         # Get current configuration
-        config = current_app.config.get('AMSLPR_CONFIG', {})
+        config = current_app.config.get('VISIGATE_CONFIG', {})
         
         # Handle form submission
         if request.method == 'POST':
             # Update configuration
-            config['system_name'] = request.form.get('system_name', 'AMSLPR')
+            config['system_name'] = request.form.get('system_name', 'VisiGate')
             config['timezone'] = request.form.get('timezone', 'UTC')
             config['operating_mode'] = request.form.get('operating_mode', 'standalone')
             config['log_level'] = request.form.get('log_level', 'INFO')
@@ -312,7 +312,7 @@ def system_settings():
             save_config(config)
             
             # Update app configuration
-            current_app.config['AMSLPR_CONFIG'] = config
+            current_app.config['VISIGATE_CONFIG'] = config
             
             flash('System settings updated successfully', 'success')
             return redirect(url_for('system.system_settings'))
@@ -458,7 +458,7 @@ def backup_restore():
     backups = []
     try:
         for filename in os.listdir(backup_dir):
-            if filename.endswith('.zip') and filename.startswith('amslpr_backup_'):
+            if filename.endswith('.zip') and filename.startswith('visigate_backup_'):
                 backup_path = os.path.join(backup_dir, filename)
                 backup_time = datetime.fromtimestamp(os.path.getmtime(backup_path))
                 backup_size = os.path.getsize(backup_path)
@@ -480,7 +480,7 @@ def backup_restore():
         try:
             # Generate backup filename with timestamp
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            backup_filename = f"amslpr_backup_{timestamp}.zip"
+            backup_filename = f"visigate_backup_{timestamp}.zip"
             backup_path = os.path.join(backup_dir, backup_filename)
             
             # Create backup using system utility
@@ -516,7 +516,7 @@ def backup_restore():
             backup_path = os.path.join(backup_dir, backup_filename)
             
             # Validate backup file exists and is a valid backup
-            if not os.path.exists(backup_path) or not backup_filename.startswith('amslpr_backup_') or not backup_filename.endswith('.zip'):
+            if not os.path.exists(backup_path) or not backup_filename.startswith('visigate_backup_') or not backup_filename.endswith('.zip'):
                 flash("Invalid backup file selected", 'danger')
                 return redirect(url_for('system.backup_restore'))
             
@@ -573,7 +573,7 @@ def backup_restore():
             backup_path = os.path.join(backup_dir, backup_filename)
             
             # Validate backup file exists and is a valid backup
-            if not os.path.exists(backup_path) or not backup_filename.startswith('amslpr_backup_') or not backup_filename.endswith('.zip'):
+            if not os.path.exists(backup_path) or not backup_filename.startswith('visigate_backup_') or not backup_filename.endswith('.zip'):
                 flash("Invalid backup file selected", 'danger')
                 return redirect(url_for('system.backup_restore'))
             

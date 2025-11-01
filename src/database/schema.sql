@@ -1,4 +1,4 @@
--- AMSLPR Database Schema
+-- VisiGate Database Schema
 
 -- Vehicles Table
 CREATE TABLE IF NOT EXISTS vehicles (

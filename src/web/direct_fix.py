@@ -9,7 +9,7 @@ import os
 import json
 
 direct_bp = Blueprint('direct', __name__)
-logger = logging.getLogger('AMSLPR.direct_fix')
+logger = logging.getLogger('VisiGate.direct_fix')
 
 @direct_bp.route('/ocr/settings', methods=['GET', 'POST'])
 def direct_ocr_settings():

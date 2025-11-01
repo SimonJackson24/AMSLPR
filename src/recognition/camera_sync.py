@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 import cv2
 import numpy as np
 
-logger = logging.getLogger('AMSLPR.camera_sync')
+logger = logging.getLogger('VisiGate.camera_sync')
 
 class NTPSynchronizer:
     """

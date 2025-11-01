@@ -38,7 +38,7 @@ class SystemMonitor:
         os.makedirs(self.metrics_path, exist_ok=True)
         
         # Initialize logger
-        self.logger = logging.getLogger('AMSLPR.system_monitor')
+        self.logger = logging.getLogger('VisiGate.system_monitor')
         
         # Start monitoring thread if enabled
         if config['monitoring']['enabled']:
@@ -342,4 +342,4 @@ Potential future enhancements for the System Monitoring module:
 4. **Predictive analytics**: Predict resource usage trends
 5. **Custom metrics**: Allow users to define custom metrics to monitor
 6. **Graphical reporting**: Generate PDF reports of system performance
-7. **Remote monitoring**: Monitor multiple AMSLPR instances from a central location
+7. **Remote monitoring**: Monitor multiple VisiGate instances from a central location

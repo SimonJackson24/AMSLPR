@@ -1,6 +1,6 @@
 # Camera Health Monitoring
 
-The AMSLPR system includes a comprehensive camera health monitoring system that ensures reliable operation of all connected cameras. This document describes the camera health monitoring features and how to use them.
+The VisiGate system includes a comprehensive camera health monitoring system that ensures reliable operation of all connected cameras. This document describes the camera health monitoring features and how to use them.
 
 ## Overview
 
@@ -64,7 +64,7 @@ Notifications are sent through the system's notification channels, which can inc
 
 ## Configuration
 
-The camera health monitoring system is configured automatically when the AMSLPR system starts. The following configuration options are available:
+The camera health monitoring system is configured automatically when the VisiGate system starts. The following configuration options are available:
 
 - **Check Interval**: How often to check camera health (default: 60 seconds)
 - **Maximum Reconnection Attempts**: Maximum number of times to attempt reconnection (default: 5)
@@ -79,7 +79,7 @@ If you're experiencing issues with camera health monitoring, check the following
 1. **Camera Network Connectivity**: Ensure the camera is accessible on the network
 2. **Camera Credentials**: Verify that the username and password for the camera are correct
 3. **Camera Resources**: Check if the camera has enough resources to handle the requested stream
-4. **System Logs**: Check the AMSLPR logs for error messages related to camera connections
+4. **System Logs**: Check the VisiGate logs for error messages related to camera connections
 
 ## API Endpoints
 

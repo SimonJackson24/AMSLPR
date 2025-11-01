@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# AMSLPR - Cleanup Old Scripts
+# VisiGate - Cleanup Old Scripts
 # This script removes obsolete or redundant scripts from the scripts directory
 
 echo "Cleaning up old scripts..."

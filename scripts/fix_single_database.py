@@ -22,7 +22,7 @@ logger = logging.getLogger('db_fix')
 # Define paths
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_DIR = os.path.join(ROOT_DIR, 'data')
-DB_PATH = os.path.join(DB_DIR, 'amslpr.db')
+DB_PATH = os.path.join(DB_DIR, 'visigate.db')
 LOG_PATH = os.path.join(ROOT_DIR, 'db_fix.log')
 
 # Add file handler for logging
@@ -31,7 +31,7 @@ file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(mes
 logger.addHandler(file_handler)
 
 # Define the standard database path to use everywhere
-STANDARD_DB_PATH = "os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'amslpr.db')"
+STANDARD_DB_PATH = "os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'visigate.db')"
 
 def check_and_create_database():
     """Check if the database exists and create it if it doesn't."""
@@ -490,8 +490,8 @@ def main():
         return False
     
     logger.info("Database and camera persistence fix complete")
-    logger.info("Please restart the AMSLPR service for the changes to take effect:")
-    logger.info("sudo systemctl restart amslpr")
+    logger.info("Please restart the VisiGate service for the changes to take effect:")
+    logger.info("sudo systemctl restart visigate")
     logger.info(f"Check the log file at {LOG_PATH} for details")
     return True
 

@@ -1,5 +1,5 @@
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
@@ -7,7 +7,7 @@
 #!/usr/bin/env python3
 
 """
-Main routes for the AMSLPR web interface.
+Main routes for the VisiGate web interface.
 """
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify

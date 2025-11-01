@@ -2,12 +2,12 @@
 
 ## Overview
 
-The AMSLPR system supports two types of cameras for license plate recognition:
+The VisiGate system supports two types of cameras for license plate recognition:
 
 1. **Local Cameras**: Connected directly to the Raspberry Pi via USB or the built-in camera interface
 2. **ONVIF IP Cameras**: Network cameras that support the ONVIF protocol
 
-This guide explains how to set up and configure both types of cameras for use with the AMSLPR system.
+This guide explains how to set up and configure both types of cameras for use with the VisiGate system.
 
 ## Local Camera Setup
 
@@ -23,7 +23,7 @@ This guide explains how to set up and configure both types of cameras for use wi
    ```
    sudo reboot
    ```
-4. Update the AMSLPR configuration to use the local camera (camera_id: 0)
+4. Update the VisiGate configuration to use the local camera (camera_id: 0)
 
 ### USB Camera
 
@@ -32,7 +32,7 @@ This guide explains how to set up and configure both types of cameras for use wi
    ```
    ls -l /dev/video*
    ```
-3. Update the AMSLPR configuration to use the USB camera (camera_id: typically 0 or 1)
+3. Update the VisiGate configuration to use the USB camera (camera_id: typically 0 or 1)
 
 ## ONVIF IP Camera Setup
 
@@ -45,7 +45,7 @@ This guide explains how to set up and configure both types of cameras for use wi
 ### Configuration
 
 1. **Web Interface Setup**:
-   - Navigate to the AMSLPR web interface
+   - Navigate to the VisiGate web interface
    - Go to the "Cameras" section
    - Click "Add Camera" or "Discover Cameras"
 
@@ -162,4 +162,4 @@ For additional help with camera setup and configuration, please refer to:
 
 - The camera manufacturer's documentation
 - ONVIF protocol documentation (www.onvif.org)
-- AMSLPR project support channels
+- VisiGate project support channels

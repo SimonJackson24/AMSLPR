@@ -7,7 +7,7 @@ Create a standalone cameras template that doesn't rely on template inheritance.
 import os
 
 # Create a backup of the template
-os.system("sudo cp /opt/amslpr/src/web/templates/cameras.html /opt/amslpr/src/web/templates/cameras.html.backup_standalone")
+os.system("sudo cp /opt/visigate/src/web/templates/cameras.html /opt/visigate/src/web/templates/cameras.html.backup_standalone")
 print("Created backup of cameras.html template")
 
 # Create a standalone cameras template that doesn't rely on template inheritance
@@ -17,7 +17,7 @@ standalone_template = '''
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cameras - AMSLPR</title>
+    <title>Cameras - VisiGate</title>
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="/static/vendor/bootstrap/css/bootstrap.min.css">
     <!-- Bootstrap Icons -->
@@ -168,10 +168,10 @@ with open("/tmp/standalone_cameras.html", "w") as f:
     f.write(standalone_template)
 
 # Replace the cameras.html template
-os.system("sudo cp /tmp/standalone_cameras.html /opt/amslpr/src/web/templates/cameras.html")
+os.system("sudo cp /tmp/standalone_cameras.html /opt/visigate/src/web/templates/cameras.html")
 
 print("Successfully replaced the cameras.html template with a standalone version")
 
 # Restart the service
-os.system("sudo systemctl restart amslpr")
+os.system("sudo systemctl restart visigate")
 print("Service restarted. The cameras page should now work without errors.")

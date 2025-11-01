@@ -14,7 +14,7 @@ from scipy.spatial.distance import cdist
 from filterpy.kalman import KalmanFilter
 from filterpy.common import Q_discrete_white_noise
 
-logger = logging.getLogger('AMSLPR.plate_tracker')
+logger = logging.getLogger('VisiGate.plate_tracker')
 
 class KalmanTracker:
     """

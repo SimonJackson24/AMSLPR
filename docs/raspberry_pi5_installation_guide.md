@@ -1,8 +1,8 @@
-# AMSLPR Installation Guide for Raspberry Pi 5
+# VisiGate Installation Guide for Raspberry Pi 5
 
-> **IMPORTANT LICENSE NOTICE**: This software is proprietary and confidential. Unauthorized use, reproduction, or distribution is prohibited. All rights reserved by Automate Systems.
+> **IMPORTANT LICENSE NOTICE**: This software is proprietary and confidential. Unauthorized use, reproduction, or distribution is prohibited. All rights reserved by VisiGate.
 
-This guide provides step-by-step instructions for installing the AMSLPR (Automated Machine Learning-based System for License Plate Recognition) on a Raspberry Pi 5 with Hailo TPU acceleration.
+This guide provides step-by-step instructions for installing the VisiGate (Automated Machine Learning-based System for License Plate Recognition) on a Raspberry Pi 5 with Hailo TPU acceleration.
 
 ## Prerequisites
 
@@ -39,7 +39,7 @@ sudo apt upgrade -y
 
 ### Step 3: Install Python 3.11
 
-Python 3.11 is **REQUIRED** for AMSLPR with Hailo TPU integration. No other Python versions are supported.
+Python 3.11 is **REQUIRED** for VisiGate with Hailo TPU integration. No other Python versions are supported.
 
 ```bash
 sudo apt update
@@ -64,11 +64,11 @@ sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 
 sudo apt install -y git cmake build-essential libopencv-dev
 ```
 
-### Step 5: Clone the AMSLPR Repository
+### Step 5: Clone the VisiGate Repository
 
 ```bash
-git clone https://github.com/SimonJackson24/AMSLPR.git
-cd AMSLPR
+git clone https://github.com/SimonJackson24/VisiGate.git
+cd VisiGate
 ```
 
 ### Step 6: Run the Installation Script
@@ -79,7 +79,7 @@ First, make the installation script executable:
 chmod +x scripts/install_on_raspberry_pi.sh
 ```
 
-Then run the installation script from the AMSLPR directory:
+Then run the installation script from the VisiGate directory:
 
 ```bash
 sudo scripts/install_on_raspberry_pi.sh
@@ -92,7 +92,7 @@ This script will:
 4. Create a Python virtual environment
 5. Install required Python packages
 6. Install Hailo TPU drivers and SDK
-7. Set up the AMSLPR service
+7. Set up the VisiGate service
 8. Configure the system for automatic startup
 
 ### Step 7: Verify the Installation
@@ -116,21 +116,21 @@ This will check:
 - Model availability
 - OCR configuration
 
-### Step 8: Start the AMSLPR Service
+### Step 8: Start the VisiGate Service
 
 ```bash
-sudo systemctl start amslpr
+sudo systemctl start visigate
 ```
 
 Check the status:
 
 ```bash
-sudo systemctl status amslpr
+sudo systemctl status visigate
 ```
 
-## Accessing the AMSLPR Web Interface
+## Accessing the VisiGate Web Interface
 
-Once the service is running, you can access the AMSLPR web interface by opening a browser and navigating to:
+Once the service is running, you can access the VisiGate web interface by opening a browser and navigating to:
 
 ```
 http://<raspberry-pi-ip-address>:5000
@@ -189,9 +189,9 @@ If you encounter "command not found" or permission errors when running scripts:
    chmod +x scripts/*.sh scripts/*.py
    ```
 
-2. Ensure you're running the scripts from the AMSLPR root directory:
+2. Ensure you're running the scripts from the VisiGate root directory:
    ```bash
-   cd /path/to/AMSLPR
+   cd /path/to/VisiGate
    ```
 
 ### Dependency Conflicts
@@ -299,8 +299,8 @@ No user intervention is required as the installation script handles these issues
 
 - [Hailo Developer Zone](https://hailo.ai/developer-zone/) - For additional Hailo TPU documentation
 - [Raspberry Pi Documentation](https://www.raspberrypi.org/documentation/) - For Raspberry Pi specific issues
-- [AMSLPR GitHub Repository](https://github.com/SimonJackson24/AMSLPR) - For the latest updates and issue tracking
+- [VisiGate GitHub Repository](https://github.com/SimonJackson24/VisiGate) - For the latest updates and issue tracking
 
 ## Support
 
-If you encounter any issues not covered in this guide, please open an issue on the [AMSLPR GitHub repository](https://github.com/SimonJackson24/AMSLPR/issues).
+If you encounter any issues not covered in this guide, please open an issue on the [VisiGate GitHub repository](https://github.com/SimonJackson24/VisiGate/issues).

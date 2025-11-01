@@ -1,6 +1,6 @@
-# AMSLPR Deployment Checklist
+# VisiGate Deployment Checklist
 
-This checklist is designed to help you deploy the AMSLPR system in a production environment. Follow these steps to ensure a successful deployment.
+This checklist is designed to help you deploy the VisiGate system in a production environment. Follow these steps to ensure a successful deployment.
 
 ## Pre-Deployment
 
@@ -25,8 +25,8 @@ This checklist is designed to help you deploy the AMSLPR system in a production 
 
 - [ ] Clone the repository
   ```bash
-  git clone https://github.com/yourusername/amslpr.git
-  cd amslpr
+  git clone https://github.com/yourusername/visigate.git
+  cd visigate
   ```
 
 - [ ] Run the installation script
@@ -44,7 +44,7 @@ This checklist is designed to help you deploy the AMSLPR system in a production 
 
 - [ ] Edit the configuration file
   ```bash
-  sudo nano /etc/amslpr/config.json
+  sudo nano /etc/visigate/config.json
   ```
 
 - [ ] Configure camera settings
@@ -99,16 +99,16 @@ This checklist is designed to help you deploy the AMSLPR system in a production 
   ```
   Add a daily backup job (runs at 2 AM):
   ```
-  0 2 * * * /opt/amslpr/venv/bin/python /opt/amslpr/src/utils/backup.py > /dev/null 2>&1
+  0 2 * * * /opt/visigate/venv/bin/python /opt/visigate/src/utils/backup.py > /dev/null 2>&1
   ```
 
 - [ ] Set up log rotation
   ```bash
-  sudo nano /etc/logrotate.d/amslpr
+  sudo nano /etc/logrotate.d/visigate
   ```
   Add the following configuration:
   ```
-  /var/log/amslpr/*.log {
+  /var/log/visigate/*.log {
     daily
     missingok
     rotate 7
@@ -118,7 +118,7 @@ This checklist is designed to help you deploy the AMSLPR system in a production 
     create 640 root adm
     sharedscripts
     postrotate
-      systemctl reload amslpr.service > /dev/null 2>&1 || true
+      systemctl reload visigate.service > /dev/null 2>&1 || true
     endscript
   }
   ```
@@ -152,7 +152,7 @@ This checklist is designed to help you deploy the AMSLPR system in a production 
 
 - [ ] Keep the system updated
   - [ ] Apply security updates
-  - [ ] Update the AMSLPR software when new versions are available
+  - [ ] Update the VisiGate software when new versions are available
 
 ## Troubleshooting
 

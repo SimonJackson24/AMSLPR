@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - AMSLPR</title>
+    <title>Login - VisiGate</title>
     
     {% include 'favicon.html' %}
     
@@ -132,8 +132,8 @@
     <div class="login-container">
         <div class="login-card">
             <div class="login-header">
-                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="AMSLPR Logo" height="100" class="mb-4">
-                <p class="text-muted mt-3">Automated License Plate Recognition System</p>
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="VisiGate Logo" height="100" class="mb-4">
+                <p class="text-muted mt-3">Vision-Based Access Control System</p>
             </div>
             
             {% if error %}
@@ -180,7 +180,7 @@
             </form>
             
             <div class="mt-4 text-center">
-                <p class="text-muted">&copy; {{ current_year }} AMSLPR. All rights reserved.</p>
+                <p class="text-muted">&copy; {{ current_year }} VisiGate. All rights reserved.</p>
             </div>
         </div>
     </div>

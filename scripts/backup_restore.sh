@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# AMSLPR Backup and Restore Script
-# This script provides functionality to backup and restore the AMSLPR system
+# VisiGate Backup and Restore Script
+# This script provides functionality to backup and restore the VisiGate system
 
 set -e
 
@@ -14,7 +14,7 @@ NC="\033[0m" # No Color
 
 # Print header
 echo -e "${BLUE}===========================================================${NC}"
-echo -e "${BLUE}       AMSLPR Backup and Restore Script                  ${NC}"
+echo -e "${BLUE}       VisiGate Backup and Restore Script                  ${NC}"
 echo -e "${BLUE}===========================================================${NC}"
 echo
 
@@ -25,11 +25,11 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # Default configuration variables
-DATA_DIR="/var/lib/amslpr"
-CONFIG_DIR="/etc/amslpr"
-BACKUP_DIR="/var/lib/amslpr/backups"
+DATA_DIR="/var/lib/visigate"
+CONFIG_DIR="/etc/visigate"
+BACKUP_DIR="/var/lib/visigate/backups"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-BACKUP_FILE="amslpr_backup_${TIMESTAMP}.tar.gz"
+BACKUP_FILE="visigate_backup_${TIMESTAMP}.tar.gz"
 COMPRESSION="gzip"
 
 # Function to display usage information
@@ -37,8 +37,8 @@ usage() {
     echo "Usage: $0 [options] [command]"
     echo
     echo "Commands:"
-    echo "  backup              Create a backup of the AMSLPR system"
-    echo "  restore <file>      Restore the AMSLPR system from a backup file"
+    echo "  backup              Create a backup of the VisiGate system"
+    echo "  restore <file>      Restore the VisiGate system from a backup file"
     echo "  list                List available backup files"
     echo "  schedule            Set up a scheduled backup using cron"
     echo "  help                Display this help message"
@@ -117,7 +117,7 @@ fi
 
 # Function to create a backup
 create_backup() {
-    echo -e "${YELLOW}Creating backup of AMSLPR system...${NC}"
+    echo -e "${YELLOW}Creating backup of VisiGate system...${NC}"
     
     # Create backup directory if it doesn't exist
     mkdir -p "$BACKUP_DIR"
@@ -139,7 +139,7 @@ create_backup() {
     
     # Add backup metadata
     echo "Backup created on $(date)" > "$TEMP_DIR/backup_info.txt"
-    echo "AMSLPR version: $(cat /opt/amslpr/version.txt 2>/dev/null || echo 'unknown')" >> "$TEMP_DIR/backup_info.txt"
+    echo "VisiGate version: $(cat /opt/visigate/version.txt 2>/dev/null || echo 'unknown')" >> "$TEMP_DIR/backup_info.txt"
     echo "Hostname: $(hostname)" >> "$TEMP_DIR/backup_info.txt"
     echo "Data directory: $DATA_DIR" >> "$TEMP_DIR/backup_info.txt"
     echo "Config directory: $CONFIG_DIR" >> "$TEMP_DIR/backup_info.txt"
@@ -173,7 +173,7 @@ restore_from_backup() {
         exit 1
     fi
     
-    echo -e "${YELLOW}Restoring AMSLPR system from backup: $backup_file${NC}"
+    echo -e "${YELLOW}Restoring VisiGate system from backup: $backup_file${NC}"
     
     # Create temporary directory for extraction
     TEMP_DIR=$(mktemp -d)
@@ -206,10 +206,10 @@ restore_from_backup() {
         exit 0
     fi
     
-    # Stop AMSLPR service if running
-    if systemctl is-active --quiet amslpr.service; then
-        echo -e "${YELLOW}Stopping AMSLPR service...${NC}"
-        systemctl stop amslpr.service
+    # Stop VisiGate service if running
+    if systemctl is-active --quiet visigate.service; then
+        echo -e "${YELLOW}Stopping VisiGate service...${NC}"
+        systemctl stop visigate.service
     fi
     
     # Backup current data and config (just in case)
@@ -240,9 +240,9 @@ restore_from_backup() {
     # Clean up temporary directory
     rm -rf "$TEMP_DIR"
     
-    # Start AMSLPR service
-    echo -e "${YELLOW}Starting AMSLPR service...${NC}"
-    systemctl start amslpr.service
+    # Start VisiGate service
+    echo -e "${YELLOW}Starting VisiGate service...${NC}"
+    systemctl start visigate.service
     
     echo -e "${GREEN}Restoration completed successfully${NC}"
     echo -e "${YELLOW}A backup of the previous state was created at: $CURRENT_BACKUP_DIR${NC}"
@@ -259,7 +259,7 @@ list_backups() {
     fi
     
     # List backup files
-    BACKUP_FILES=$(find "$BACKUP_DIR" -name "amslpr_backup_*.tar.gz" -type f | sort -r)
+    BACKUP_FILES=$(find "$BACKUP_DIR" -name "visigate_backup_*.tar.gz" -type f | sort -r)
     
     if [ -z "$BACKUP_FILES" ]; then
         echo -e "${YELLOW}No backup files found${NC}"
@@ -299,19 +299,19 @@ schedule_backups() {
     case $choice in
         1)
             read -p "Enter hour (0-23): " hour
-            CRON_JOB="0 $hour * * * root $0 backup > /var/log/amslpr-backup.log 2>&1"
+            CRON_JOB="0 $hour * * * root $0 backup > /var/log/visigate-backup.log 2>&1"
             SCHEDULE_DESC="daily at $hour:00"
             ;;
         2)
             read -p "Enter day of week (0-6, where 0 is Sunday): " dow
             read -p "Enter hour (0-23): " hour
-            CRON_JOB="0 $hour * * $dow root $0 backup > /var/log/amslpr-backup.log 2>&1"
+            CRON_JOB="0 $hour * * $dow root $0 backup > /var/log/visigate-backup.log 2>&1"
             SCHEDULE_DESC="weekly on $(date -d "Sunday + $dow days" "+%A") at $hour:00"
             ;;
         3)
             read -p "Enter day of month (1-28): " dom
             read -p "Enter hour (0-23): " hour
-            CRON_JOB="0 $hour $dom * * root $0 backup > /var/log/amslpr-backup.log 2>&1"
+            CRON_JOB="0 $hour $dom * * root $0 backup > /var/log/visigate-backup.log 2>&1"
             SCHEDULE_DESC="monthly on day $dom at $hour:00"
             ;;
         *)
@@ -323,7 +323,7 @@ schedule_backups() {
     # Add retention policy
     read -p "Enter number of backups to keep (0 for unlimited): " retention
     if [ "$retention" -gt 0 ]; then
-        CLEANUP_JOB="30 $hour * * * root find $BACKUP_DIR -name 'amslpr_backup_*.tar.gz' -type f -printf '%T@ %p\n' | sort -n | head -n -$retention | cut -d' ' -f2- | xargs -r rm"
+        CLEANUP_JOB="30 $hour * * * root find $BACKUP_DIR -name 'visigate_backup_*.tar.gz' -type f -printf '%T@ %p\n' | sort -n | head -n -$retention | cut -d' ' -f2- | xargs -r rm"
         echo -e "${YELLOW}Retention policy: Keep last $retention backups${NC}"
     else
         CLEANUP_JOB=""
@@ -331,8 +331,8 @@ schedule_backups() {
     fi
     
     # Create cron file
-    CRON_FILE="/etc/cron.d/amslpr-backup"
-    echo "# AMSLPR scheduled backup" > "$CRON_FILE"
+    CRON_FILE="/etc/cron.d/visigate-backup"
+    echo "# VisiGate scheduled backup" > "$CRON_FILE"
     echo "$CRON_JOB" >> "$CRON_FILE"
     
     if [ -n "$CLEANUP_JOB" ]; then

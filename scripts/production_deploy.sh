@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# AMSLPR Production Deployment Script
-# This script automates the deployment of AMSLPR in a production environment
+# VisiGate Production Deployment Script
+# This script automates the deployment of VisiGate in a production environment
 
 set -e
 
@@ -14,7 +14,7 @@ NC="\033[0m" # No Color
 
 # Print header
 echo -e "${BLUE}===========================================================${NC}"
-echo -e "${BLUE}       AMSLPR Production Deployment Script               ${NC}"
+echo -e "${BLUE}       VisiGate Production Deployment Script               ${NC}"
 echo -e "${BLUE}===========================================================${NC}"
 echo
 
@@ -25,13 +25,13 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # Configuration variables
-INSTALL_DIR="/opt/amslpr"
-DATA_DIR="/var/lib/amslpr"
-LOG_DIR="/var/log/amslpr"
-CONFIG_DIR="/etc/amslpr"
-NGINX_CONF="/etc/nginx/sites-available/amslpr"
-SSL_DIR="/etc/ssl/amslpr"
-SYSTEMD_SERVICE="/etc/systemd/system/amslpr.service"
+INSTALL_DIR="/opt/visigate"
+DATA_DIR="/var/lib/visigate"
+LOG_DIR="/var/log/visigate"
+CONFIG_DIR="/etc/visigate"
+NGINX_CONF="/etc/nginx/sites-available/visigate"
+SSL_DIR="/etc/ssl/visigate"
+SYSTEMD_SERVICE="/etc/systemd/system/visigate.service"
 
 # Parse command line arguments
 DEPLOY_TYPE="standard"
@@ -184,13 +184,13 @@ if [ "$GENERATE_SSL" = true ]; then
     
     # Generate SSL certificates
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-        -keyout "$SSL_DIR/amslpr.key" \
-        -out "$SSL_DIR/amslpr.crt" \
+        -keyout "$SSL_DIR/visigate.key" \
+        -out "$SSL_DIR/visigate.crt" \
         -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"
     
     # Set proper permissions
-    chmod 600 "$SSL_DIR/amslpr.key"
-    chmod 644 "$SSL_DIR/amslpr.crt"
+    chmod 600 "$SSL_DIR/visigate.key"
+    chmod 644 "$SSL_DIR/visigate.crt"
     
     echo -e "${GREEN}SSL certificates generated successfully${NC}"
 else
@@ -208,12 +208,12 @@ cat > "$CONFIG_DIR/config.json" << EOF
         "debug": false,
         "ssl": {
             "enabled": true,
-            "cert_path": "$SSL_DIR/amslpr.crt",
-            "key_path": "$SSL_DIR/amslpr.key"
+            "cert_path": "$SSL_DIR/visigate.crt",
+            "key_path": "$SSL_DIR/visigate.key"
         }
     },
     "database": {
-        "path": "$DATA_DIR/amslpr.db",
+        "path": "$DATA_DIR/visigate.db",
         "backup_path": "$DATA_DIR/backups"
     },
     "camera": {
@@ -237,7 +237,7 @@ cat > "$CONFIG_DIR/config.json" << EOF
     },
     "logging": {
         "level": "INFO",
-        "file_path": "$LOG_DIR/amslpr.log",
+        "file_path": "$LOG_DIR/visigate.log",
         "max_size": 10485760,
         "backup_count": 5
     },
@@ -262,7 +262,7 @@ cat > "$CONFIG_DIR/config.json" << EOF
             "port": 587,
             "username": "user@example.com",
             "password": "password",
-            "from_addr": "amslpr@example.com",
+            "from_addr": "visigate@example.com",
             "to_addrs": ["admin@example.com"]
         }
     },
@@ -300,8 +300,8 @@ server {
     listen 443 ssl;
     server_name _;
     
-    ssl_certificate $SSL_DIR/amslpr.crt;
-    ssl_certificate_key $SSL_DIR/amslpr.key;
+    ssl_certificate $SSL_DIR/visigate.crt;
+    ssl_certificate_key $SSL_DIR/visigate.key;
     
     # SSL configuration
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -361,7 +361,7 @@ echo -e "${YELLOW}Step 8: Creating systemd service...${NC}"
 
 cat > "$SYSTEMD_SERVICE" << EOF
 [Unit]
-Description=AMSLPR License Plate Recognition System
+Description=VisiGate License Plate Recognition System
 After=network.target
 
 [Service]
@@ -381,7 +381,7 @@ EOF
 systemctl daemon-reload
 
 # Enable the service to start at boot
-systemctl enable amslpr.service
+systemctl enable visigate.service
 
 echo -e "${GREEN}Systemd service created successfully${NC}"
 
@@ -433,22 +433,22 @@ chmod -R 755 "$LOG_DIR"
 echo -e "${GREEN}Permissions set successfully${NC}"
 
 # Step 11: Start the service
-echo -e "${YELLOW}Step 11: Starting AMSLPR service...${NC}"
+echo -e "${YELLOW}Step 11: Starting VisiGate service...${NC}"
 
-systemctl start amslpr.service
+systemctl start visigate.service
 
 # Check if service started successfully
-if systemctl is-active --quiet amslpr.service; then
-    echo -e "${GREEN}AMSLPR service started successfully${NC}"
+if systemctl is-active --quiet visigate.service; then
+    echo -e "${GREEN}VisiGate service started successfully${NC}"
 else
-    echo -e "${RED}Failed to start AMSLPR service${NC}"
-    echo -e "${YELLOW}Check logs with: journalctl -u amslpr.service${NC}"
+    echo -e "${RED}Failed to start VisiGate service${NC}"
+    echo -e "${YELLOW}Check logs with: journalctl -u visigate.service${NC}"
 fi
 
 # Final message
 echo
 echo -e "${BLUE}===========================================================${NC}"
-echo -e "${GREEN}AMSLPR has been successfully deployed in production mode!${NC}"
+echo -e "${GREEN}VisiGate has been successfully deployed in production mode!${NC}"
 echo -e "${BLUE}===========================================================${NC}"
 echo
 echo -e "${YELLOW}Access the web interface at: https://$(hostname -I | awk '{print $1}')${NC}"

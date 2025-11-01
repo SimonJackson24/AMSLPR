@@ -6,7 +6,7 @@ import os
 import json
 import logging
 
-logger = logging.getLogger('AMSLPR.direct_ocr_fix')
+logger = logging.getLogger('VisiGate.direct_ocr_fix')
 
 # Create a blueprint with an explicit URL path
 direct_ocr_bp = Blueprint('direct_ocr', __name__)

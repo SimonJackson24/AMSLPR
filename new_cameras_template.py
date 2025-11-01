@@ -7,14 +7,14 @@ Create a completely new cameras.html template that doesn't rely on the stats var
 import os
 
 # Create a backup of the template
-os.system("sudo cp /opt/amslpr/src/web/templates/cameras.html /opt/amslpr/src/web/templates/cameras.html.backup_complete")
+os.system("sudo cp /opt/visigate/src/web/templates/cameras.html /opt/visigate/src/web/templates/cameras.html.backup_complete")
 print("Created backup of cameras.html template")
 
 # Create a completely new cameras template that doesn't rely on the stats variable
 new_template = '''
 {% extends "base.html" %}
 
-{% block title %}Cameras - AMSLPR{% endblock %}
+{% block title %}Cameras - VisiGate{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
@@ -304,21 +304,21 @@ with open("/tmp/new_cameras.html", "w") as f:
     f.write(new_template)
 
 # Replace the cameras.html template
-os.system("sudo cp /tmp/new_cameras.html /opt/amslpr/src/web/templates/cameras.html")
+os.system("sudo cp /tmp/new_cameras.html /opt/visigate/src/web/templates/cameras.html")
 
 print("Successfully replaced the cameras.html template with a new version")
 
 # Now let's create a simple version of the camera_routes.py file that doesn't rely on the stats variable
 new_camera_routes = '''
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
 
 #!/usr/bin/env python3
 """
-Camera routes for the AMSLPR web application.
+Camera routes for the VisiGate web application.
 
 This module provides routes for managing ONVIF cameras and viewing license plate recognition results.
 """
@@ -330,7 +330,7 @@ from functools import wraps
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger('AMSLPR.web.cameras')
+logger = logging.getLogger('VisiGate.web.cameras')
 
 # Create blueprint
 camera_bp = Blueprint('camera', __name__)
@@ -392,15 +392,15 @@ with open("/tmp/new_camera_routes.py", "w") as f:
     f.write(new_camera_routes)
 
 # Create a backup of the current camera_routes.py
-os.system("sudo cp /opt/amslpr/src/web/camera_routes.py /opt/amslpr/src/web/camera_routes.py.backup_emergency")
+os.system("sudo cp /opt/visigate/src/web/camera_routes.py /opt/visigate/src/web/camera_routes.py.backup_emergency")
 
 # Replace the camera_routes.py file
-os.system("sudo cp /tmp/new_camera_routes.py /opt/amslpr/src/web/camera_routes.py")
+os.system("sudo cp /tmp/new_camera_routes.py /opt/visigate/src/web/camera_routes.py")
 
 print("Successfully replaced the camera_routes.py file with a simplified version")
 
 # Restart the service
-os.system("sudo systemctl restart amslpr")
-print("Restarted AMSLPR service")
+os.system("sudo systemctl restart visigate")
+print("Restarted VisiGate service")
 
 print("Emergency fix applied. The cameras page should now work without errors.")

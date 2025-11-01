@@ -1,6 +1,6 @@
 {
-    "name": "AMSLPR",
-    "short_name": "AMSLPR",
+    "name": "VisiGate",
+    "short_name": "VisiGate",
     "icons": [
         {
             "src": "/static/img/favicon/android-chrome-192x192.png",

@@ -114,7 +114,7 @@ try:
         logger.info(route)
     
     # Save the patched app
-    logger.info("Routes patched successfully.\nRestart the service with: sudo systemctl restart amslpr")
+    logger.info("Routes patched successfully.\nRestart the service with: sudo systemctl restart visigate")
     
 except Exception as e:
     logger.error(f"Error applying OCR route fix: {e}")

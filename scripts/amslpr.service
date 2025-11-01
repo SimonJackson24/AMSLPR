@@ -1,17 +1,17 @@
 [Unit]
-Description=Automate Systems License Plate Recognition Service
+Description=Vision-Based Access Control System Service
 After=network.target
 
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi/AMSLPR
-ExecStart=/usr/bin/python3 /home/pi/AMSLPR/src/main.py
+WorkingDirectory=/home/pi/VisiGate
+ExecStart=/usr/bin/python3 /home/pi/VisiGate/src/main.py
 Restart=on-failure
 RestartSec=5
 StandardOutput=syslog
 StandardError=syslog
-SyslogIdentifier=amslpr
+SyslogIdentifier=visigate
 
 [Install]
 WantedBy=multi-user.target

@@ -8,7 +8,7 @@ with a minimal version that will work without errors.
 import os
 
 # Create a backup of the current file
-os.system("sudo cp /opt/amslpr/src/web/camera_routes.py /opt/amslpr/src/web/camera_routes.py.backup_direct_route")
+os.system("sudo cp /opt/visigate/src/web/camera_routes.py /opt/visigate/src/web/camera_routes.py.backup_direct_route")
 print("Created backup of camera_routes.py")
 
 # Create a minimal cameras route that will definitely work
@@ -36,11 +36,11 @@ with open("/tmp/minimal_route.py", "w") as f:
     f.write(minimal_route)
 
 # Replace the cameras route in the file
-os.system("sudo sed -i '/def cameras/,/return render_template.*cameras\.html.*cameras=cameras.*stats=stats.*/c\\n' /opt/amslpr/src/web/camera_routes.py")
-os.system("sudo sed -i '/def cameras/r /tmp/minimal_route.py' /opt/amslpr/src/web/camera_routes.py")
+os.system("sudo sed -i '/def cameras/,/return render_template.*cameras\.html.*cameras=cameras.*stats=stats.*/c\\n' /opt/visigate/src/web/camera_routes.py")
+os.system("sudo sed -i '/def cameras/r /tmp/minimal_route.py' /opt/visigate/src/web/camera_routes.py")
 
 print("Applied direct fix to the cameras route")
 
 # Restart the service
-os.system("sudo systemctl restart amslpr")
+os.system("sudo systemctl restart visigate")
 print("Service restarted. The cameras page should now load without errors.")

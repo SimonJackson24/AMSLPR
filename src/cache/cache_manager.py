@@ -11,7 +11,7 @@ from .redis_cache import RedisCache
 from .file_cache import FileCache
 from .result_cache import ResultCache
 
-logger = logging.getLogger('AMSLPR.cache')
+logger = logging.getLogger('VisiGate.cache')
 
 class CacheManager:
     """

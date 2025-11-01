@@ -1,6 +1,6 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
@@ -100,7 +100,7 @@ class TestSSLConfiguration(unittest.TestCase):
             x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
             x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "CA"),
             x509.NameAttribute(NameOID.LOCALITY_NAME, "San Francisco"),
-            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "AMSLPR Test"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "VisiGate Test"),
             x509.NameAttribute(NameOID.COMMON_NAME, "localhost"),
         ])
         

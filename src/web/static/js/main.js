@@ -1,5 +1,5 @@
 /**
- * AMSLPR - Main JavaScript File
+ * VisiGate - Main JavaScript File
  */
 
 // Initialize when DOM is ready
@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // AMSLPR Main JavaScript
+    // VisiGate Main JavaScript
     
     // Sidebar toggle - get sidebar elements once
     var sidebar = document.getElementById('sidebar');

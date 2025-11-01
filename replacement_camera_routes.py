@@ -1,12 +1,12 @@
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
 
 #!/usr/bin/env python3
 """
-Camera routes for the AMSLPR web application.
+Camera routes for the VisiGate web application.
 
 This module provides routes for managing ONVIF cameras and viewing license plate recognition results.
 """

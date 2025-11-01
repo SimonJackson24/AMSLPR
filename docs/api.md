@@ -1,10 +1,10 @@
-# AMSLPR API Documentation
+# VisiGate API Documentation
 
-This document describes the API endpoints provided by the AMSLPR system for integration with other systems.
+This document describes the API endpoints provided by the VisiGate system for integration with other systems.
 
 ## Base URL
 
-All API endpoints are relative to the base URL of your AMSLPR installation:
+All API endpoints are relative to the base URL of your VisiGate installation:
 
 ```
 https://<raspberry-pi-ip>/api
@@ -477,7 +477,7 @@ or in case of error:
 import requests
 import json
 
-# Base URL of the AMSLPR API
+# Base URL of the VisiGate API
 base_url = "https://192.168.1.100/api"
 
 # Get all authorized vehicles
@@ -501,7 +501,7 @@ print(f"Total vehicles in system: {stats['vehicle_stats']['total_vehicles']}")
 ### JavaScript Example
 
 ```javascript
-// Base URL of the AMSLPR API
+// Base URL of the VisiGate API
 const baseUrl = 'https://192.168.1.100/api';
 
 // Get all authorized vehicles

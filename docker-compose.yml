@@ -1,7 +1,7 @@
 version: '2'
 
 services:
-  amslpr:
+  visigate:
     build: .
     ports:
       - "5001:5001"

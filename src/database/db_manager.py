@@ -1,5 +1,5 @@
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
@@ -12,11 +12,11 @@ import shutil
 from datetime import datetime, timedelta
 import math
 
-logger = logging.getLogger('AMSLPR.database')
+logger = logging.getLogger('VisiGate.database')
 
 class DatabaseManager:
     """
-    Database manager for the AMSLPR system.
+    Database manager for the VisiGate system.
     Handles database operations for vehicle management and access logs.
     """
     
@@ -30,7 +30,7 @@ class DatabaseManager:
         self.config = config or {}
         
         # Always use the standard database path in the data directory
-        self.db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'amslpr.db')
+        self.db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'visiongate.db')
         self.backup_interval = self.config.get('backup_interval', 86400)  # 24 hours
         self.last_backup_time = 0
         
@@ -751,7 +751,7 @@ class DatabaseManager:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             backup_dir = os.path.join(os.path.dirname(self.db_path), 'backups')
             os.makedirs(backup_dir, exist_ok=True)
-            backup_path = os.path.join(backup_dir, f'amslpr_backup_{timestamp}.db')
+            backup_path = os.path.join(backup_dir, f'visiongate_backup_{timestamp}.db')
             
             # Copy database file
             shutil.copy2(self.db_path, backup_path)
@@ -1796,7 +1796,7 @@ class DatabaseManager:
             
             # Generate a secure random API key
             alphabet = string.ascii_letters + string.digits
-            key = 'amslpr_' + ''.join(secrets.choice(alphabet) for _ in range(32))
+            key = 'visiongate_' + ''.join(secrets.choice(alphabet) for _ in range(32))
             
             # Store in database
             conn = sqlite3.connect(self.db_path)

@@ -1,12 +1,12 @@
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
 
 #!/usr/bin/env python3
 """
-Mock Hailo TPU Module for AMSLPR
+Mock Hailo TPU Module for VisiGate
 
 This module provides a mock implementation of the Hailo TPU SDK for
 development and testing without requiring actual Hailo hardware.
@@ -25,7 +25,7 @@ import logging
 import numpy as np
 from pathlib import Path
 
-logger = logging.getLogger('AMSLPR.recognition.mock_hailo')
+logger = logging.getLogger('VisiGate.recognition.mock_hailo')
 
 class Device:
     """Mock implementation of Hailo device for development/testing"""

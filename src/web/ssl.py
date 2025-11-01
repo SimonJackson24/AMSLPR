@@ -1,6 +1,6 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
@@ -16,7 +16,7 @@ import subprocess
 from pathlib import Path
 from OpenSSL import crypto
 
-logger = logging.getLogger('AMSLPR.web.ssl')
+logger = logging.getLogger('VisiGate.web.ssl')
 
 def generate_self_signed_cert(cert_file, key_file, days=365, key_size=2048):
     """
@@ -51,8 +51,8 @@ def generate_self_signed_cert(cert_file, key_file, days=365, key_size=2048):
         cert.get_subject().C = "US"
         cert.get_subject().ST = "California"
         cert.get_subject().L = "Silicon Valley"
-        cert.get_subject().O = "AMSLPR"
-        cert.get_subject().OU = "AMSLPR System"
+        cert.get_subject().O = "VisiGate"
+        cert.get_subject().OU = "VisiGate System"
         cert.get_subject().CN = "localhost"
         cert.set_serial_number(1000)
         cert.gmtime_adj_notBefore(0)
@@ -143,7 +143,7 @@ def setup_ssl(config):
     
     # Use default paths if not specified
     if not cert_file or not key_file:
-        config_dir = os.environ.get('AMSLPR_CONFIG_DIR', '/etc/amslpr')
+        config_dir = os.environ.get('VISIGATE_CONFIG_DIR', '/etc/visigate')
         cert_file = os.path.join(config_dir, 'ssl', 'cert.pem')
         key_file = os.path.join(config_dir, 'ssl', 'key.pem')
     

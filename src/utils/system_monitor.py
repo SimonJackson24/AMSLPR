@@ -1,13 +1,13 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
 
 #!/usr/bin/env python3
 """
-System monitoring utilities for the AMSLPR system.
+System monitoring utilities for the VisiGate system.
 """
 
 import os
@@ -19,14 +19,14 @@ import json
 import threading
 from datetime import datetime
 
-logger = logging.getLogger('AMSLPR.system_monitor')
+logger = logging.getLogger('VisiGate.system_monitor')
 
 class SystemMonitor:
     """
-    System monitor for the AMSLPR system.
+    System monitor for the VisiGate system.
     """
     
-    def __init__(self, data_dir='/var/lib/amslpr', check_interval=60, notification_manager=None):
+    def __init__(self, data_dir='/var/lib/visigate', check_interval=60, notification_manager=None):
         """
         Initialize system monitor.
         
@@ -216,12 +216,12 @@ class SystemMonitor:
                 return
             
             # Create alert message
-            alert_message = "AMSLPR System Alerts:\n\n"
+            alert_message = "VisiGate System Alerts:\n\n"
             alert_message += "\n".join([f"- {alert}" for alert in alerts])
             
             # Send email notification
             self.notification_manager.send_email_notification(
-                subject="AMSLPR System Alert",
+                subject="VisiGate System Alert",
                 message=alert_message
             )
             
@@ -296,7 +296,7 @@ def setup_system_monitor(app):
         SystemMonitor: System monitor instance
     """
     # Get data directory from environment or config
-    data_dir = os.environ.get('AMSLPR_DATA_DIR', '/var/lib/amslpr')
+    data_dir = os.environ.get('VISIGATE_DATA_DIR', '/var/lib/visigate')
     
     # Get notification manager if available
     notification_manager = app.config.get('NOTIFICATION_MANAGER')

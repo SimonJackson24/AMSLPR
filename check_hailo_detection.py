@@ -116,7 +116,7 @@ def check_permissions():
         # Check application user/group
         try:
             import subprocess
-            result = subprocess.run("ps -ef | grep python | grep amslpr", shell=True, capture_output=True, text=True)
+            result = subprocess.run("ps -ef | grep python | grep visigate", shell=True, capture_output=True, text=True)
             logger.info(f"\nApplication process info:\n{result.stdout}")
         except Exception as e:
             logger.error(f"Error checking application process: {e}")
@@ -147,7 +147,7 @@ def main():
         logger.info("Please address the specific issues mentioned above rather than using workarounds")
     
     logger.info("\nTo check application logs for Hailo-related messages:")
-    logger.info("journalctl -u amslpr | grep -i hailo")
+    logger.info("journalctl -u visigate | grep -i hailo")
 
 if __name__ == "__main__":
     main()

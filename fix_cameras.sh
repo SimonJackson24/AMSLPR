@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Create a backup of the current file
-sudo cp /opt/amslpr/src/web/camera_routes.py /opt/amslpr/src/web/camera_routes.py.backup_$(date +%Y%m%d_%H%M%S)
+sudo cp /opt/visigate/src/web/camera_routes.py /opt/visigate/src/web/camera_routes.py.backup_$(date +%Y%m%d_%H%M%S)
 
 # Create a temporary file with the fixed cameras function
 cat > /tmp/cameras_function.py << 'EOF'
@@ -36,10 +36,10 @@ def cameras():
 EOF
 
 # Replace the cameras function in the file
-sudo sed -i '/def cameras():/,/return render_template.*cameras\.html.*cameras=cameras.*stats=stats.*/c\\n@camera_bp.route("/cameras")\n@login_required(user_manager)\n'"$(cat /tmp/cameras_function.py)" /opt/amslpr/src/web/camera_routes.py
+sudo sed -i '/def cameras():/,/return render_template.*cameras\.html.*cameras=cameras.*stats=stats.*/c\\n@camera_bp.route("/cameras")\n@login_required(user_manager)\n'"$(cat /tmp/cameras_function.py)" /opt/visigate/src/web/camera_routes.py
 
 # Restart the service
-sudo systemctl restart amslpr
+sudo systemctl restart visigate
 
 echo "Fix applied and service restarted."
 echo "Please try accessing the cameras page now."

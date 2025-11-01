@@ -1,13 +1,13 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
 
 #!/usr/bin/env python3
 """
-Paxton access control integration for AMSLPR system.
+Paxton access control integration for VisiGate system.
 
 This module provides functionality to integrate with Paxton access control systems
 using the Wiegand protocol for license plate data transmission.
@@ -17,13 +17,13 @@ import logging
 import time
 from .wiegand import WiegandTransmitter
 
-logger = logging.getLogger('AMSLPR.integration.paxton')
+logger = logging.getLogger('VisiGate.integration.paxton')
 
 class PaxtonIntegration:
     """
     Integration with Paxton access control systems.
     
-    This class handles the communication between the AMSLPR system and Paxton
+    This class handles the communication between the VisiGate system and Paxton
     access control systems, using the Wiegand protocol to transmit license plate
     data to the Paxton controller.
     """

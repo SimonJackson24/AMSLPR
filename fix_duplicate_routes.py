@@ -8,7 +8,7 @@ and ensuring the cameras function is properly implemented.
 import os
 
 # Create a backup of the current file
-os.system("sudo cp /opt/amslpr/src/web/camera_routes.py /opt/amslpr/src/web/camera_routes.py.backup_duplicate")
+os.system("sudo cp /opt/visigate/src/web/camera_routes.py /opt/visigate/src/web/camera_routes.py.backup_duplicate")
 print("Created backup of camera_routes.py")
 
 # The corrected cameras function
@@ -82,7 +82,7 @@ def cameras():
 '''
 
 # Remove all existing cameras route definitions and add the corrected one
-os.system("sudo grep -n '@camera_bp.route.*cameras' /opt/amslpr/src/web/camera_routes.py > /tmp/camera_routes.txt")
+os.system("sudo grep -n '@camera_bp.route.*cameras' /opt/visigate/src/web/camera_routes.py > /tmp/camera_routes.txt")
 
 with open("/tmp/camera_routes.txt", "r") as f:
     camera_routes = f.readlines()
@@ -99,7 +99,7 @@ if camera_routes:
     
     # Find the next route or function after the last camera route
     last_line = max(line_numbers)
-    os.system(f"sudo grep -n '@camera_bp.route\\|def ' /opt/amslpr/src/web/camera_routes.py | awk '$1 > {last_line}' | head -1 > /tmp/next_route.txt")
+    os.system(f"sudo grep -n '@camera_bp.route\\|def ' /opt/visigate/src/web/camera_routes.py | awk '$1 > {last_line}' | head -1 > /tmp/next_route.txt")
     
     with open("/tmp/next_route.txt", "r") as f:
         next_route = f.read().strip()
@@ -113,8 +113,8 @@ if camera_routes:
             f.write(corrected_cameras)
         
         # Remove all existing camera route definitions and add the corrected one
-        os.system(f"sudo sed -i '{first_line},{next_line-1}d' /opt/amslpr/src/web/camera_routes.py")
-        os.system(f"sudo sed -i '{first_line-1}r /tmp/corrected_cameras.py' /opt/amslpr/src/web/camera_routes.py")
+        os.system(f"sudo sed -i '{first_line},{next_line-1}d' /opt/visigate/src/web/camera_routes.py")
+        os.system(f"sudo sed -i '{first_line-1}r /tmp/corrected_cameras.py' /opt/visigate/src/web/camera_routes.py")
         
         print("Successfully replaced all camera route definitions with the corrected one")
     else:
@@ -123,5 +123,5 @@ else:
     print("Could not find any camera route definitions")
 
 # Restart the service
-os.system("sudo systemctl restart amslpr")
+os.system("sudo systemctl restart visigate")
 print("Service restarted. Please try accessing the cameras page now.")

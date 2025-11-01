@@ -25,7 +25,7 @@ logging.basicConfig(
     ]
 )
 
-logger = logging.getLogger("AMSLPR.install_hailo")
+logger = logging.getLogger("VisiGate.install_hailo")
 
 # Get project root directory
 project_root = Path(__file__).resolve().parent.parent

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# AMSLPR - Installation Script
-# This script installs the AMSLPR system with Hailo TPU support 
+# VisiGate - Installation Script
+# This script installs the VisiGate system with Hailo TPU support 
 # using pre-built packages and compatibility fallbacks
 # Version: 1.1.0
 
@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 
 # Print header
 echo -e "${GREEN}==================================================${NC}"
-echo -e "${GREEN}       AMSLPR Installation Script        ${NC}"
+echo -e "${GREEN}       VisiGate Installation Script        ${NC}"
 echo -e "${GREEN}==================================================${NC}"
 echo
 
@@ -32,10 +32,10 @@ cd "$SCRIPT_DIR/.."
 ROOT_DIR="$(pwd)"
 
 # Define installation directories
-INSTALL_DIR="/opt/amslpr"
-CONFIG_DIR="/etc/amslpr"
-LOG_DIR="/var/log/amslpr"
-DATA_DIR="/var/lib/amslpr"
+INSTALL_DIR="/opt/visigate"
+CONFIG_DIR="/etc/visigate"
+LOG_DIR="/var/log/visigate"
+DATA_DIR="/var/lib/visigate"
 
 # Create required directories
 echo -e "${YELLOW}Creating required directories...${NC}"
@@ -90,18 +90,18 @@ systemctl start redis-server
 
 # Create systemd service
 echo -e "${YELLOW}Creating systemd service...${NC}"
-cat > /etc/systemd/system/amslpr.service << EOL
+cat > /etc/systemd/system/visigate.service << EOL
 [Unit]
-Description=AMSLPR License Plate Recognition System
+Description=VisiGate License Plate Recognition System
 After=network.target redis-server.service
 
 [Service]
 Type=simple
 User=automate
 Group=automate
-WorkingDirectory=/opt/amslpr
-Environment=PYTHONPATH=/opt/amslpr:/opt/amslpr/venv/lib/python3.11/site-packages
-ExecStart=/opt/amslpr/venv/bin/python3 run_server.py --port 5004
+WorkingDirectory=/opt/visigate
+Environment=PYTHONPATH=/opt/visigate:/opt/visigate/venv/lib/python3.11/site-packages
+ExecStart=/opt/visigate/venv/bin/python3 run_server.py --port 5004
 Restart=always
 RestartSec=3
 
@@ -111,21 +111,21 @@ EOL
 
 # Reload systemd and enable service
 systemctl daemon-reload
-systemctl enable amslpr.service
+systemctl enable visigate.service
 
 echo -e "${GREEN}==================================================${NC}"
-echo -e "${GREEN}       AMSLPR Installation Complete!              ${NC}"
+echo -e "${GREEN}       VisiGate Installation Complete!              ${NC}"
 echo -e "${GREEN}==================================================${NC}"
 echo
-echo -e "${YELLOW}The AMSLPR service has been installed and configured.${NC}"
+echo -e "${YELLOW}The VisiGate service has been installed and configured.${NC}"
 echo -e "${YELLOW}You can control it using:${NC}"
-echo -e "  ${GREEN}sudo systemctl start amslpr${NC}"
-echo -e "  ${GREEN}sudo systemctl stop amslpr${NC}"
-echo -e "  ${GREEN}sudo systemctl restart amslpr${NC}"
-echo -e "  ${GREEN}sudo systemctl status amslpr${NC}"
+echo -e "  ${GREEN}sudo systemctl start visigate${NC}"
+echo -e "  ${GREEN}sudo systemctl stop visigate${NC}"
+echo -e "  ${GREEN}sudo systemctl restart visigate${NC}"
+echo -e "  ${GREEN}sudo systemctl status visigate${NC}"
 echo
 echo -e "${YELLOW}To view logs:${NC}"
-echo -e "  ${GREEN}sudo journalctl -u amslpr -f${NC}"
+echo -e "  ${GREEN}sudo journalctl -u visigate -f${NC}"
 echo
 echo -e "${YELLOW}The web interface will be available at:${NC}"
 echo -e "  ${GREEN}http://localhost:5004${NC}"

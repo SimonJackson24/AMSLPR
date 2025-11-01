@@ -1,6 +1,6 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
@@ -137,7 +137,7 @@ def main():
     # Get API key from configuration
     api_key = config.get('api', {}).get('key', 'test_api_key')
     
-    print("=== AMSLPR Integration Tests ===")
+    print("=== VisiGate Integration Tests ===")
     print(f"Base URL: {args.url}")
     print(f"API Key: {api_key}")
     

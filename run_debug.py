@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Debug runner for AMSLPR application.
+Debug runner for VisiGate application.
 This script runs the application with the Flask development server for debugging purposes.
 """
 
@@ -15,7 +15,7 @@ logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger('AMSLPR.debug')
+logger = logging.getLogger('VisiGate.debug')
 
 # Add src directory to path if needed
 src_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src')
@@ -38,7 +38,7 @@ def main():
         app.config['DEBUG'] = True
         
         # Run the application
-        logger.info("Starting AMSLPR in debug mode")
+        logger.info("Starting VisiGate in debug mode")
         app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
     except Exception as e:
         logger.error(f"Error starting debug server: {e}")

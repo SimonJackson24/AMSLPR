@@ -1,13 +1,13 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
 
 #!/usr/bin/env python3
 """
-Mock License Plate Detector for AMSLPR
+Mock License Plate Detector for VisiGate
 
 This module provides a mock implementation of the LicensePlateDetector class
 for testing and development purposes when the required dependencies (like TensorFlow)
@@ -21,7 +21,7 @@ import random
 import string
 from datetime import datetime
 
-logger = logging.getLogger('AMSLPR.recognition.mock_detector')
+logger = logging.getLogger('VisiGate.recognition.mock_detector')
 
 class MockLicensePlateDetector:
     """Mock implementation of the LicensePlateDetector class."""

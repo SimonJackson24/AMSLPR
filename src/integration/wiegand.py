@@ -1,13 +1,13 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
 
 #!/usr/bin/env python3
 """
-Wiegand protocol integration for AMSLPR system.
+Wiegand protocol integration for VisiGate system.
 
 This module provides functionality to send license plate data to Paxton access control systems
 using the Wiegand 26-bit protocol via GPIO pins on the Raspberry Pi.
@@ -24,7 +24,7 @@ except ImportError:
     GPIO_AVAILABLE = False
     logging.warning("RPi.GPIO not available. Running in simulation mode.")
 
-logger = logging.getLogger('AMSLPR.integration.wiegand')
+logger = logging.getLogger('VisiGate.integration.wiegand')
 
 class WiegandTransmitter:
     """

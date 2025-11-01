@@ -2,7 +2,7 @@
 
 set -e
 
-echo "Hailo TPU Model Download Script for AMSLPR"
+echo "Hailo TPU Model Download Script for VisiGate"
 echo "========================================="
 echo ""
 
@@ -110,7 +110,7 @@ echo "Important Notes:"
 echo "1. The Hailo SDK requires registration at https://hailo.ai/developer-zone/"
 echo "2. You need to download the appropriate Hailo SDK package for ARM64/Raspberry Pi"
 echo "   from the Hailo Developer Zone and place it in the /opt/hailo/packages directory."
-echo "3. After installing the Hailo SDK, run the enable_hailo_tpu.py script in your AMSLPR installation"
+echo "3. After installing the Hailo SDK, run the enable_hailo_tpu.py script in your VisiGate installation"
 echo "   to configure the OCR system to use these models."
 echo ""
 echo "For detailed instructions, see docs/raspberry_pi_hailo_setup.md"

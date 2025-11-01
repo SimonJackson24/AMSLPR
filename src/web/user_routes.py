@@ -1,12 +1,12 @@
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
 
 #!/usr/bin/env python3
 """
-User routes for AMSLPR system.
+User routes for VisiGate system.
 
 This module provides routes for user management.
 """
@@ -15,7 +15,7 @@ import logging
 from flask import Blueprint, redirect, url_for, render_template, session
 from src.utils.user_management import login_required, UserManager
 
-logger = logging.getLogger('AMSLPR.web.user')
+logger = logging.getLogger('VisiGate.web.user')
 
 # Create blueprint
 user_bp = Blueprint('user', __name__, url_prefix='/user')

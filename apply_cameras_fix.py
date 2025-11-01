@@ -12,7 +12,7 @@ import shutil
 from datetime import datetime
 
 # Path to the camera_routes.py file
-CAMERA_ROUTES_PATH = '/opt/amslpr/src/web/camera_routes.py'
+CAMERA_ROUTES_PATH = '/opt/visigate/src/web/camera_routes.py'
 
 # The fixed cameras function
 FIXED_CAMERAS_FUNCTION = '''
@@ -131,7 +131,7 @@ def main():
             f.write(new_content)
         
         print("Successfully applied the fix to the cameras function")
-        print("Restart the AMSLPR service to apply the changes")
+        print("Restart the VisiGate service to apply the changes")
     else:
         print("Error: Could not find the cameras function in the file")
         sys.exit(1)

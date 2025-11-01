@@ -2,7 +2,7 @@
 
 set -e
 
-echo "Copying Hailo models from Downloads folder to AMSLPR models directory"
+echo "Copying Hailo models from Downloads folder to VisiGate models directory"
 echo "================================================================"
 echo ""
 

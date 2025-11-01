@@ -1,5 +1,5 @@
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
@@ -21,7 +21,7 @@ logging.basicConfig(
         logging.StreamHandler(sys.stdout)
     ]
 )
-logger = logging.getLogger('AMSLPR.enable_hailo')
+logger = logging.getLogger('VisiGate.enable_hailo')
 
 # Get project root
 project_root = Path(__file__).parent.parent
@@ -200,8 +200,8 @@ def main():
     
     if success:
         logger.info("Hailo TPU has been enabled in the OCR configuration")
-        logger.info("Restart the AMSLPR service for changes to take effect")
-        logger.info("Run 'sudo systemctl restart amslpr' to restart the service")
+        logger.info("Restart the VisiGate service for changes to take effect")
+        logger.info("Run 'sudo systemctl restart visigate' to restart the service")
     else:
         logger.error("Failed to enable Hailo TPU")
 

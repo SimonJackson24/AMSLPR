@@ -1,14 +1,14 @@
-# AMSLPR Reports and Notifications User Guide
+# VisiGate Reports and Notifications User Guide
 
-This guide provides instructions on how to use the reporting and notification features of the AMSLPR system.
+This guide provides instructions on how to use the reporting and notification features of the VisiGate system.
 
 ## Reports
 
-The AMSLPR system can generate comprehensive PDF reports that provide insights into your parking system's usage patterns and statistics. These reports are useful for analyzing trends, planning capacity, and making data-driven decisions about your parking facility.
+The VisiGate system can generate comprehensive PDF reports that provide insights into your parking system's usage patterns and statistics. These reports are useful for analyzing trends, planning capacity, and making data-driven decisions about your parking facility.
 
 ### Accessing Reports
 
-1. Log in to the AMSLPR web interface
+1. Log in to the VisiGate web interface
 2. Click on the "Reports" link in the main navigation menu
 3. The reports page displays options for generating different types of reports
 
@@ -70,7 +70,7 @@ All generated reports are listed in the "Previous Reports" section of the report
 
 ## Notifications
 
-The AMSLPR system can send notifications when unauthorized vehicles attempt to access your parking facility. This feature helps you respond quickly to potential security issues.
+The VisiGate system can send notifications when unauthorized vehicles attempt to access your parking facility. This feature helps you respond quickly to potential security issues.
 
 ### Notification Channels
 
@@ -82,7 +82,7 @@ The system supports three notification channels:
 
 ### Configuring Notifications
 
-1. Log in to the AMSLPR web interface
+1. Log in to the VisiGate web interface
 2. Click on your username in the top-right corner
 3. Select "Notification Settings" from the dropdown menu
 4. Configure each notification channel as needed

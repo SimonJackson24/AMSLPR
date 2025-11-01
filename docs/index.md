@@ -1,15 +1,15 @@
-# AMSLPR Documentation
+# VisiGate Documentation
 
 ```{include} ../README.md
 :start-after: <!-- start docs -->
 :end-before: <!-- end docs -->
 ```
 
-Welcome to the comprehensive documentation for AMSLPR (Automate Systems License Plate Recognition), a cutting-edge license plate recognition system designed for automated vehicle access control and monitoring.
+Welcome to the comprehensive documentation for VisiGate (Vision-Based Access Control System), a cutting-edge license plate recognition system designed for automated vehicle access control and monitoring.
 
 ## 🚀 Quick Start
 
-Get up and running with AMSLPR in minutes:
+Get up and running with VisiGate in minutes:
 
 1. **Installation**: [Quick Installation Guide](installation.md)
 2. **Configuration**: [Basic Configuration](deployment/configuration.md#quick-start)
@@ -26,14 +26,14 @@ Get up and running with AMSLPR in minutes:
 :link: installation
 :link-type: doc
 
-New to AMSLPR? Start here with installation and basic setup guides.
+New to VisiGate? Start here with installation and basic setup guides.
 ```
 
 ```{grid-item-card} 🔧 Configuration
 :link: deployment/configuration
 :link-type: doc
 
-Complete configuration reference for all AMSLPR parameters and options.
+Complete configuration reference for all VisiGate parameters and options.
 ```
 
 ```{grid-item-card} 📡 API Reference
@@ -47,7 +47,7 @@ Interactive API documentation with examples and code samples.
 :link: deployment/docker_deployment
 :link-type: doc
 
-Deploy AMSLPR using Docker, Kubernetes, or traditional methods.
+Deploy VisiGate using Docker, Kubernetes, or traditional methods.
 ```
 
 ### 🛠️ For Administrators
@@ -59,7 +59,7 @@ Deploy AMSLPR using Docker, Kubernetes, or traditional methods.
 :link: maintenance/performance_tuning
 :link-type: doc
 
-Optimize AMSLPR performance for your specific use case and scale.
+Optimize VisiGate performance for your specific use case and scale.
 ```
 
 ```{grid-item-card} 📊 Monitoring
@@ -99,7 +99,7 @@ System architecture, design patterns, and component interactions.
 :link: api/examples
 :link-type: doc
 
-Integrate AMSLPR with your existing systems and workflows.
+Integrate VisiGate with your existing systems and workflows.
 ```
 
 ```{grid-item-card} 🧪 Testing
@@ -113,7 +113,7 @@ Testing strategies, frameworks, and best practices.
 :link: development/contributing
 :link-type: doc
 
-Contribute to AMSLPR development and join the community.
+Contribute to VisiGate development and join the community.
 ```
 
 ## 🌟 Key Features
@@ -280,7 +280,7 @@ See our [Contributing Guide](development/contributing.md) for detailed instructi
 ## 📞 Contact Information
 
 ### Support
-- **Email**: support@automatesystems.com
+- **Email**: support@visigate.com
 - **Phone**: +1 (555) 123-4567
 - **Hours**: Monday-Friday, 9 AM - 6 PM EST
 
@@ -294,12 +294,12 @@ See our [Contributing Guide](development/contributing.md) for detailed instructi
 
 ## 📜 License
 
-AMSLPR is proprietary software developed by Automate Systems. This documentation is licensed under the same terms as the AMSLPR software.
+VisiGate is proprietary software developed by VisiGate. This documentation is licensed under the same terms as the VisiGate software.
 
 ---
 
 ```{admonition} 🎉 Getting Started
-Ready to get started with AMSLPR? Head over to our [Installation Guide](installation.md) to begin your journey!
+Ready to get started with VisiGate? Head over to our [Installation Guide](installation.md) to begin your journey!
 ```
 
 ```{admonition} 📣 Latest Updates

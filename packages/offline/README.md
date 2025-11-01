@@ -1,4 +1,4 @@
-# AMSLPR Offline Installation Package
+# VisiGate Offline Installation Package
 
 ## Installation Instructions
 

@@ -34,10 +34,10 @@ def set_environment_variable():
             logger.warning("! HAILO_ENABLED environment variable is not set in current process")
         
         # Restart the service to apply changes
-        logger.info("\nRestarting the AMSLPR service to apply changes...")
-        restart_cmd = "sudo systemctl restart amslpr"
+        logger.info("\nRestarting the VisiGate service to apply changes...")
+        restart_cmd = "sudo systemctl restart visigate"
         subprocess.run(restart_cmd, shell=True, check=True)
-        logger.info("✓ AMSLPR service restarted successfully")
+        logger.info("✓ VisiGate service restarted successfully")
         
         return True
     except Exception as e:
@@ -54,4 +54,4 @@ if __name__ == "__main__":
         logger.info("Please refresh the page to see the changes.")
     else:
         logger.error("\n✗ Failed to enable Hailo TPU in the environment.")
-        logger.info("Please try manually running:\n\nexport HAILO_ENABLED=true\nsudo systemctl restart amslpr")
+        logger.info("Please try manually running:\n\nexport HAILO_ENABLED=true\nsudo systemctl restart visigate")

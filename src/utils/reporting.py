@@ -1,6 +1,6 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
@@ -10,7 +10,7 @@
 Reporting module for generating PDF reports from statistics data.
 
 This module provides functionality to generate PDF reports of various statistics
-collected by the AMSLPR system, including daily traffic, hourly distribution,
+collected by the VisiGate system, including daily traffic, hourly distribution,
 vehicle statistics, and parking duration statistics.
 """
 
@@ -28,7 +28,7 @@ class ReportGenerator:
     Class for generating PDF reports from statistics data.
     """
     
-    def __init__(self, statistics_manager, output_dir='/home/simon/Projects/AMSLPR/reports'):
+    def __init__(self, statistics_manager, output_dir='/home/simon/Projects/VisiGate/reports'):
         """
         Initialize the ReportGenerator with a StatisticsManager instance.
         
@@ -72,9 +72,9 @@ class ReportGenerator:
             fig = Figure(figsize=(8.5, 11))
             ax = fig.add_subplot(111)
             ax.axis('off')
-            ax.text(0.5, 0.8, 'AMSLPR Daily Report', fontsize=24, ha='center')
+            ax.text(0.5, 0.8, 'VisiGate Daily Report', fontsize=24, ha='center')
             ax.text(0.5, 0.7, f"Date: {date.strftime('%Y-%m-%d')}", fontsize=18, ha='center')
-            ax.text(0.5, 0.6, 'Automate Systems License Plate Recognition', fontsize=14, ha='center')
+            ax.text(0.5, 0.6, 'Vision-Based Access Control System', fontsize=14, ha='center')
             ax.text(0.5, 0.5, f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", fontsize=12, ha='center')
             pdf.savefig(fig)
             plt.close(fig)
@@ -203,10 +203,10 @@ class ReportGenerator:
             fig = Figure(figsize=(8.5, 11))
             ax = fig.add_subplot(111)
             ax.axis('off')
-            ax.text(0.5, 0.8, 'AMSLPR Weekly Report', fontsize=24, ha='center')
+            ax.text(0.5, 0.8, 'VisiGate Weekly Report', fontsize=24, ha='center')
             ax.text(0.5, 0.7, f"Period: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}", 
                    fontsize=18, ha='center')
-            ax.text(0.5, 0.6, 'Automate Systems License Plate Recognition', fontsize=14, ha='center')
+            ax.text(0.5, 0.6, 'Vision-Based Access Control System', fontsize=14, ha='center')
             ax.text(0.5, 0.5, f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", 
                    fontsize=12, ha='center')
             pdf.savefig(fig)
@@ -361,9 +361,9 @@ class ReportGenerator:
             fig = Figure(figsize=(8.5, 11))
             ax = fig.add_subplot(111)
             ax.axis('off')
-            ax.text(0.5, 0.8, 'AMSLPR Monthly Report', fontsize=24, ha='center')
+            ax.text(0.5, 0.8, 'VisiGate Monthly Report', fontsize=24, ha='center')
             ax.text(0.5, 0.7, f"Month: {start_date.strftime('%B %Y')}", fontsize=18, ha='center')
-            ax.text(0.5, 0.6, 'Automate Systems License Plate Recognition', fontsize=14, ha='center')
+            ax.text(0.5, 0.6, 'Vision-Based Access Control System', fontsize=14, ha='center')
             ax.text(0.5, 0.5, f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", 
                    fontsize=12, ha='center')
             pdf.savefig(fig)

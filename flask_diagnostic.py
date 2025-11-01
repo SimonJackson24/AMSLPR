@@ -10,13 +10,13 @@ import logging
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger('AMSLPR.flask_diagnostic')
+logger = logging.getLogger('VisiGate.flask_diagnostic')
 
 # Create a file for output
 output_file = '/tmp/flask_diagnostic.log'
 
-# Add AMSLPR to Python path
-sys.path.append('/opt/amslpr')
+# Add VisiGate to Python path
+sys.path.append('/opt/visigate')
 
 try:
     # Try to import Flask app
@@ -60,32 +60,32 @@ try:
     # Don't actually run the app, just print instructions
     print(f"Diagnostic complete. Check {output_file} for results.")
     print("To test the Flask app directly, you can run:")
-    print("cd /opt/amslpr && python -m src.web.app")
+    print("cd /opt/visigate && python -m src.web.app")
     
     # Create a simple fix script
     fix_script = '''
 #!/usr/bin/env python3
 
 """
-Emergency fix for AMSLPR - redirects problematic routes to dashboard.
+Emergency fix for VisiGate - redirects problematic routes to dashboard.
 """
 
 import os
 
 # Create a backup of the current app.py
-os.system("sudo cp /opt/amslpr/src/web/app.py /opt/amslpr/src/web/app.py.backup")
+os.system("sudo cp /opt/visigate/src/web/app.py /opt/visigate/src/web/app.py.backup")
 
 # Create a new app.py with error handling
 new_app = """
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
 
 #!/usr/bin/env python3
 \"\"\"
-Main Flask application for AMSLPR.
+Main Flask application for VisiGate.
 \"\"\"
 
 import os
@@ -95,7 +95,7 @@ from flask import Flask, render_template, redirect, url_for, request, jsonify
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger('AMSLPR.app')
+logger = logging.getLogger('VisiGate.app')
 
 def create_app(config=None):
     \"\"\"
@@ -187,13 +187,13 @@ with open("/tmp/new_app.py", "w") as f:
     f.write(new_app)
 
 # Replace the app.py file
-os.system("sudo cp /tmp/new_app.py /opt/amslpr/src/web/app.py")
+os.system("sudo cp /tmp/new_app.py /opt/visigate/src/web/app.py")
 
 print("Successfully replaced app.py with emergency version")
 
 # Restart the service
-os.system("sudo systemctl restart amslpr")
-print("Restarted AMSLPR service")
+os.system("sudo systemctl restart visigate")
+print("Restarted VisiGate service")
 
 print("Emergency fix applied. Problematic routes will now redirect to the dashboard.")
 '''

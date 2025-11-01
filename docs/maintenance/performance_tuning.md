@@ -1,6 +1,6 @@
 # Performance Tuning Guide
 
-This guide provides comprehensive strategies for optimizing AMSLPR performance across different deployment scenarios.
+This guide provides comprehensive strategies for optimizing VisiGate performance across different deployment scenarios.
 
 ## Performance Monitoring
 
@@ -46,7 +46,7 @@ print(f"Memory usage: {metrics['memory_percent']}%")
 ```yaml
 # Prometheus configuration
 scrape_configs:
-  - job_name: 'amslpr'
+  - job_name: 'visigate'
     static_configs:
       - targets: ['localhost:5001']
     metrics_path: '/metrics'
@@ -159,7 +159,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
 taskset -c 0-3 python run_server.py
 
 # For Docker containers
-docker run --cpuset-cpus="0-3" amslpr:latest
+docker run --cpuset-cpus="0-3" visigate:latest
 ```
 
 ### Memory Optimization
@@ -285,12 +285,12 @@ EXPLAIN QUERY PLAN SELECT * FROM access_logs WHERE plate_number = ? AND access_t
 
 ```bash
 # Regular maintenance tasks
-sqlite3 data/amslpr.db "VACUUM;"
-sqlite3 data/amslpr.db "REINDEX;"
-sqlite3 data/amslpr.db "ANALYZE;"
+sqlite3 data/visigate.db "VACUUM;"
+sqlite3 data/visigate.db "REINDEX;"
+sqlite3 data/visigate.db "ANALYZE;"
 
 # Backup with compression
-sqlite3 data/amslpr.db ".backup backup.db"
+sqlite3 data/visigate.db ".backup backup.db"
 gzip backup.db
 ```
 
@@ -345,12 +345,12 @@ socketio = SocketIO(
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: amslpr-hpa
+  name: visigate-hpa
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: amslpr
+    name: visigate
   minReplicas: 2
   maxReplicas: 10
   metrics:
@@ -366,17 +366,17 @@ spec:
 
 ```yaml
 # NGINX load balancer configuration
-upstream amslpr_backend {
+upstream visigate_backend {
     least_conn;
-    server amslpr-1:5001;
-    server amslpr-2:5001;
-    server amslpr-3:5001;
+    server visigate-1:5001;
+    server visigate-2:5001;
+    server visigate-3:5001;
 }
 
 server {
     listen 80;
     location / {
-        proxy_pass http://amslpr_backend;
+        proxy_pass http://visigate_backend;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -421,10 +421,10 @@ print(f"Throughput: {results['ocr_batch']['throughput']} images/sec")
 ```yaml
 # Prometheus alerting rules
 groups:
-  - name: amslpr_performance
+  - name: visigate_performance
     rules:
       - alert: HighOCRProcessingTime
-        expr: amslpr_ocr_processing_time > 500
+        expr: visigate_ocr_processing_time > 500
         for: 5m
         labels:
           severity: warning
@@ -447,12 +447,12 @@ groups:
 ```yaml
 # Grafana dashboard configuration
 dashboard:
-  title: AMSLPR Performance
+  title: VisiGate Performance
   panels:
     - title: OCR Processing Time
       type: graph
       targets:
-        - expr: amslpr_ocr_processing_time
+        - expr: visigate_ocr_processing_time
           legendFormat: "OCR Time"
 
     - title: System Resources
@@ -502,19 +502,19 @@ dashboard:
 # Daily tasks
 #!/bin/bash
 # Clear old cache entries
-redis-cli KEYS "amslpr:*" | xargs redis-cli DEL
+redis-cli KEYS "visigate:*" | xargs redis-cli DEL
 
 # Optimize database
-sqlite3 data/amslpr.db "VACUUM;"
+sqlite3 data/visigate.db "VACUUM;"
 
 # Rotate logs
-logrotate /etc/logrotate.d/amslpr
+logrotate /etc/logrotate.d/visigate
 
 # Weekly tasks
 #!/bin/bash
 # Full database optimization
-sqlite3 data/amslpr.db "REINDEX;"
-sqlite3 data/amslpr.db "ANALYZE;"
+sqlite3 data/visigate.db "REINDEX;"
+sqlite3 data/visigate.db "ANALYZE;"
 
 # Clean old images
 find /app/data/images -type f -mtime +30 -delete

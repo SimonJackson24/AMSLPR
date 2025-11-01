@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Fix for the NumPy module error that's preventing the AMSLPR service from starting
+Fix for the NumPy module error that's preventing the VisiGate service from starting
 """
 
 import os
@@ -43,7 +43,7 @@ def fix_numpy_issue():
     try:
         # Find the multiarray.py file
         result = subprocess.run(
-            ["find", "/opt/amslpr/venv", "-name", "multiarray.py"],
+            ["find", "/opt/visigate/venv", "-name", "multiarray.py"],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -132,22 +132,22 @@ def main():
     
     if fix_numpy_issue():
         logger.info("\n✓ NumPy issue fixed successfully!")
-        logger.info("Restarting AMSLPR service...")
+        logger.info("Restarting VisiGate service...")
         try:
             subprocess.run(
-                ["sudo", "systemctl", "restart", "amslpr"],
+                ["sudo", "systemctl", "restart", "visigate"],
                 check=True
             )
-            logger.info("\n✓ AMSLPR service restarted successfully")
+            logger.info("\n✓ VisiGate service restarted successfully")
             logger.info("Wait a few moments, then check the service status:")
-            logger.info("sudo systemctl status amslpr")
+            logger.info("sudo systemctl status visigate")
         except Exception as e:
             logger.error(f"Error restarting service: {e}")
     else:
         logger.error("\n✗ Failed to fix NumPy issue")
         logger.info("Try manually reinstalling NumPy in the virtual environment:")
-        logger.info("sudo -u www-data /opt/amslpr/venv/bin/pip uninstall -y numpy")
-        logger.info("sudo -u www-data /opt/amslpr/venv/bin/pip install numpy==1.24.3")
+        logger.info("sudo -u www-data /opt/visigate/venv/bin/pip uninstall -y numpy")
+        logger.info("sudo -u www-data /opt/visigate/venv/bin/pip install numpy==1.24.3")
 
 if __name__ == "__main__":
     main()

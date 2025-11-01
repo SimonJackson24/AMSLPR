@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Install TensorFlow for AMSLPR in a virtual environment
+Install TensorFlow for VisiGate in a virtual environment
 """
 
 import os
@@ -111,16 +111,16 @@ def install_tensorflow_in_venv():
     
     return True
 
-def configure_amslpr_for_venv():
-    """Configure AMSLPR to use the virtual environment"""
-    log.info("\nConfiguring AMSLPR service to use the virtual environment...")
+def configure_visigate_for_venv():
+    """Configure VisiGate to use the virtual environment"""
+    log.info("\nConfiguring VisiGate service to use the virtual environment...")
     
     # Create or update the service file to use the venv python
-    service_file = Path('/etc/systemd/system/amslpr.service')
+    service_file = Path('/etc/systemd/system/visigate.service')
     
     if not service_file.exists():
         log.warning(f"Service file not found at {service_file}, skipping configuration.")
-        log.info("To manually configure AMSLPR, edit the service file to use venv/bin/python")
+        log.info("To manually configure VisiGate, edit the service file to use venv/bin/python")
         return True
     
     # Read existing service file
@@ -147,11 +147,11 @@ def configure_amslpr_for_venv():
             new_content.append(line)
         
         # Write updated service file
-        with open('/tmp/amslpr.service.new', 'w') as f:
+        with open('/tmp/visigate.service.new', 'w') as f:
             f.write('\n'.join(new_content))
         
         # Move updated file to service location
-        if not run_command(f"mv /tmp/amslpr.service.new {service_file}"):
+        if not run_command(f"mv /tmp/visigate.service.new {service_file}"):
             log.error("Failed to update service file")
             return False
         
@@ -167,8 +167,8 @@ def configure_amslpr_for_venv():
         return False
 
 def install_tensorflow():
-    """Main function to install TensorFlow for AMSLPR"""
-    log.info("======== Installing TensorFlow for AMSLPR ========")
+    """Main function to install TensorFlow for VisiGate"""
+    log.info("======== Installing TensorFlow for VisiGate ========")
     
     # Check if running on Raspberry Pi
     if not platform.machine().startswith('arm') and not platform.machine().startswith('aarch'):
@@ -194,18 +194,18 @@ def install_tensorflow():
         log.error("Failed to install TensorFlow in virtual environment")
         return False
     
-    # 4. Configure AMSLPR to use the virtual environment
-    if not configure_amslpr_for_venv():
-        log.warning("Failed to configure AMSLPR to use virtual environment automatically")
-        log.warning("You may need to manually update the AMSLPR service")
+    # 4. Configure VisiGate to use the virtual environment
+    if not configure_visigate_for_venv():
+        log.warning("Failed to configure VisiGate to use virtual environment automatically")
+        log.warning("You may need to manually update the VisiGate service")
     
     log.info("\n======== TensorFlow Installation Complete ========")
     log.info(f"TensorFlow has been installed in the virtual environment at: {VENV_PATH}")
     log.info("To activate the virtual environment: ")
     log.info(f"source {VENV_PATH}/bin/activate")
     
-    log.info("\nTo use TensorFlow with AMSLPR, restart the service:")
-    log.info("sudo systemctl restart amslpr")
+    log.info("\nTo use TensorFlow with VisiGate, restart the service:")
+    log.info("sudo systemctl restart visigate")
     
     return True
 

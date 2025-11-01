@@ -22,9 +22,9 @@
                         {% endfor %}
                     </select>
                     <small class="form-text text-muted">
-                        <strong>Standalone:</strong> AMSLPR controls the barrier directly and checks vehicle authorization in its own database.<br>
-                        <strong>Paxton:</strong> AMSLPR sends all detected license plates to Paxton via Wiegand protocol, and Paxton handles authorization and barrier control.<br>
-                        <strong>Nayax:</strong> AMSLPR integrates with Nayax payment system for parking fee management.
+                        <strong>Standalone:</strong> VisiGate controls the barrier directly and checks vehicle authorization in its own database.<br>
+                        <strong>Paxton:</strong> VisiGate sends all detected license plates to Paxton via Wiegand protocol, and Paxton handles authorization and barrier control.<br>
+                        <strong>Nayax:</strong> VisiGate integrates with Nayax payment system for parking fee management.
                     </small>
                 </div>
                 
@@ -34,7 +34,7 @@
                     <div class="alert alert-info">
                         <i class="bi bi-info-circle"></i> 
                         In Paxton mode, the system will send <strong>all</strong> detected license plates to Paxton using the Wiegand 26-bit protocol.
-                        License plates are converted to numeric codes that Paxton can process. The AMSLPR database is bypassed for authorization
+                        License plates are converted to numeric codes that Paxton can process. The VisiGate database is bypassed for authorization
                         decisions, allowing Paxton to handle all access control.
                     </div>
                     

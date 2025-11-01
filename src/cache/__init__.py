@@ -1,5 +1,5 @@
 """
-Caching module for AMSLPR recognition system.
+Caching module for VisiGate recognition system.
 Provides multi-tier caching with in-memory, Redis, and file-based storage.
 """
 

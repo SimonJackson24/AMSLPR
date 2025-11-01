@@ -7,20 +7,20 @@ Emergency fix for the cameras page - redirect to dashboard.
 import os
 
 # Create a backup of the current camera_routes.py if it doesn't already exist
-os.system("sudo cp /opt/amslpr/src/web/camera_routes.py /opt/amslpr/src/web/camera_routes.py.backup_redirect 2>/dev/null || true")
+os.system("sudo cp /opt/visigate/src/web/camera_routes.py /opt/visigate/src/web/camera_routes.py.backup_redirect 2>/dev/null || true")
 print("Created backup of camera_routes.py")
 
 # Create an emergency version of camera_routes.py that redirects to dashboard
 emergency_routes = '''
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
 
 #!/usr/bin/env python3
 """
-Emergency camera routes for the AMSLPR web application.
+Emergency camera routes for the VisiGate web application.
 This version redirects the cameras page to the dashboard to avoid errors.
 """
 
@@ -29,7 +29,7 @@ from flask import Blueprint, redirect, url_for
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger('AMSLPR.web.cameras')
+logger = logging.getLogger('VisiGate.web.cameras')
 
 # Create blueprint
 camera_bp = Blueprint('camera', __name__)
@@ -81,12 +81,12 @@ with open("/tmp/emergency_camera_routes.py", "w") as f:
     f.write(emergency_routes)
 
 # Replace the camera_routes.py file
-os.system("sudo cp /tmp/emergency_camera_routes.py /opt/amslpr/src/web/camera_routes.py")
+os.system("sudo cp /tmp/emergency_camera_routes.py /opt/visigate/src/web/camera_routes.py")
 
 print("Successfully replaced camera_routes.py with emergency redirect version")
 
 # Restart the service
-os.system("sudo systemctl restart amslpr")
-print("Restarted AMSLPR service")
+os.system("sudo systemctl restart visigate")
+print("Restarted VisiGate service")
 
 print("Emergency fix applied. The cameras page will now redirect to the dashboard to avoid errors.")

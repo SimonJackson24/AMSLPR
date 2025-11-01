@@ -8,7 +8,7 @@ import os
 import sys
 
 # Path to the camera_routes.py file
-CAMERA_ROUTES_PATH = '/opt/amslpr/src/web/camera_routes.py'
+CAMERA_ROUTES_PATH = '/opt/visigate/src/web/camera_routes.py'
 
 # Create a backup
 backup_path = f"{CAMERA_ROUTES_PATH}.backup_direct"
@@ -87,4 +87,4 @@ else:
     print("Could not find the cameras route definition")
     sys.exit(1)
 
-print("Fix applied. Please restart the AMSLPR service.")
+print("Fix applied. Please restart the VisiGate service.")

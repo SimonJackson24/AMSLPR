@@ -95,7 +95,7 @@ def main():
     log.info("\nInstallation complete! Next steps:")
     log.info("1. Run 'python scripts/download_hailo_models.py' to download the required models")
     log.info("2. Run 'python scripts/enable_hailo_tpu.py' to configure the system for TPU usage")
-    log.info("3. Restart the AMSLPR application")
+    log.info("3. Restart the VisiGate application")
     
     return True
 

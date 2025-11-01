@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Error Handling module provides comprehensive error tracking, logging, and notification capabilities for the AMSLPR system. It ensures that errors are properly captured, logged, and that administrators are notified of critical issues, enabling quick resolution and minimizing system downtime.
+The Error Handling module provides comprehensive error tracking, logging, and notification capabilities for the VisiGate system. It ensures that errors are properly captured, logged, and that administrators are notified of critical issues, enabling quick resolution and minimizing system downtime.
 
 ## Module Structure
 
@@ -39,7 +39,7 @@ class ErrorHandler:
         os.makedirs(self.log_path, exist_ok=True)
         
         # Initialize logger
-        self.logger = logging.getLogger('AMSLPR.error_handler')
+        self.logger = logging.getLogger('VisiGate.error_handler')
         
         # Set up file handler for error logs
         self._setup_file_handler()
@@ -174,8 +174,8 @@ def _send_error_notification(self, error_details):
     email_config = self.config['error_handling']['email_config']
     
     # Create email subject and body
-    subject = f"AMSLPR Error: {error_details['error_type']} in {error_details['module']}"
-    body = f"""An error occurred in the AMSLPR system:
+    subject = f"VisiGate Error: {error_details['error_type']} in {error_details['module']}"
+    body = f"""An error occurred in the VisiGate system:
 
 Timestamp: {error_details['timestamp']}
 Error Type: {error_details['error_type']}
@@ -442,7 +442,7 @@ The Error Handling module is configured through the `error_handling` section in 
         "port": 587,
         "username": "user@example.com",
         "password": "password",
-        "from_addr": "amslpr@example.com",
+        "from_addr": "visigate@example.com",
         "to_addrs": ["admin@example.com"]
     }
 }

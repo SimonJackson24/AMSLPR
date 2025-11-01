@@ -3,7 +3,7 @@ import sys
 import os
 
 # Add virtual environment site-packages to Python path
-venv_path = "/opt/amslpr/venv/lib/python3.11/site-packages"
+venv_path = "/opt/visigate/venv/lib/python3.11/site-packages"
 sys.path.insert(0, venv_path)
 
 from onvif2 import ONVIFCamera, ONVIFService, ONVIFError

@@ -21,12 +21,12 @@ def check_database_path():
     """Check all possible database paths in the codebase."""
     # List of potential database paths
     potential_paths = [
-        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'amslpr.db'),
-        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'instance', 'amslpr.db'),
-        'data/amslpr.db',
-        'instance/amslpr.db',
-        '/home/pi/AMSLPR/data/amslpr.db',
-        '/home/pi/AMSLPR/instance/amslpr.db'
+        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'visigate.db'),
+        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'instance', 'visigate.db'),
+        'data/visigate.db',
+        'instance/visigate.db',
+        '/home/pi/VisiGate/data/visigate.db',
+        '/home/pi/VisiGate/instance/visigate.db'
     ]
     
     logger.info("===== CHECKING POTENTIAL DATABASE PATHS =====")

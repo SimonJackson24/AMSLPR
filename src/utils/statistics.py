@@ -1,6 +1,6 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
@@ -13,11 +13,11 @@ import numpy as np
 from collections import Counter
 
 # Configure logging
-logger = logging.getLogger('AMSLPR.statistics')
+logger = logging.getLogger('VisiGate.statistics')
 
 class StatisticsManager:
     """
-    Manages statistics and analytics for the AMSLPR system.
+    Manages statistics and analytics for the VisiGate system.
     """
     
     def __init__(self, db_manager):

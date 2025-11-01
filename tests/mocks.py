@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Mock objects and utilities for AMSLPR testing.
+Mock objects and utilities for VisiGate testing.
 """
 
 import numpy as np

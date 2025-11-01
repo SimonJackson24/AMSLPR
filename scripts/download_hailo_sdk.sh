@@ -2,7 +2,7 @@
 
 set -e
 
-echo "Hailo SDK Auto-Download Script for AMSLPR"
+echo "Hailo SDK Auto-Download Script for VisiGate"
 echo "======================================="
 echo ""
 
@@ -170,4 +170,4 @@ echo ""
 echo "The following models are available in $MODELS_DIR:"
 ls -la "$MODELS_DIR"
 echo ""
-echo "These packages and models will be used during the AMSLPR installation."
+echo "These packages and models will be used during the VisiGate installation."

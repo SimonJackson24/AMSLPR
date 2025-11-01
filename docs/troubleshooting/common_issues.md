@@ -1,6 +1,6 @@
 # Common Issues and Solutions
 
-This guide covers the most common issues encountered with AMSLPR and provides step-by-step solutions.
+This guide covers the most common issues encountered with VisiGate and provides step-by-step solutions.
 
 ## System Startup Issues
 
@@ -48,22 +48,22 @@ This guide covers the most common issues encountered with AMSLPR and provides st
 
 1. **Check Database File:**
    ```bash
-   ls -la data/amslpr.db
-   file data/amslpr.db
+   ls -la data/visigate.db
+   file data/visigate.db
    ```
 
 2. **Repair Database:**
    ```bash
-   sqlite3 data/amslpr.db ".schema" > schema.sql
-   sqlite3 data/amslpr.db ".dump" > backup.sql
-   rm data/amslpr.db
-   sqlite3 data/amslpr.db < schema.sql
+   sqlite3 data/visigate.db ".schema" > schema.sql
+   sqlite3 data/visigate.db ".dump" > backup.sql
+   rm data/visigate.db
+   sqlite3 data/visigate.db < schema.sql
    ```
 
 3. **Check Database Permissions:**
    ```bash
-   chmod 666 data/amslpr.db
-   chown www-data:www-data data/amslpr.db
+   chmod 666 data/visigate.db
+   chown www-data:www-data data/visigate.db
    ```
 
 ## Camera Connection Issues
@@ -393,7 +393,7 @@ This guide covers the most common issues encountered with AMSLPR and provides st
 
 2. **Configure Log Rotation:**
    ```bash
-   # /etc/logrotate.d/amslpr
+   # /etc/logrotate.d/visigate
    /app/logs/*.log {
        daily
        rotate 7
@@ -421,7 +421,7 @@ This guide covers the most common issues encountered with AMSLPR and provides st
 1. **Check File Permissions:**
    ```bash
    ls -la /app/
-   namei -l /app/data/amslpr.db
+   namei -l /app/data/visigate.db
    ```
 
 2. **Fix Permissions:**
@@ -578,16 +578,16 @@ This guide covers the most common issues encountered with AMSLPR and provides st
 
 ```bash
 # View recent logs
-tail -f logs/amslpr.log
+tail -f logs/visigate.log
 
 # Search for specific errors
-grep "ERROR" logs/amslpr.log
+grep "ERROR" logs/visigate.log
 
 # Filter by date
-sed -n '/2023-10-01/,/2023-10-02/p' logs/amslpr.log
+sed -n '/2023-10-01/,/2023-10-02/p' logs/visigate.log
 
 # Count error types
-grep "ERROR" logs/amslpr.log | cut -d' ' -f4 | sort | uniq -c | sort -nr
+grep "ERROR" logs/visigate.log | cut -d' ' -f4 | sort | uniq -c | sort -nr
 ```
 
 ### Common Log Patterns
@@ -633,7 +633,7 @@ netstat -tlnp
 ss -tlnp
 ```
 
-### AMSLPR Diagnostics
+### VisiGate Diagnostics
 
 ```bash
 # Test database connection
@@ -650,16 +650,16 @@ python -c "from src.recognition.detector import LicensePlateDetector; detector =
 
 ```bash
 # CPU usage
-top -p $(pgrep -f amslpr)
+top -p $(pgrep -f visigate)
 
 # Memory usage
-ps aux --sort=-%mem | grep amslpr
+ps aux --sort=-%mem | grep visigate
 
 # Network connections
 netstat -anp | grep :5001
 
 # Disk I/O
-iotop -p $(pgrep -f amslpr)
+iotop -p $(pgrep -f visigate)
 ```
 
 ## Emergency Procedures
@@ -668,7 +668,7 @@ iotop -p $(pgrep -f amslpr)
 
 1. **Stop the Application:**
    ```bash
-   systemctl stop amslpr
+   systemctl stop visigate
    docker-compose down
    ```
 
@@ -686,7 +686,7 @@ iotop -p $(pgrep -f amslpr)
 
 4. **Restart Services:**
    ```bash
-   systemctl start amslpr
+   systemctl start visigate
    docker-compose up -d
    ```
 
@@ -694,9 +694,9 @@ iotop -p $(pgrep -f amslpr)
 
 1. **Database Recovery:**
    ```bash
-   sqlite3 data/amslpr.db ".recover" > recovered.sql
-   sqlite3 data/amslpr_new.db < recovered.sql
-   mv data/amslpr_new.db data/amslpr.db
+   sqlite3 data/visigate.db ".recover" > recovered.sql
+   sqlite3 data/visigate_new.db < recovered.sql
+   mv data/visigate_new.db data/visigate.db
    ```
 
 2. **Configuration Recovery:**
@@ -711,9 +711,9 @@ iotop -p $(pgrep -f amslpr)
 ```bash
 # Create diagnostic bundle
 mkdir diagnostics
-cp logs/amslpr.log diagnostics/
+cp logs/visigate.log diagnostics/
 cp config/*.json diagnostics/
-ps aux | grep amslpr > diagnostics/processes.txt
+ps aux | grep visigate > diagnostics/processes.txt
 netstat -tlnp > diagnostics/network.txt
 df -h > diagnostics/disk.txt
 free -h > diagnostics/memory.txt
@@ -729,7 +729,7 @@ When contacting support, please provide:
 1. **System Information:**
    - OS version and architecture
    - Python version
-   - AMSLPR version
+   - VisiGate version
    - Hardware specifications
 
 2. **Configuration Files:**

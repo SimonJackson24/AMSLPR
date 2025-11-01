@@ -115,7 +115,7 @@ def main():
     if len(sys.argv) > 1:
         wheel_dir = sys.argv[1]
     else:
-        wheel_dir = os.path.join('/opt', 'amslpr', 'packages', 'offline')
+        wheel_dir = os.path.join('/opt', 'visigate', 'packages', 'offline')
     
     print_colored(f"Scanning for platform-specific wheels in: {wheel_dir}", "blue")
     

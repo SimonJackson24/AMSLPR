@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the integration between the AMSLPR system and Nayax Onyx payment terminals for processing parking payments.
+This document describes the integration between the VisiGate system and Nayax Onyx payment terminals for processing parking payments.
 
 ## Features
 
@@ -15,7 +15,7 @@ This document describes the integration between the AMSLPR system and Nayax Onyx
 
 ## Car Park Operating Modes
 
-The AMSLPR system supports different car park operating modes that affect how the Nayax payment terminal is used:
+The VisiGate system supports different car park operating modes that affect how the Nayax payment terminal is used:
 
 ### Entry/Exit Mode
 
@@ -124,5 +124,5 @@ A test mode is available for verifying the integration without processing actual
 
 For issues with the Nayax integration, please contact:
 
-- Technical support: support@automatesystems.com
+- Technical support: support@visigate.com
 - Nayax support: support@nayax.com

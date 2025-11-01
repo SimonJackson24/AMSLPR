@@ -1,13 +1,13 @@
 
-# AMSLPR - Automate Systems License Plate Recognition
-# Copyright (c) 2025 Automate Systems. All rights reserved.
+# VisiGate - Vision-Based Access Control System
+# Copyright (c) 2025 VisiGate. All rights reserved.
 #
 # This software is proprietary and confidential.
 # Unauthorized use, reproduction, or distribution is prohibited.
 
 #!/usr/bin/env python3
 """
-Generate sample data for testing the AMSLPR system.
+Generate sample data for testing the VisiGate system.
 
 This script creates sample vehicles and access logs for testing and demonstration purposes.
 """
@@ -37,7 +37,7 @@ SAMPLE_VEHICLES = [
     {'plate': 'YZA567', 'desc': 'Ivy Martin - Kia Optima', 'auth': True},
 ]
 
-def generate_sample_data(db_path='data/amslpr.db', days=30, entries_per_day_min=10, entries_per_day_max=30):
+def generate_sample_data(db_path='data/visigate.db', days=30, entries_per_day_min=10, entries_per_day_max=30):
     """
     Generate sample data for testing.
     
@@ -147,8 +147,8 @@ def generate_sample_data(db_path='data/amslpr.db', days=30, entries_per_day_min=
 if __name__ == '__main__':
     import argparse
     
-    parser = argparse.ArgumentParser(description='Generate sample data for AMSLPR')
-    parser.add_argument('--db-path', type=str, default='data/amslpr.db', help='Path to database file')
+    parser = argparse.ArgumentParser(description='Generate sample data for VisiGate')
+    parser.add_argument('--db-path', type=str, default='data/visigate.db', help='Path to database file')
     parser.add_argument('--days', type=int, default=30, help='Number of days of data to generate')
     parser.add_argument('--min-entries', type=int, default=10, help='Minimum entries per day')
     parser.add_argument('--max-entries', type=int, default=30, help='Maximum entries per day')

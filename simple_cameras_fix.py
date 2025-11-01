@@ -10,7 +10,7 @@ import shutil
 from datetime import datetime
 
 # Create a backup of the original file
-CAMERA_ROUTES_PATH = '/opt/amslpr/src/web/camera_routes.py'
+CAMERA_ROUTES_PATH = '/opt/visigate/src/web/camera_routes.py'
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 backup_path = f"{CAMERA_ROUTES_PATH}.backup_{timestamp}"
 shutil.copy2(CAMERA_ROUTES_PATH, backup_path)
@@ -92,4 +92,4 @@ with open(CAMERA_ROUTES_PATH, 'w') as f:
     f.writelines(new_content)
 
 print("Successfully applied the fix to the cameras function")
-print("Restart the AMSLPR service to apply the changes")
+print("Restart the VisiGate service to apply the changes")

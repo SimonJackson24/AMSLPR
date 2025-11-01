@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Test installation script for AMSLPR on Raspberry Pi
+# Test installation script for VisiGate on Raspberry Pi
 # This script simulates the installation process without actually installing system services
 
 set -e

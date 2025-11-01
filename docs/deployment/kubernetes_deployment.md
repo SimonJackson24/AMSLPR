@@ -1,6 +1,6 @@
 # Kubernetes Deployment Guide
 
-This guide provides comprehensive instructions for deploying AMSLPR on Kubernetes clusters.
+This guide provides comprehensive instructions for deploying VisiGate on Kubernetes clusters.
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@ This guide provides comprehensive instructions for deploying AMSLPR on Kubernete
 
 1. **Create namespace:**
    ```bash
-   kubectl create namespace amslpr
+   kubectl create namespace visigate
    ```
 
 2. **Apply manifests:**
@@ -26,13 +26,13 @@ This guide provides comprehensive instructions for deploying AMSLPR on Kubernete
 
 3. **Check deployment:**
    ```bash
-   kubectl get pods -n amslpr
-   kubectl get services -n amslpr
+   kubectl get pods -n visigate
+   kubectl get services -n visigate
    ```
 
 4. **Access the application:**
    ```bash
-   kubectl port-forward -n amslpr svc/amslpr-service 8080:80
+   kubectl port-forward -n visigate svc/visigate-service 8080:80
    # Access at http://localhost:8080
    ```
 
@@ -45,9 +45,9 @@ This guide provides comprehensive instructions for deploying AMSLPR on Kubernete
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: amslpr
+  name: visigate
   labels:
-    name: amslpr
+    name: visigate
     app: license-plate-recognition
 ```
 
@@ -58,15 +58,15 @@ metadata:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: amslpr-config
-  namespace: amslpr
+  name: visigate-config
+  namespace: visigate
 data:
   FLASK_ENV: "production"
   HAILO_ENABLED: "true"
   TZ: "UTC"
   LOG_LEVEL: "INFO"
   REDIS_URL: "redis://redis-service:6379"
-  DATABASE_URL: "postgresql://amslpr:password@postgres-service:5432/amslpr"
+  DATABASE_URL: "postgresql://visigate:password@postgres-service:5432/visigate"
 ```
 
 ### 3. Secrets
@@ -76,8 +76,8 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: amslpr-secrets
-  namespace: amslpr
+  name: visigate-secrets
+  namespace: visigate
 type: Opaque
 data:
   # Base64 encoded values
@@ -94,8 +94,8 @@ data:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: amslpr-data-pvc
-  namespace: amslpr
+  name: visigate-data-pvc
+  namespace: visigate
 spec:
   accessModes:
     - ReadWriteOnce
@@ -108,8 +108,8 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: amslpr-logs-pvc
-  namespace: amslpr
+  name: visigate-logs-pvc
+  namespace: visigate
 spec:
   accessModes:
     - ReadWriteOnce
@@ -122,8 +122,8 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: amslpr-models-pvc
-  namespace: amslpr
+  name: visigate-models-pvc
+  namespace: visigate
 spec:
   accessModes:
     - ReadWriteOnce
@@ -141,7 +141,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgres
-  namespace: amslpr
+  namespace: visigate
   labels:
     app: postgres
 spec:
@@ -161,13 +161,13 @@ spec:
         - containerPort: 5432
         env:
         - name: POSTGRES_DB
-          value: "amslpr"
+          value: "visigate"
         - name: POSTGRES_USER
-          value: "amslpr"
+          value: "visigate"
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: amslpr-secrets
+              name: visigate-secrets
               key: postgres-password
         volumeMounts:
         - name: postgres-storage
@@ -184,7 +184,7 @@ spec:
             command:
             - pg_isready
             - -U
-            - amslpr
+            - visigate
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
@@ -192,7 +192,7 @@ spec:
             command:
             - pg_isready
             - -U
-            - amslpr
+            - visigate
           initialDelaySeconds: 5
           periodSeconds: 5
       volumes:
@@ -205,7 +205,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: postgres-service
-  namespace: amslpr
+  namespace: visigate
 spec:
   selector:
     app: postgres
@@ -222,7 +222,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redis
-  namespace: amslpr
+  namespace: visigate
   labels:
     app: redis
 spec:
@@ -275,7 +275,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: redis-service
-  namespace: amslpr
+  namespace: visigate
 spec:
   selector:
     app: redis
@@ -284,37 +284,37 @@ spec:
     targetPort: 6379
 ```
 
-### 7. AMSLPR Application Deployment
+### 7. VisiGate Application Deployment
 
 ```yaml
-# k8s/amslpr-deployment.yaml
+# k8s/visigate-deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: amslpr
-  namespace: amslpr
+  name: visigate
+  namespace: visigate
   labels:
-    app: amslpr
+    app: visigate
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: amslpr
+      app: visigate
   template:
     metadata:
       labels:
-        app: amslpr
+        app: visigate
     spec:
       containers:
-      - name: amslpr
-        image: amslpr:latest
+      - name: visigate
+        image: visigate:latest
         ports:
         - containerPort: 5001
         envFrom:
         - configMapRef:
-            name: amslpr-config
+            name: visigate-config
         - secretRef:
-            name: amslpr-secrets
+            name: visigate-secrets
         env:
         - name: PORT
           value: "5001"
@@ -353,26 +353,26 @@ spec:
       volumes:
       - name: data-storage
         persistentVolumeClaim:
-          claimName: amslpr-data-pvc
+          claimName: visigate-data-pvc
       - name: logs-storage
         persistentVolumeClaim:
-          claimName: amslpr-logs-pvc
+          claimName: visigate-logs-pvc
       - name: config-storage
         configMap:
-          name: amslpr-config
+          name: visigate-config
       - name: models-storage
         persistentVolumeClaim:
-          claimName: amslpr-models-pvc
+          claimName: visigate-models-pvc
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: amslpr-service
-  namespace: amslpr
+  name: visigate-service
+  namespace: visigate
 spec:
   selector:
-    app: amslpr
+    app: visigate
   ports:
   - port: 80
     targetPort: 5001
@@ -387,8 +387,8 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: amslpr-ingress
-  namespace: amslpr
+  name: visigate-ingress
+  namespace: visigate
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
@@ -397,17 +397,17 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - amslpr.example.com
-    secretName: amslpr-tls
+    - visigate.example.com
+    secretName: visigate-tls
   rules:
-  - host: amslpr.example.com
+  - host: visigate.example.com
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: amslpr-service
+            name: visigate-service
             port:
               number: 80
 ```
@@ -419,13 +419,13 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: amslpr-hpa
-  namespace: amslpr
+  name: visigate-hpa
+  namespace: visigate
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: amslpr
+    name: visigate
   minReplicas: 2
   maxReplicas: 10
   metrics:
@@ -450,12 +450,12 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: amslpr-network-policy
-  namespace: amslpr
+  name: visigate-network-policy
+  namespace: visigate
 spec:
   podSelector:
     matchLabels:
-      app: amslpr
+      app: visigate
   policyTypes:
   - Ingress
   - Egress
@@ -509,12 +509,12 @@ spec:
 ### High Availability Setup
 
 ```yaml
-# k8s/amslpr-ha-deployment.yaml
+# k8s/visigate-ha-deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: amslpr-ha
-  namespace: amslpr
+  name: visigate-ha
+  namespace: visigate
 spec:
   replicas: 3
   strategy:
@@ -524,29 +524,29 @@ spec:
       maxUnavailable: 1
   selector:
     matchLabels:
-      app: amslpr
+      app: visigate
   template:
     metadata:
       labels:
-        app: amslpr
+        app: visigate
     spec:
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
           - labelSelector:
               matchLabels:
-                app: amslpr
+                app: visigate
             topologyKey: kubernetes.io/hostname
       containers:
-      - name: amslpr
-        image: amslpr:latest
+      - name: visigate
+        image: visigate:latest
         ports:
         - containerPort: 5001
         envFrom:
         - configMapRef:
-            name: amslpr-config
+            name: visigate-config
         - secretRef:
-            name: amslpr-secrets
+            name: visigate-secrets
         volumeMounts:
         - name: shared-storage
           mountPath: /app/data
@@ -572,33 +572,33 @@ spec:
       volumes:
       - name: shared-storage
         persistentVolumeClaim:
-          claimName: amslpr-shared-pvc
+          claimName: visigate-shared-pvc
 ```
 
 ### GPU-Enabled Deployment
 
 ```yaml
-# k8s/amslpr-gpu-deployment.yaml
+# k8s/visigate-gpu-deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: amslpr-gpu
-  namespace: amslpr
+  name: visigate-gpu
+  namespace: visigate
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: amslpr-gpu
+      app: visigate-gpu
   template:
     metadata:
       labels:
-        app: amslpr-gpu
+        app: visigate-gpu
     spec:
       nodeSelector:
         accelerator: nvidia-tesla-k80
       containers:
-      - name: amslpr
-        image: amslpr:gpu
+      - name: visigate
+        image: visigate:gpu
         ports:
         - containerPort: 5001
         env:
@@ -617,7 +617,7 @@ spec:
       volumes:
       - name: data-storage
         persistentVolumeClaim:
-          claimName: amslpr-data-pvc
+          claimName: visigate-data-pvc
 ```
 
 ## Helm Chart
@@ -625,7 +625,7 @@ spec:
 ### Chart Structure
 
 ```
-amslpr/
+visigate/
 ├── Chart.yaml
 ├── values.yaml
 ├── templates/
@@ -643,14 +643,14 @@ amslpr/
 
 ```bash
 # Add repository
-helm repo add amslpr https://charts.automatesystems.com
+helm repo add visigate https://charts.automatesystems.com
 helm repo update
 
 # Install with default values
-helm install amslpr amslpr/amslpr
+helm install visigate visigate/visigate
 
 # Install with custom values
-helm install amslpr amslpr/amslpr -f my-values.yaml
+helm install visigate visigate/visigate -f my-values.yaml
 ```
 
 ### Custom Values
@@ -660,7 +660,7 @@ helm install amslpr amslpr/amslpr -f my-values.yaml
 replicaCount: 3
 
 image:
-  repository: amslpr
+  repository: visigate
   tag: "latest"
   pullPolicy: IfNotPresent
 
@@ -672,7 +672,7 @@ ingress:
   enabled: true
   className: nginx
   hosts:
-    - host: amslpr.example.com
+    - host: visigate.example.com
       paths:
         - path: /
           pathType: Prefix
@@ -691,8 +691,8 @@ persistence:
 
 postgresql:
   enabled: true
-  postgresqlUsername: amslpr
-  postgresqlDatabase: amslpr
+  postgresqlUsername: visigate
+  postgresqlDatabase: visigate
 
 redis:
   enabled: true
@@ -707,12 +707,12 @@ redis:
 apiVersion: v1
 kind: ServiceMonitor
 metadata:
-  name: amslpr-monitor
+  name: visigate-monitor
   namespace: monitoring
 spec:
   selector:
     matchLabels:
-      app: amslpr
+      app: visigate
   endpoints:
   - port: metrics
     path: /metrics
@@ -727,7 +727,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: fluent-bit-config
-  namespace: amslpr
+  namespace: visigate
 data:
   fluent-bit.conf: |
     [SERVICE]
@@ -739,15 +739,15 @@ data:
         Name              tail
         Path              /app/logs/*.log
         Parser            docker
-        Tag               amslpr.*
+        Tag               visigate.*
         Refresh_Interval  5
 
     [OUTPUT]
         Name  elasticsearch
-        Match amslpr.*
+        Match visigate.*
         Host  elasticsearch
         Port  9200
-        Index amslpr
+        Index visigate
 ```
 
 ## Security
@@ -759,7 +759,7 @@ data:
 apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
-  name: amslpr-psp
+  name: visigate-psp
 spec:
   privileged: false
   allowPrivilegeEscalation: false
@@ -793,12 +793,12 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: amslpr-security
-  namespace: amslpr
+  name: visigate-security
+  namespace: visigate
 spec:
   podSelector:
     matchLabels:
-      app: amslpr
+      app: visigate
   policyTypes:
   - Ingress
   - Egress
@@ -839,8 +839,8 @@ spec:
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: amslpr-backup
-  namespace: amslpr
+  name: visigate-backup
+  namespace: visigate
 spec:
   schedule: "0 2 * * *"
   jobTemplate:
@@ -854,12 +854,12 @@ spec:
             - /bin/sh
             - -c
             - |
-              pg_dump -h postgres-service -U amslpr amslpr > /backup/backup-$(date +%Y%m%d-%H%M%S).sql
+              pg_dump -h postgres-service -U visigate visigate > /backup/backup-$(date +%Y%m%d-%H%M%S).sql
             env:
             - name: PGPASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: amslpr-secrets
+                  name: visigate-secrets
                   key: postgres-password
             volumeMounts:
             - name: backup-storage
@@ -877,25 +877,25 @@ spec:
 
 1. **Pods not starting:**
    ```bash
-   kubectl describe pod <pod-name> -n amslpr
-   kubectl logs <pod-name> -n amslpr
+   kubectl describe pod <pod-name> -n visigate
+   kubectl logs <pod-name> -n visigate
    ```
 
 2. **Service not accessible:**
    ```bash
-   kubectl get endpoints -n amslpr
-   kubectl describe service amslpr-service -n amslpr
+   kubectl get endpoints -n visigate
+   kubectl describe service visigate-service -n visigate
    ```
 
 3. **Persistent volume issues:**
    ```bash
-   kubectl get pvc -n amslpr
-   kubectl describe pvc <pvc-name> -n amslpr
+   kubectl get pvc -n visigate
+   kubectl describe pvc <pvc-name> -n visigate
    ```
 
 4. **Resource constraints:**
    ```bash
-   kubectl top pods -n amslpr
+   kubectl top pods -n visigate
    kubectl top nodes
    ```
 
@@ -903,19 +903,19 @@ spec:
 
 ```bash
 # Check pod status
-kubectl get pods -n amslpr -o wide
+kubectl get pods -n visigate -o wide
 
 # View pod logs
-kubectl logs -f <pod-name> -n amslpr
+kubectl logs -f <pod-name> -n visigate
 
 # Execute commands in pod
-kubectl exec -it <pod-name> -n amslpr -- /bin/bash
+kubectl exec -it <pod-name> -n visigate -- /bin/bash
 
 # Check events
-kubectl get events -n amslpr --sort-by=.metadata.creationTimestamp
+kubectl get events -n visigate --sort-by=.metadata.creationTimestamp
 
 # Check resource usage
-kubectl top pods -n amslpr
+kubectl top pods -n visigate
 kubectl top nodes
 ```
 
@@ -938,4 +938,4 @@ For additional support or questions about Kubernetes deployment:
 
 - Check the [troubleshooting guide](../troubleshooting/kubernetes_issues.md)
 - Review the [configuration reference](../deployment/configuration.md)
-- Contact support at support@automatesystems.com
+- Contact support at support@visigate.com

@@ -34,7 +34,7 @@ def run_command(cmd, description):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Run AMSLPR tests with coverage')
+    parser = argparse.ArgumentParser(description='Run VisiGate tests with coverage')
     parser.add_argument('--unit', action='store_true', help='Run only unit tests')
     parser.add_argument('--integration', action='store_true', help='Run only integration tests')
     parser.add_argument('--performance', action='store_true', help='Run only performance tests')

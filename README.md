@@ -1,11 +1,11 @@
-# Automate Systems License Plate Recognition (AMSLPR)
+# VisiGate - Vision-Based Access Control System
 
 ![Production Ready](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)
 ![Version](https://img.shields.io/badge/Version-1.0.0-blue)
 ![License](https://img.shields.io/badge/License-Proprietary-red)
 
 ## Overview
-AMSLPR is a production-ready Raspberry Pi-based license plate recognition system designed for barrier control and parking management. The system automatically detects and recognizes license plates, controls entry/exit barriers, and manages authorized vehicles with enterprise-grade security, reliability, and performance features.
+VisiGate is a production-ready Raspberry Pi-based license plate recognition system designed for barrier control and parking management. The system automatically detects and recognizes license plates, controls entry/exit barriers, and manages authorized vehicles with enterprise-grade security, reliability, and performance features.
 
 ## Features
 - Fast, accurate license plate detection and recognition
@@ -92,8 +92,8 @@ For Raspberry Pi 5 specific installation, see our [Raspberry Pi 5 installation g
 For high-performance installations using the Hailo TPU accelerator:
 
 ```bash
-git clone https://github.com/yourusername/AMSLPR.git
-cd AMSLPR
+git clone https://github.com/yourusername/VisiGate.git
+cd VisiGate
 sudo ./scripts/install_on_raspberry_pi.sh
 ```
 
@@ -105,7 +105,7 @@ The installation script will automatically:
 
 See [Raspberry Pi Hailo TPU Setup Guide](docs/raspberry_pi_hailo_setup.md) for detailed instructions on setting up the Hailo TPU accelerator.
 
-> **Note**: The Hailo SDK requires registration at the [Hailo Developer Zone](https://hailo.ai/developer-zone/). All required Hailo models are now included in the AMSLPR package, so you don't need to download them separately.
+> **Note**: The Hailo SDK requires registration at the [Hailo Developer Zone](https://hailo.ai/developer-zone/). All required Hailo models are now included in the VisiGate package, so you don't need to download them separately.
 
 #### Pre-packaged Hailo SDK
 
@@ -121,8 +121,8 @@ These packages will be automatically installed during the Raspberry Pi installat
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/AMSLPR.git
-cd AMSLPR
+git clone https://github.com/yourusername/VisiGate.git
+cd VisiGate
 
 # Run the installation script
 ./install.sh
@@ -131,7 +131,7 @@ cd AMSLPR
 sudo ./scripts/hailo_raspberry_pi_setup.sh
 
 # Start the service
-sudo systemctl start amslpr
+sudo systemctl start visigate
 ```
 
 ## Documentation
@@ -150,7 +150,7 @@ See the [documentation index](docs/index.md) for a complete list of available do
 
 ## Production Readiness
 
-AMSLPR has undergone a comprehensive [production readiness assessment](docs/production_readiness_assessment.md) and meets or exceeds production-grade standards in all key areas:
+VisiGate has undergone a comprehensive [production readiness assessment](docs/production_readiness_assessment.md) and meets or exceeds production-grade standards in all key areas:
 
 | Category | Status | Score |
 |----------|--------|-------|
@@ -177,7 +177,7 @@ Contributions are welcome! Please see our [contributing guide](docs/contributing
 ## Project Structure
 
 ```
-AMSLPR/
+VisiGate/
 ├── config/             # Configuration files and examples
 ├── data/               # Data storage (images, database)
 ├── docs/               # Documentation
